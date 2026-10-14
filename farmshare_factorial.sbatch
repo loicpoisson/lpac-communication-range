@@ -18,17 +18,18 @@
 #
 # Variables: RANGES (default "1024"), CELLS (default the six cells of the first factorial), KS (default "4"),
 # EXTRA_ARGS (passed to lpac_study.factorial, e.g. "--repeats 5 --repeat-start 1"), TAG (suffix of the
-# output folder, so that two arrays at the same range never append to the same CSV).
+# output folder, so that two arrays at the same range never append to the same CSV), DATA_DIR, BASELINE
+# (results.csv holding the clairvoyant rows of those environments), OUT_ROOT, NUM_ENVS.
 set -euo pipefail
 # Under sbatch the script runs from a spool copy: the project is the submission directory.
 PROJECT_DIR="${SLURM_SUBMIT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 WORK_DIR="${WORK_DIR:-$HOME/lpac}"
-export LPAC_DATA_DIR="$WORK_DIR/data/lpac" OMP_NUM_THREADS=1 OMP_THREAD_LIMIT=1 OMP_WAIT_POLICY=PASSIVE
+export LPAC_DATA_DIR="${DATA_DIR:-$WORK_DIR/data/lpac}" OMP_NUM_THREADS=1 OMP_THREAD_LIMIT=1 OMP_WAIT_POLICY=PASSIVE
 ENV_INDEX="${SLURM_ARRAY_TASK_ID:-0}"
 cd "$PROJECT_DIR"
 # shellcheck disable=SC2086
 "$WORK_DIR/venv/bin/python" -m lpac_study.factorial \
-  --baseline "$PROJECT_DIR/results/results.csv" \
-  --out-dir "$PROJECT_DIR/results_2x2/r${RANGES:-1024}${TAG:-}_env_$ENV_INDEX" \
+  --baseline "${BASELINE:-$PROJECT_DIR/results/results.csv}" \
+  --out-dir "${OUT_ROOT:-$PROJECT_DIR/results_2x2}/r${RANGES// /_}${TAG:-}_env_$ENV_INDEX" \
   --ranges ${RANGES:-1024} --cells ${CELLS:-G0C0 G0C1 G0C2 G1C0 G1C1 G1C2} --k ${KS:-4} \
-  --env-start "$ENV_INDEX" --env-end "$((ENV_INDEX + 1))" ${EXTRA_ARGS:-}
+  --env-start "$ENV_INDEX" --env-end "$((ENV_INDEX + 1))" --num-envs "${NUM_ENVS:-11}" ${EXTRA_ARGS:-}

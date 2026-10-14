@@ -10,13 +10,15 @@
 #
 #   MODEL=/path/model_best_state_dict.pt OUT=~/lpac_project/results_train sbatch training/farmshare_eval.sbatch
 #
-# Variables: MODEL (state dict, required), OUT (output folder), RANGES (default "128 256").
+# Variables: MODEL (state dict; omitted = published checkpoint), OUT (output folder), RANGES (default "128 256"),
+# CONTROLLERS (default "lpac ClairvoyantCVT"), DATA_DIR (release-like folder, default ~/lpac/data/lpac),
+# NUM_ENVS (default 11; pass --array=0-39 and NUM_ENVS=40 for 40 environments).
 set -euo pipefail
 PROJECT_DIR="${SLURM_SUBMIT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
-export LPAC_DATA_DIR="$HOME/lpac/data/lpac" OMP_NUM_THREADS=1 OMP_THREAD_LIMIT=1 OMP_WAIT_POLICY=PASSIVE
+export LPAC_DATA_DIR="${DATA_DIR:-$HOME/lpac/data/lpac}" OMP_NUM_THREADS=1 OMP_THREAD_LIMIT=1 OMP_WAIT_POLICY=PASSIVE
 ENV_INDEX="${SLURM_ARRAY_TASK_ID:-0}"
 cd "$PROJECT_DIR"
 # shellcheck disable=SC2086
 "$HOME/lpac/venv/bin/python" -m lpac_study.sweep --out-dir "${OUT:-$PROJECT_DIR/results_train}/env_$ENV_INDEX" \
-  --ranges ${RANGES:-128 256} --no-constant-degree --controllers lpac ClairvoyantCVT \
-  --env-start "$ENV_INDEX" --env-end "$((ENV_INDEX + 1))" --model "$MODEL"
+  --ranges ${RANGES:-128 256} --no-constant-degree --controllers ${CONTROLLERS:-lpac ClairvoyantCVT} \
+  --env-start "$ENV_INDEX" --env-end "$((ENV_INDEX + 1))" --num-envs "${NUM_ENVS:-11}" ${MODEL:+--model "$MODEL"}
