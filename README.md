@@ -17,6 +17,8 @@ when the policy is run with a larger communication range than it was trained wit
 - At inference, capping the graph given to the GNN does not help. Drawing the neighbor map
   given to the CNN at a fixed 256 m scale restores the 256 m performance at every range:
   the failure comes from the rasterized neighbor maps, not from the graph.
+- A model trained at 256 m degrades much less (2.31 at 1024 m instead of 4.4 to 5.2) but
+  still degrades: the training range sets the neighborhood regime the map can read.
 - Open: validation on new environments, the same diagnosis on our retrained models, and a
   variant that carries neighbor geometry on graph edges instead of in an image.
 

@@ -128,12 +128,32 @@ Statements made during planning that turned out wrong, and what replaced them:
 - "Over-smoothing (H3) is the favored explanation": the factorial points to the neighbor map
   (closer to the paper's H1), with graph density as a secondary effect.
 
-## 7. Running and next (as of 14 October)
+## 7. A model trained at 256 m (14 October, 00:05)
 
-Launched overnight on FarmShare, results not yet retrieved:
+Same recipe, 100,000 samples generated with `CommunicationRange = 256` (4 to 5 neighbors
+per robot in the training maps and graphs). The GPU job hit its 3 h limit at epoch 35
+(265 s per epoch, loader-bound); best validation loss **0.391 at epoch 7**, lower than at
+128 m (0.449) since imitation is easier with more neighbors. Sweep, 11 environments:
 
-- a model trained at 256 m (100,000 samples generated at 256 m), then swept 128 → 1024 m:
-  does the optimum move with the training range?
+| Range | 128 m | 256 m | 512 m | 768 m | 1024 m |
+|---|---|---|---|---|---|
+| trained at 256 m | 2.28 ± 0.50 | 1.76 ± 0.28 | **1.74 ± 0.17** | 1.90 ± 0.24 | **2.31 ± 0.24** |
+| trained at 128 m (seed 0) | 2.15 ± 0.51 | 1.74 ± 0.25 | 2.49 ± 0.32 | 3.46 ± 0.71 | 4.36 ± 1.08 |
+| paired (256 m − 128 m) | +0.13 ± 0.23 | +0.02 ± 0.23 | −0.75 (11/11) | −1.56 (11/11) | −2.06 (11/11) |
+
+- As good as the 128 m model at its own range, slightly worse at 128 m (fewer neighbors
+  than in training), and far more robust beyond: 2.31 at 1024 m instead of 4.4 to 5.2.
+- The degradation is pushed back, not removed: 1.74 → 2.31 from 512 to 1024 m, and at
+  1024 m it beats the centralized CVT in only 6 of 11 environments.
+- Reading: the training range sets the neighborhood regime the map can read; widening it
+  delays the collapse. Reference for phase 2: a variant without maps must reach at least
+  2.3 at 1024 m, ideally stay flat. Files: `results_train/results_sweep256_best.csv`,
+  `training/logs/loss_256m_gpu.json`, figure `fig_range_retrained.png`.
+
+## 8. Running and next (as of 14 October)
+
+Launched overnight on FarmShare (Slurm dependency chains), results not yet retrieved:
+
 - a third seed of the 100k run (noise floor for comparing variants);
 - a decorrelated dataset (one sample every 20 steps) to test early overfitting. For any
   comparison with the published model, keep the authors' recipe (every 5 steps).
