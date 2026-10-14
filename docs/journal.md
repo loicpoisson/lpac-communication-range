@@ -283,12 +283,25 @@ V2 against V0 as is (collapse or not), against V0 with the 256 m map (1.81-1.84 
 against the model trained at 256 m (2.31), and V2 against V1 (does the edge geometry help).
 Ranges 128 to 1024 m on the 11 release and the 40 new environments.
 
-Pipeline trial: 2,000 samples (one generation part), 3 epochs on one L40S, then one
-evaluation episode, for V1 and V2 (FarmShare jobs 1845981-1845984). Results below.
+Pipeline trial (14 October, 13:00): 2,000 samples (one generation part, split 1,400 / 400 / 200),
+3 epochs, then one evaluation episode at 256 m on environment 0. The GPU partition was
+backed up (estimated start the next night), so the trial ran on an Intel CPU node with
+16 cores: 34 s per epoch for both variants, validation loss 0.700 → 0.694 (V1) and
+0.700 → 0.696 (V2), evaluation cost ratio 2.73 (V1) and 2.73 (V2) after 3 epochs on
+1,400 samples, i.e. the whole chain (dataset with 2 channels, variant model, checkpoint,
+evaluation through `lpac_study.sweep --variant`) works end to end.
+
+Full runs submitted at 13:05: V1 and V2 × seeds 0, 1, 2 on the GPU partition (jobs
+1846008-1846025, 100 epochs, best-validation checkpoint, each chained with the evaluations
+on the 11 release and the 40 new environments at 128 / 256 / 512 / 768 / 1024 m), plus a
+CPU hedge for seed 0 of each variant (12 epochs on 32 Intel cores, jobs 1846026-1846031)
+in case the GPU queue does not clear overnight. Whichever finishes first is kept; the other
+is cancelled or reported as a fourth seed.
 
 ## 11. Running and next (as of 14 October)
 
-Nothing running on FarmShare as of 10:30; all overnight chains retrieved (sections 7, 8).
+Running on FarmShare (submitted 14 October 13:05): the V1 and V2 trainings and their
+evaluation chains (section 10). Results folder on the cluster: `~/lpac_project/results_variants/`.
 
 Next, in order (1 and 2 done, section 9; 4 started, section 10):
 
