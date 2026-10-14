@@ -1,0 +1,34 @@
+{
+  "args": {
+    "data_dir": null,
+    "out_dir": "/home/loicp/lpac/results/part_e",
+    "ranges": [],
+    "num_robots": 32,
+    "constant_degree": [
+      "256:32"
+    ],
+    "no_constant_degree": false,
+    "num_envs": 11,
+    "num_steps": 600,
+    "env_start": 0,
+    "env_end": 8,
+    "controllers": [
+      "lpac",
+      "DecentralizedCVT",
+      "CentralizedCVT",
+      "ClairvoyantCVT"
+    ],
+    "reuse_range_independent": true,
+    "no_rank": false,
+    "curve_stride": 10,
+    "device": "auto",
+    "seed": 0
+  },
+  "device": "cpu",
+  "elapsed_s": 1637.7,
+  "python": "3.12.3",
+  "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+  "torch": "2.8.0+cpu",
+  "torch_geometric": "2.8.0.post1",
+  "coverage_control": "1.3.1"
+}

@@ -1,0 +1,871 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Communication des essaims robotiques</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&display=swap">
+
+<style>
+/* Layout : colonne de lecture unique (~68ch) ; figures, tableaux et code débordent en conteneurs scrollables */
+:root {
+  --bg:        #F3F5F7;
+  --surface:   #FFFFFF;
+  --sunk:      #E9ECF0;
+  --fg:        #14181E;
+  --muted:     #596472;
+  --rule:      #D7DCE3;
+  --amber:     #9E5400;
+  --amber-dim: #F2E6D6;
+  --teal:      #0B6065;
+  --teal-dim:  #DAEAEB;
+
+  --f-head: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-body: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#0F131A; --surface:#161C25; --sunk:#1C232D; --fg:#E3E8EE; --muted:#97A2AF;
+    --rule:#273040; --amber:#E9A647; --amber-dim:#2B2116; --teal:#4FC2C7; --teal-dim:#122527;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#0F131A; --surface:#161C25; --sunk:#1C232D; --fg:#E3E8EE; --muted:#97A2AF;
+  --rule:#273040; --amber:#E9A647; --amber-dim:#2B2116; --teal:#4FC2C7; --teal-dim:#122527;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 1rem; line-height: 1.68; margin: 0; }
+.wrap { max-width: 50rem; margin: 0 auto; padding-inline: 20px; padding-block: 3rem 5rem; }
+
+h1,h2,h3,h4 { font-family: var(--f-head); text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(1.9rem,1.3rem + 2.4vw,2.9rem); font-weight:700; line-height:1.08; letter-spacing:-0.022em; }
+h2 { font-size: clamp(1.4rem,1.12rem + 1.2vw,1.9rem); font-weight:600; line-height:1.16; letter-spacing:-0.014em; }
+h3 { font-size: 1.14rem; font-weight:600; line-height:1.3; }
+h4 { font-size: 0.95rem; font-weight:600; }
+p { margin: 0; }
+strong { font-weight: 600; }
+em { font-style: italic; }
+
+.eyebrow { font-family: var(--f-mono); font-size:0.7rem; font-weight:500; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); margin:0; }
+.lede { font-size: 1.1rem; color: var(--muted); font-style: italic; }
+.stack   { display:flex; flex-direction:column; gap:1rem; }
+.stack-s { display:flex; flex-direction:column; gap:0.6rem; }
+.stack-l { display:flex; flex-direction:column; gap:2.1rem; }
+.stack-xl{ display:flex; flex-direction:column; gap:3.2rem; }
+
+a { color: inherit; text-underline-offset:2px; text-decoration-color: var(--muted); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible { outline:2px solid var(--amber); outline-offset:2px; border-radius:2px; }
+
+code, .mono { font-family: var(--f-mono); font-size:0.86em; }
+code { background: var(--sunk); padding:0.1em 0.38em; border-radius:3px; }
+pre { margin:0; background:var(--surface); border:1px solid var(--rule); border-left:3px solid var(--amber); border-radius:4px; padding:0.9rem 1rem; overflow-x:auto; font-family:var(--f-mono); font-size:0.8rem; line-height:1.6; }
+
+/* en-tête */
+.masthead { border-bottom:2px solid var(--fg); padding-bottom:1.6rem; }
+.masthead .meta { display:flex; flex-wrap:wrap; gap:0.5rem 1.4rem; font-family:var(--f-mono); font-size:0.74rem; color:var(--muted); margin-top:1.2rem; }
+.masthead .meta b { font-weight:600; color:var(--fg); }
+
+/* sommaire */
+.toc { background:var(--surface); border:1px solid var(--rule); border-radius:4px; padding:1.2rem 1.3rem; }
+.toc ol { margin:0.7rem 0 0; padding-left:1.3rem; font-size:0.92rem; }
+.toc li { margin-bottom:0.32rem; }
+.toc a { text-decoration:none; border-bottom:1px solid var(--rule); }
+.toc a:hover { border-bottom-color: currentColor; }
+
+/* projets */
+.project { border-top:1px solid var(--rule); padding-top:2.6rem; scroll-margin-top:1rem; }
+.sub { scroll-margin-top:1rem; }
+.tag { display:inline-flex; align-items:baseline; gap:0.5rem; font-family:var(--f-mono); font-size:0.72rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; padding:0.28rem 0.6rem; border-radius:3px; }
+.tag-c { color:var(--amber); background:var(--amber-dim); }
+.tag-b { color:var(--teal);  background:var(--teal-dim); }
+
+blockquote { margin:0; padding:0.9rem 0 0.9rem 1.2rem; border-left:3px solid var(--rule); font-size:0.95rem; font-style:italic; color:var(--muted); }
+blockquote .src { display:block; margin-top:0.55rem; font-family:var(--f-mono); font-size:0.72rem; font-style:normal; letter-spacing:0.04em; }
+.project-c blockquote { border-left-color: var(--amber); }
+.project-b blockquote { border-left-color: var(--teal); }
+
+.kernel { background:var(--surface); border:1px solid var(--rule); border-radius:4px; padding:1.3rem 1.4rem; }
+.project-c .kernel { border-left:4px solid var(--amber); }
+.project-b .kernel { border-left:4px solid var(--teal); }
+.note { background:var(--sunk); border-radius:4px; padding:1rem 1.15rem; font-size:0.92rem; }
+
+/* hypothèses — numérotation reprise du papier */
+.hyps { display:flex; flex-direction:column; gap:0; margin:0; padding:0; list-style:none; }
+.hyps li { display:grid; grid-template-columns:2.6rem 1fr; gap:0 0.9rem; padding:0.9rem 0; border-bottom:1px solid var(--rule); align-items:start; }
+.hyps li:first-child { border-top:1px solid var(--rule); }
+.hyps .h-id { font-family:var(--f-mono); font-size:0.78rem; font-weight:600; padding-top:0.2em; }
+.project-c .hyps .h-id { color:var(--amber); }
+.hyps .h-name { font-family:var(--f-head); font-weight:600; font-size:0.96rem; }
+.hyps .h-txt { font-size:0.93rem; color:var(--muted); margin-top:0.2rem; }
+
+/* tableaux */
+.tscroll { overflow-x:auto; border:1px solid var(--rule); border-radius:4px; background:var(--surface); }
+table { border-collapse:collapse; width:100%; min-width:34rem; font-size:0.88rem; }
+caption { text-align:left; padding:0 0 0.6rem; font-family:var(--f-mono); font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); }
+th,td { text-align:left; padding:0.68rem 0.85rem; vertical-align:top; border-bottom:1px solid var(--rule); }
+thead th { font-family:var(--f-head); font-size:0.75rem; font-weight:600; letter-spacing:0.05em; text-transform:uppercase; color:var(--muted); background:var(--sunk); }
+tbody tr:last-child td { border-bottom:none; }
+td.xid { font-family:var(--f-mono); font-weight:600; white-space:nowrap; }
+.project-c td.xid { color:var(--amber); }
+.project-b td.xid { color:var(--teal); }
+td.num, .tnum { font-family:var(--f-mono); font-variant-numeric:tabular-nums; white-space:nowrap; }
+
+/* chiffres clés */
+.facts { display:grid; grid-template-columns:repeat(auto-fit,minmax(8.5rem,1fr)); gap:1px; background:var(--rule); border:1px solid var(--rule); border-radius:4px; overflow:hidden; }
+.facts div { background:var(--surface); padding:0.8rem 0.9rem; min-width:0; }
+.facts dt { font-family:var(--f-mono); font-size:0.67rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); }
+.facts dd { margin:0.25rem 0 0; font-family:var(--f-head); font-size:1.12rem; font-weight:600; font-variant-numeric:tabular-nums; }
+.facts dd small { font-size:0.74rem; font-weight:400; color:var(--muted); }
+
+/* figures */
+figure { margin:0; }
+figure svg { display:block; width:100%; max-width:100%; height:auto; }
+.figbox { border:1px solid var(--rule); border-radius:4px; background:var(--surface); padding:1rem; overflow-x:auto; }
+figcaption { margin-top:0.7rem; font-size:0.85rem; color:var(--muted); }
+.svg-accent { color: var(--amber); }
+.svg-fill-bg { fill: var(--surface); }
+.svg-fill-sunk { fill: var(--sunk); }
+
+/* planning */
+.weeks { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; }
+.weeks li { display:grid; grid-template-columns:4.2rem 1fr; gap:0 1rem; padding:0.72rem 0; border-bottom:1px solid var(--rule); }
+.weeks li:first-child { border-top:1px solid var(--rule); }
+.weeks .wk { font-family:var(--f-mono); font-size:0.76rem; font-weight:600; color:var(--muted); padding-top:0.15em; }
+.weeks .wt { font-size:0.93rem; }
+
+.roles { display:grid; grid-template-columns:repeat(auto-fit,minmax(13rem,1fr)); gap:1rem; }
+.role { background:var(--surface); border:1px solid var(--rule); border-radius:4px; padding:1rem 1.1rem; min-width:0; }
+.role h4 { margin-bottom:0.3rem; }
+.role p { font-size:0.89rem; color:var(--muted); }
+
+.verdict { background:var(--sunk); border-radius:4px; padding:1.4rem 1.5rem; }
+
+/* glossaire */
+.gloss { display:flex; flex-direction:column; gap:0; margin:0; }
+.gloss > div { padding:0.8rem 0; border-bottom:1px solid var(--rule); }
+.gloss > div:first-child { border-top:1px solid var(--rule); }
+.gloss dt { font-family:var(--f-head); font-weight:600; font-size:0.93rem; }
+.gloss dd { margin:0.2rem 0 0; font-size:0.9rem; color:var(--muted); }
+
+.refs { list-style:none; margin:0; padding:0; font-size:0.88rem; }
+.refs li { padding:0.6rem 0; border-bottom:1px solid var(--rule); }
+.refs li:first-child { border-top:1px solid var(--rule); }
+.refs .rtag { font-family:var(--f-mono); font-size:0.7rem; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted); display:block; }
+
+.foot { border-top:1px solid var(--rule); padding-top:1.5rem; font-size:0.85rem; color:var(--muted); }
+.foot ul { margin:0.6rem 0 0; padding-left:1.1rem; }
+.foot li { margin-bottom:0.3rem; }
+
+@media (max-width:460px) {
+  .hyps li { grid-template-columns:1fr; gap:0.2rem; }
+  .weeks li { grid-template-columns:1fr; gap:0.15rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }
+
+:root { --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; } }
+:root[data-theme="dark"] { --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; }
+.ser1 { stroke: var(--s1); } .ser2 { stroke: var(--s2); } .ser3 { stroke: var(--s3); }
+.ser1 .dot { fill: var(--s1); } .ser2 .dot { fill: var(--s2); } .ser3 .dot { fill: var(--s3); }
+.ser4 { stroke: var(--s4); } .ser4 .dot { fill: var(--s4); } .sw4 { background: var(--s4); }
+.dot { stroke: var(--surface); stroke-width: 2; }
+.legend { display:flex; flex-wrap:wrap; gap:0.4rem 1.2rem; font-family:var(--f-head); font-size:0.82rem; color:var(--muted); margin-bottom:0.6rem; }
+.legend span { display:inline-flex; align-items:center; gap:0.4rem; }
+.sw { display:inline-block; width:18px; height:3px; border-radius:2px; }
+.sw1 { background:var(--s1); } .sw2 { background:var(--s2); } .sw3 { background:var(--s3); }
+.swref { background: repeating-linear-gradient(90deg, var(--muted) 0 5px, transparent 5px 9px); }
+.status { background:var(--surface); border:1px solid var(--rule); border-left:4px solid var(--amber); border-radius:4px; padding:1.3rem 1.4rem; }
+.grid22 { border-collapse:collapse; width:100%; min-width:30rem; font-size:0.9rem; }
+.grid22 th, .grid22 td { border:1px solid var(--rule); padding:0.8rem 0.9rem; text-align:left; vertical-align:top; }
+.grid22 thead th, .grid22 tbody th { background:var(--sunk); font-family:var(--f-head); font-size:0.8rem; font-weight:600; }
+.done { font-family:var(--f-mono); font-weight:600; color:var(--amber); }
+.todo { font-family:var(--f-mono); color:var(--muted); }
+.weeks li { grid-template-columns: 8.6rem 1fr; }
+@media (max-width:460px) { .weeks li { grid-template-columns: 1fr; } }
+</style>
+
+<div class="wrap stack-xl">
+
+  <header class="masthead">
+    <p class="eyebrow">CS 224W · Projet d’automne 2026 · état au 12 octobre</p>
+    <h1 style="margin-top:0.7rem">Communication des essaims robotiques</h1>
+    <p class="lede" style="margin-top:0.9rem">Un modèle d’essaim publié s’effondre quand on lui donne plus de communication qu’à l’entraînement. Le projet : comprendre pourquoi, et le réparer sans le réentraîner.</p>
+    <div class="meta">
+      <span><b>Proposal</b> 20 oct.</span>
+      <span><b>Milestone</b> 10 nov.</span>
+      <span><b>Rapport</b> 10 déc.</span>
+      <span><b>Équipe</b> 3 personnes</span>
+      <span><b>Format</b> billet Medium + Colab</span>
+    </div>
+  </header>
+
+  <section class="status stack-s">
+    <p class="eyebrow">Où nous en sommes</p>
+    <p><strong>Le phénomène existe et il est massif.</strong> Le modèle LPAC publié, évalué sans réentraînement sur les 11 environnements de ses auteurs, est le meilleur contrôleur à 128 et 256 m de portée de communication. Au-delà son coût triple, et à 1024 m il fait pire que des algorithmes non appris.</p>
+    <p><strong>La cause est localisée.</strong> Ce n’est pas le graphe donné au GNN, qui supporte de passer de 1,4 à 30 voisins. C’est la carte de voisinage donnée au CNN. En la rendant à l’échelle de 256 m, sans toucher aux poids, le modèle retrouve à 1024 m exactement sa performance de 256 m.</p>
+    <p><strong>Ce qui reste ouvert.</strong> Ce correctif rend le modèle insensible à la portée, mais il ne lui fait tirer aucun bénéfice d’une meilleure communication. Et nos résultats portent sur un seul modèle, transféré hors de son régime d’entraînement : ils n’expliquent pas la figure 20 du papier.</p>
+  </section>
+
+  <nav class="toc">
+    <p class="eyebrow">Sommaire</p>
+    <ol>
+      <li><a href="#socle">Le problème et le modèle</a></li>
+      <li><a href="#papier">Ce que dit le papier, et ce que fait son code</a></li>
+      <li><a href="#mesures">Ce que nous avons mesuré</a></li>
+      <li><a href="#question">La cause : la carte de voisinage, pas le graphe</a></li>
+      <li><a href="#lies">Travaux liés</a></li>
+      <li><a href="#risques">Ce qui ferait échouer le projet</a></li>
+      <li><a href="#grille">Ce qu’exige la grille de notation</a></li>
+      <li><a href="#execution">Calendrier et calcul</a></li>
+      <li><a href="#glossaire">Glossaire</a></li>
+      <li><a href="#refs">Références</a></li>
+    </ol>
+  </nav>
+
+  <!-- ================= 1. PROBLÈME ET MODÈLE ================= -->
+  <section class="project project-c stack-l" id="socle">
+    <div class="stack-s">
+      <p class="eyebrow">Section 1</p>
+      <h2>Le problème et le modèle</h2>
+    </div>
+
+    <p>Un groupe de robots doit accomplir une tâche collective, mais <strong>aucun d’eux ne voit la scène entière</strong>. Chacun perçoit une petite zone autour de lui et ne peut parler qu’aux robots situés à portée radio. Il n’y a pas de serveur central : chaque robot décide seul de son prochain mouvement. Dans ce cadre décentralisé, la seule chose qui permette à l’essaim de se coordonner est la communication entre voisins.</p>
+
+    <div class="kernel stack-s">
+      <p class="eyebrow">Pourquoi un GNN</p>
+      <p>Le réseau de communication <em>est</em> un graphe : les <strong>nœuds sont les robots</strong>, les <strong>arêtes relient les paires qui peuvent se parler</strong>. Un robot qui agrège les messages de ses voisins fait exactement ce qu’une couche de message passing fait sur un nœud. Un robot de plus ou de moins ne change pas l’architecture, ce qui est la raison pour laquelle on attend de ces politiques qu’elles se transfèrent à d’autres tailles d’équipe et d’autres topologies.</p>
+    </div>
+
+    <div class="stack sub">
+      <h3>Le coverage control</h3>
+      <p>L’essaim doit se répartir sur une zone pour la surveiller. Certains endroits comptent plus que d’autres : c’est le <strong>champ de densité d’importance</strong>, ou <strong>IDF</strong>. Les robots ne le connaissent pas à l’avance, ils le découvrent avec leur capteur en se déplaçant. L’objectif est de placer l’essaim pour que les capteurs couvrent au mieux les zones importantes ; la qualité se mesure par un <strong>coût de couverture</strong>, plus bas quand c’est mieux.</p>
+      <figure>
+        <div class="figbox"><svg viewBox="0 0 560 345" role="img" aria-label="Le probleme du coverage control : un champ avec deux zones de forte importance, six robots dotes d un capteur de portee limitee, le decoupage en cellules de Voronoi, et les deplacements vers les centres de masse ponderes.">
+            <defs>
+              <radialGradient id="idf1"><stop offset="0%" stop-color="currentColor" stop-opacity="0.34"/><stop offset="100%" stop-color="currentColor" stop-opacity="0"/></radialGradient>
+              <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><polygon points="0,1 10,5 0,9" fill="currentColor"/></marker>
+            </defs>
+            <rect x="20" y="15" width="300" height="300" rx="2" class="svg-fill-sunk" stroke="currentColor" stroke-width="1.3"/>
+            <g class="svg-accent">
+              <circle cx="232" cy="112" r="72" fill="url(#idf1)"/>
+              <circle cx="108" cy="248" r="58" fill="url(#idf1)"/>
+              <circle cx="232" cy="112" r="30" fill="currentColor" opacity="0.26"/>
+              <circle cx="108" cy="248" r="23" fill="currentColor" opacity="0.26"/>
+            </g>
+            <g fill="none" stroke="currentColor" stroke-width="1.1" stroke-dasharray="4 3" opacity="0.45">
+              <polygon points="158,190 130,315 20,315 20,160"/>
+              <polygon points="186,177 320,302 320,315 130,315 158,190 180,176"/>
+              <polygon points="320,302 186,177 320,98"/>
+              <polygon points="20,156 20,160 158,190 180,176 153,35"/>
+              <polygon points="186,177 320,98 320,15 158,15 153,35 180,176"/>
+              <polygon points="20,15 158,15 153,35 20,156"/>
+            </g>
+            <g fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="2 3" opacity="0.5">
+              <circle cx="90" cy="235" r="34"/><circle cx="200" cy="260" r="34"/><circle cx="270" cy="185" r="34"/>
+              <circle cx="115" cy="120" r="34"/><circle cx="220" cy="100" r="34"/><circle cx="65" cy="65" r="34"/>
+            </g>
+            <g stroke="currentColor" stroke-width="1.7" fill="none" marker-end="url(#ar2)" opacity="0.9">
+              <line x1="90" y1="235" x2="104" y2="243"/>
+              <line x1="200" y1="260" x2="176" y2="238"/>
+              <line x1="270" y1="185" x2="248" y2="146"/>
+              <line x1="115" y1="120" x2="124" y2="166"/>
+              <line x1="220" y1="100" x2="229" y2="108"/>
+              <line x1="65" y1="65" x2="92" y2="94"/>
+            </g>
+            <g fill="currentColor">
+              <circle cx="90" cy="235" r="5.5"/><circle cx="200" cy="260" r="5.5"/><circle cx="270" cy="185" r="5.5"/>
+              <circle cx="115" cy="120" r="5.5"/><circle cx="220" cy="100" r="5.5"/><circle cx="65" cy="65" r="5.5"/>
+            </g>
+            <g font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor">
+              <g class="svg-accent"><circle cx="352" cy="44" r="8" fill="currentColor" opacity="0.26"/></g>
+              <text x="370" y="42">zone de forte importance</text>
+              <text x="370" y="57" font-size="10.5" opacity="0.65">le champ IDF, inconnu des robots</text>
+              <circle cx="352" cy="92" r="5" fill="currentColor"/>
+              <text x="370" y="96">robot</text>
+              <circle cx="352" cy="130" r="9" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="2 3" opacity="0.7"/>
+              <text x="370" y="128">port&#233;e du capteur</text>
+              <text x="370" y="143" font-size="10.5" opacity="0.65">il ne voit rien au-del&#224;</text>
+              <polygon points="344,170 362,164 364,180 346,184" fill="none" stroke="currentColor" stroke-width="1.1" stroke-dasharray="4 3" opacity="0.6"/>
+              <text x="378" y="172">cellule de Vorono&#239;</text>
+              <text x="378" y="187" font-size="10.5" opacity="0.65">les points dont il est le plus proche</text>
+              <line x1="344" y1="218" x2="366" y2="218" stroke="currentColor" stroke-width="1.7" marker-end="url(#ar2)"/>
+              <text x="378" y="222">d&#233;placement</text>
+              <text x="378" y="237" font-size="10.5" opacity="0.65">vers le centre de masse pond&#233;r&#233;</text>
+              <text x="344" y="283" font-size="11" opacity="0.8">Chaque robot ne conna&#238;t</text>
+              <text x="344" y="298" font-size="11" opacity="0.8">ni le champ, ni la position</text>
+              <text x="344" y="313" font-size="11" opacity="0.8">des robots hors de port&#233;e.</text>
+            </g>
+          </svg></div>
+        <figcaption><strong>Figure 1.</strong> Le problème du coverage control. Chaque robot n’observe que le disque de son capteur. L’algorithme classique CVT attribue à chaque robot la cellule de Voronoï des points dont il est le plus proche, puis l’envoie vers le centre de masse de cette cellule pondéré par l’importance.</figcaption>
+      </figure>
+      <p>Trois algorithmes non appris servent de repères. Le <strong>CVT décentralisé</strong> n’utilise que les positions des voisins. Le <strong>CVT centralisé</strong> suppose un serveur qui reçoit toutes les cartes. Le <strong>clairvoyant</strong> connaît le champ entier : impossible à déployer, il donne la borne de référence, et tous nos coûts sont exprimés en multiples du sien.</p>
+    </div>
+
+    <div class="stack sub">
+      <h3>LPAC</h3>
+      <p><em>Learnable Perception-Action-Communication</em>, de Agarwal, Muthukrishnan, Gosrich, Kumar et Ribeiro. Chaque robot exécute trois modules : un CNN qui lit ses cartes locales, un GNN qui échange avec ses voisins, un MLP qui sort une commande de vitesse. L’ensemble est entraîné à imiter l’algorithme clairvoyant.</p>
+      <figure>
+        <div class="figbox"><svg viewBox="0 0 680 280" role="img" aria-label="Chaîne de traitement d'un robot LPAC : la carte locale passe dans un CNN, le vecteur produit entre dans le GNN qui échange des messages avec les robots voisins sur trois sauts, puis un MLP produit la commande de vitesse.">
+            <defs>
+              <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <polygon points="0,1 10,5 0,9" fill="currentColor"/>
+              </marker>
+            </defs>
+
+            <!-- voisins -->
+            <g fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.85">
+              <circle cx="306" cy="56" r="13" class="svg-fill-sunk"/>
+              <circle cx="352" cy="56" r="13" class="svg-fill-sunk"/>
+              <circle cx="398" cy="56" r="13" class="svg-fill-sunk"/>
+            </g>
+            <text x="424" y="52" font-size="12" fill="currentColor" font-family="IBM Plex Sans, sans-serif">robots voisins</text>
+            <text x="424" y="68" font-size="11" fill="currentColor" opacity="0.65" font-family="IBM Plex Sans, sans-serif">(dans le rayon de communication)</text>
+
+            <!-- lien voisins <-> GNN -->
+            <g class="svg-accent">
+              <line x1="352" y1="72" x2="352" y2="124" stroke="currentColor" stroke-width="1.8" marker-start="url(#ar)" marker-end="url(#ar)"/>
+            </g>
+            <text x="362" y="102" font-size="11" fill="currentColor" opacity="0.8" font-family="IBM Plex Mono, monospace">K = 3 sauts</text>
+
+            <!-- boîtes -->
+            <g stroke="currentColor" stroke-width="1.6">
+              <rect x="16"  y="140" width="104" height="62" rx="3" class="svg-fill-sunk"/>
+              <rect x="154" y="140" width="96"  height="62" rx="3" class="svg-fill-bg"/>
+              <rect x="462" y="140" width="92"  height="62" rx="3" class="svg-fill-bg"/>
+            </g>
+            <g class="svg-accent">
+              <rect x="284" y="126" width="146" height="90" rx="3" stroke="currentColor" stroke-width="2.2" class="svg-fill-bg"/>
+            </g>
+
+            <g font-family="IBM Plex Sans, sans-serif" fill="currentColor" text-anchor="middle">
+              <text x="68"  y="166" font-size="12.5" font-weight="600">Carte locale</text>
+              <text x="68"  y="184" font-size="11" opacity="0.7">256 × 256</text>
+              <text x="202" y="166" font-size="12.5" font-weight="600">Perception</text>
+              <text x="202" y="184" font-size="11" opacity="0.7">CNN</text>
+              <text x="357" y="160" font-size="12.5" font-weight="600">Communication</text>
+              <text x="357" y="178" font-size="11" opacity="0.7">5 × TAGConv, K = 3</text>
+              <text x="357" y="196" font-size="11" opacity="0.7">adjacence normalisée</text>
+              <text x="508" y="166" font-size="12.5" font-weight="600">Action</text>
+              <text x="508" y="184" font-size="11" opacity="0.7">MLP</text>
+            </g>
+
+            <!-- flèches -->
+            <g stroke="currentColor" stroke-width="1.6" fill="none" marker-end="url(#ar)">
+              <line x1="120" y1="171" x2="148" y2="171"/>
+              <line x1="250" y1="171" x2="278" y2="171"/>
+              <line x1="430" y1="171" x2="456" y2="171"/>
+              <line x1="554" y1="171" x2="620" y2="171"/>
+            </g>
+            <g font-family="IBM Plex Mono, monospace" font-size="10.5" fill="currentColor" opacity="0.75" text-anchor="middle">
+              <text x="264" y="162">25 + 2</text>
+              <text x="443" y="162">256</text>
+            </g>
+            <text x="624" y="167" font-size="11.5" fill="currentColor" font-family="IBM Plex Sans, sans-serif">vitesse</text>
+            <text x="624" y="183" font-size="11.5" fill="currentColor" opacity="0.7" font-family="IBM Plex Sans, sans-serif">(vx, vy)</text>
+
+            <text x="16" y="248" font-size="11.5" fill="currentColor" opacity="0.7" font-family="IBM Plex Sans, sans-serif">Les trois modules tournent indépendamment sur chaque robot. Le GNN est le seul point de collaboration.</text>
+          </svg></div>
+        <figcaption><strong>Figure 2.</strong> La boucle d’un robot LPAC. Le voisinage entre dans le modèle par <strong>deux chemins</strong> : le graphe donné au GNN, et une « carte de voisinage » de 32 × 32 donnée au CNN, qui encode la position relative des robots à portée. Cette distinction est au centre du plan d’expériences.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ================= 2. PAPIER ET CODE ================= -->
+  <section class="project project-c stack-l" id="papier">
+    <div class="stack-s">
+      <p class="eyebrow">Section 2</p>
+      <h2>Ce que dit le papier, et ce que fait son code</h2>
+    </div>
+
+    <blockquote>
+      La performance du modèle LPAC-K3 s’améliore jusqu’à une portée de communication de 512 m, puis décroît. C’est contre-intuitif. […] Étudier ces hypothèses et améliorer la performance du modèle à grande portée est une direction intéressante pour de futurs travaux.
+      <span class="src">LPAC, section VI-H — figure 20 du papier</span>
+    </blockquote>
+
+    <p>Dans cette expérience, les auteurs <strong>entraînent un modèle par portée</strong>, dans un monde de 1024 × 1024 m avec 32 robots. Ils proposent trois explications sans trancher.</p>
+
+    <ul class="hyps">
+      <li><span class="h-id">H1</span><div><div class="h-name">La carte de voisinage perd de l’information</div><p class="h-txt">Elle est de taille fixe, 32 × 32, et sa résolution est proportionnelle à la portée. À grande portée plusieurs robots tombent dans la même cellule et leurs valeurs sont sommées.</p></div></li>
+      <li><span class="h-id">H2</span><div><div class="h-name">L’agrégation du GNN serait une somme avec perte</div><p class="h-txt">« Le modèle est peut-être mal armé pour distinguer les features provenant de robots différents. »</p></div></li>
+      <li><span class="h-id">H3</span><div><div class="h-name">Le graphe devient trop dense</div><p class="h-txt">« Le graphe de communication devient presque complet, or les GNN fonctionnent mieux sur des graphes creux. »</p></div></li>
+    </ul>
+
+    <div class="kernel stack-s">
+      <p class="eyebrow">Ce que nous avons lu dans le code</p>
+      <p>Le GNN est un empilement de cinq couches <code>torch_geometric.nn.TAGConv</code> avec K = 3, une couche standard de PyG :</p>
+      <pre><code>X' = somme pour k de 0 à K de  ( D^-1/2 · A · D^-1/2 )^k · X · W_k</code></pre>
+      <p>Ce n’est <strong>pas une agrégation par somme</strong> : c’est l’adjacence symétriquement normalisée, celle de GCN, appliquée jusqu’à K fois par couche, soit jusqu’à 5 × 3 = 15 propagations. L’hypothèse H2 ne décrit donc pas l’implémentation. Autre fait vérifié : le modèle ne transmet pas de poids d’arêtes au GNN, l’adjacence est binaire.</p>
+    </div>
+
+    <p>Conséquence pratique : comparer TAGConv à <code>GCNConv</code>, <code>SAGEConv</code>, <code>GATConv</code> ou <code>PNAConv</code> revient à changer une ligne, puisque ces couches partagent la même interface. Mais toute comparaison de ce type demande un réentraînement.</p>
+  </section>
+
+  <!-- ================= 3. MESURES ================= -->
+  <section class="project project-c stack-l" id="mesures">
+    <div class="stack-s">
+      <p class="eyebrow">Section 3</p>
+      <h2>Ce que nous avons mesuré</h2>
+    </div>
+
+    <p>Protocole : le modèle publié <code>model_k3_1024_state_dict.pt</code>, entraîné à 128 m, évalué sans réentraînement à cinq portées. 32 robots, 11 environnements de la release, 600 pas par épisode, évaluation déterministe. Métrique du papier : coût de couverture moyen sur l’épisode, divisé par celui du clairvoyant sur le même environnement.</p>
+
+    <figure>
+      <div class="legend"><span><i class="sw sw1"></i>LPAC-K3, modèle publié</span><span><i class="sw sw4"></i>LPAC, carte de voisinage à 256 m</span><span><i class="sw sw2"></i>CVT décentralisé</span><span><i class="sw sw3"></i>CVT centralisé</span><span><i class="sw swref"></i>clairvoyant (référence)</span></div>
+      <div class="figbox"><svg viewBox="0 0 700 350" role="img" aria-label="Coût de couverture normalisé selon la portée de communication, modèle LPAC publié et deux baselines CVT, 32 robots, 11 environnements. LPAC est le meilleur à 128 et 256 mètres puis son coût triple jusqu à 1024 mètres.">
+<line x1="62" y1="300.0" x2="560" y2="300.0" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+<text x="54" y="303.5" font-size="10.5" text-anchor="end" fill="currentColor" opacity="0.75" font-family="IBM Plex Mono, monospace">0</text>
+<line x1="62" y1="261.4" x2="560" y2="261.4" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="54" y="264.9" font-size="10.5" text-anchor="end" fill="currentColor" opacity="0.75" font-family="IBM Plex Mono, monospace">1</text>
+<line x1="62" y1="222.9" x2="560" y2="222.9" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="54" y="226.4" font-size="10.5" text-anchor="end" fill="currentColor" opacity="0.75" font-family="IBM Plex Mono, monospace">2</text>
+<line x1="62" y1="184.3" x2="560" y2="184.3" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="54" y="187.8" font-size="10.5" text-anchor="end" fill="currentColor" opacity="0.75" font-family="IBM Plex Mono, monospace">3</text>
+<line x1="62" y1="145.7" x2="560" y2="145.7" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="54" y="149.2" font-size="10.5" text-anchor="end" fill="currentColor" opacity="0.75" font-family="IBM Plex Mono, monospace">4</text>
+<line x1="62" y1="107.1" x2="560" y2="107.1" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="54" y="110.6" font-size="10.5" text-anchor="end" fill="currentColor" opacity="0.75" font-family="IBM Plex Mono, monospace">5</text>
+<line x1="62" y1="68.6" x2="560" y2="68.6" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="54" y="72.1" font-size="10.5" text-anchor="end" fill="currentColor" opacity="0.75" font-family="IBM Plex Mono, monospace">6</text>
+<line x1="62" y1="30.0" x2="560" y2="30.0" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="54" y="33.5" font-size="10.5" text-anchor="end" fill="currentColor" opacity="0.75" font-family="IBM Plex Mono, monospace">7</text>
+<text x="62.0" y="318" font-size="10.5" text-anchor="middle" fill="currentColor" opacity="0.75" font-family="IBM Plex Mono, monospace">128</text>
+<text x="133.1" y="318" font-size="10.5" text-anchor="middle" fill="currentColor" opacity="0.75" font-family="IBM Plex Mono, monospace">256</text>
+<text x="275.4" y="318" font-size="10.5" text-anchor="middle" fill="currentColor" opacity="0.75" font-family="IBM Plex Mono, monospace">512</text>
+<text x="417.7" y="318" font-size="10.5" text-anchor="middle" fill="currentColor" opacity="0.75" font-family="IBM Plex Mono, monospace">768</text>
+<text x="560.0" y="318" font-size="10.5" text-anchor="middle" fill="currentColor" opacity="0.75" font-family="IBM Plex Mono, monospace">1024</text>
+<text x="311" y="340" font-size="11.5" text-anchor="middle" fill="currentColor" opacity="0.8" font-family="IBM Plex Sans, sans-serif">portée de communication au test (m)</text>
+<text x="16" y="165" font-size="11.5" text-anchor="middle" fill="currentColor" opacity="0.8" transform="rotate(-90 16 165)" font-family="IBM Plex Sans, sans-serif">coût / coût du clairvoyant</text>
+<line x1="62" y1="261.4" x2="560" y2="261.4" stroke="currentColor" stroke-width="1.4" stroke-dasharray="5 4" opacity="0.55"/>
+<text x="568" y="265.4" font-size="11" fill="currentColor" opacity="0.7" font-family="IBM Plex Sans, sans-serif">clairvoyant = 1</text>
+<text x="62.0" y="22" font-size="10.5" text-anchor="middle" fill="currentColor" opacity="0.7" font-family="IBM Plex Sans, sans-serif">entraînement</text>
+<line x1="62.0" y1="28" x2="62.0" y2="300" stroke="currentColor" stroke-width="1" stroke-dasharray="2 3" opacity="0.4"/>
+<g class="ser3">
+<polyline fill="none" stroke-width="2" points="62.0,202.6 133.1,202.6 275.4,202.6 417.7,202.6 560.0,202.6"/>
+<circle cx="62.0" cy="202.6" r="4.5" class="dot"><title>CVT centralisé, 128 m : 2,52 ± 0,74</title></circle>
+<circle cx="62.0" cy="202.6" r="13" fill="transparent" stroke="none"><title>CVT centralisé, 128 m : 2,52 ± 0,74</title></circle>
+<circle cx="133.1" cy="202.6" r="4.5" class="dot"><title>CVT centralisé, 256 m : 2,52 ± 0,74</title></circle>
+<circle cx="133.1" cy="202.6" r="13" fill="transparent" stroke="none"><title>CVT centralisé, 256 m : 2,52 ± 0,74</title></circle>
+<circle cx="275.4" cy="202.6" r="4.5" class="dot"><title>CVT centralisé, 512 m : 2,52 ± 0,74</title></circle>
+<circle cx="275.4" cy="202.6" r="13" fill="transparent" stroke="none"><title>CVT centralisé, 512 m : 2,52 ± 0,74</title></circle>
+<circle cx="417.7" cy="202.6" r="4.5" class="dot"><title>CVT centralisé, 768 m : 2,52 ± 0,74</title></circle>
+<circle cx="417.7" cy="202.6" r="13" fill="transparent" stroke="none"><title>CVT centralisé, 768 m : 2,52 ± 0,74</title></circle>
+<circle cx="560.0" cy="202.6" r="4.5" class="dot"><title>CVT centralisé, 1024 m : 2,52 ± 0,74</title></circle>
+<circle cx="560.0" cy="202.6" r="13" fill="transparent" stroke="none"><title>CVT centralisé, 1024 m : 2,52 ± 0,74</title></circle>
+</g>
+<g class="ser2">
+<polyline fill="none" stroke-width="2" points="62.0,199.9 133.1,201.0 275.4,200.1 417.7,200.1 560.0,200.1"/>
+<circle cx="62.0" cy="199.9" r="4.5" class="dot"><title>CVT décentralisé, 128 m : 2,59 ± 0,70</title></circle>
+<circle cx="62.0" cy="199.9" r="13" fill="transparent" stroke="none"><title>CVT décentralisé, 128 m : 2,59 ± 0,70</title></circle>
+<circle cx="133.1" cy="201.0" r="4.5" class="dot"><title>CVT décentralisé, 256 m : 2,57 ± 0,71</title></circle>
+<circle cx="133.1" cy="201.0" r="13" fill="transparent" stroke="none"><title>CVT décentralisé, 256 m : 2,57 ± 0,71</title></circle>
+<circle cx="275.4" cy="200.1" r="4.5" class="dot"><title>CVT décentralisé, 512 m : 2,59 ± 0,67</title></circle>
+<circle cx="275.4" cy="200.1" r="13" fill="transparent" stroke="none"><title>CVT décentralisé, 512 m : 2,59 ± 0,67</title></circle>
+<circle cx="417.7" cy="200.1" r="4.5" class="dot"><title>CVT décentralisé, 768 m : 2,59 ± 0,67</title></circle>
+<circle cx="417.7" cy="200.1" r="13" fill="transparent" stroke="none"><title>CVT décentralisé, 768 m : 2,59 ± 0,67</title></circle>
+<circle cx="560.0" cy="200.1" r="4.5" class="dot"><title>CVT décentralisé, 1024 m : 2,59 ± 0,67</title></circle>
+<circle cx="560.0" cy="200.1" r="13" fill="transparent" stroke="none"><title>CVT décentralisé, 1024 m : 2,59 ± 0,67</title></circle>
+</g>
+<g class="ser1">
+<line x1="62.0" y1="241.2" x2="62.0" y2="205.7" stroke-width="1.4" opacity="0.6"/>
+<line x1="57.0" y1="241.2" x2="67.0" y2="241.2" stroke-width="1.4" opacity="0.6"/>
+<line x1="57.0" y1="205.7" x2="67.0" y2="205.7" stroke-width="1.4" opacity="0.6"/>
+<line x1="133.1" y1="241.9" x2="133.1" y2="227.7" stroke-width="1.4" opacity="0.6"/>
+<line x1="128.1" y1="241.9" x2="138.1" y2="241.9" stroke-width="1.4" opacity="0.6"/>
+<line x1="128.1" y1="227.7" x2="138.1" y2="227.7" stroke-width="1.4" opacity="0.6"/>
+<line x1="275.4" y1="208.0" x2="275.4" y2="178.7" stroke-width="1.4" opacity="0.6"/>
+<line x1="270.4" y1="208.0" x2="280.4" y2="208.0" stroke-width="1.4" opacity="0.6"/>
+<line x1="270.4" y1="178.7" x2="280.4" y2="178.7" stroke-width="1.4" opacity="0.6"/>
+<line x1="417.7" y1="169.6" x2="417.7" y2="81.4" stroke-width="1.4" opacity="0.6"/>
+<line x1="412.7" y1="169.6" x2="422.7" y2="169.6" stroke-width="1.4" opacity="0.6"/>
+<line x1="412.7" y1="81.4" x2="422.7" y2="81.4" stroke-width="1.4" opacity="0.6"/>
+<line x1="560.0" y1="153.2" x2="560.0" y2="44.3" stroke-width="1.4" opacity="0.6"/>
+<line x1="555.0" y1="153.2" x2="565.0" y2="153.2" stroke-width="1.4" opacity="0.6"/>
+<line x1="555.0" y1="44.3" x2="565.0" y2="44.3" stroke-width="1.4" opacity="0.6"/>
+<polyline fill="none" stroke-width="2" points="62.0,223.4 133.1,234.8 275.4,193.3 417.7,125.5 560.0,98.7"/>
+<circle cx="62.0" cy="223.4" r="4.5" class="dot"><title>LPAC-K3, 128 m : 1,98 ± 0,46</title></circle>
+<circle cx="62.0" cy="223.4" r="13" fill="transparent" stroke="none"><title>LPAC-K3, 128 m : 1,98 ± 0,46</title></circle>
+<circle cx="133.1" cy="234.8" r="4.5" class="dot"><title>LPAC-K3, 256 m : 1,69 ± 0,18</title></circle>
+<circle cx="133.1" cy="234.8" r="13" fill="transparent" stroke="none"><title>LPAC-K3, 256 m : 1,69 ± 0,18</title></circle>
+<circle cx="275.4" cy="193.3" r="4.5" class="dot"><title>LPAC-K3, 512 m : 2,77 ± 0,38</title></circle>
+<circle cx="275.4" cy="193.3" r="13" fill="transparent" stroke="none"><title>LPAC-K3, 512 m : 2,77 ± 0,38</title></circle>
+<circle cx="417.7" cy="125.5" r="4.5" class="dot"><title>LPAC-K3, 768 m : 4,52 ± 1,14</title></circle>
+<circle cx="417.7" cy="125.5" r="13" fill="transparent" stroke="none"><title>LPAC-K3, 768 m : 4,52 ± 1,14</title></circle>
+<circle cx="560.0" cy="98.7" r="4.5" class="dot"><title>LPAC-K3, 1024 m : 5,22 ± 1,41</title></circle>
+<circle cx="560.0" cy="98.7" r="13" fill="transparent" stroke="none"><title>LPAC-K3, 1024 m : 5,22 ± 1,41</title></circle>
+</g>
+<g class="ser4">
+<polyline fill="none" stroke-width="2" points="133.1,234.8 275.4,231.4 417.7,232.3 560.0,234.2"/>
+<circle cx="133.1" cy="234.8" r="4.5" class="dot"><title>LPAC avec carte à 256 m, 256 m : 1,69 ± 0,18</title></circle>
+<circle cx="133.1" cy="234.8" r="13" fill="transparent" stroke="none"><title>LPAC avec carte à 256 m, 256 m : 1,69 ± 0,18</title></circle>
+<circle cx="275.4" cy="231.4" r="4.5" class="dot"><title>LPAC avec carte à 256 m, 512 m : 1,78 ± 0,20</title></circle>
+<circle cx="275.4" cy="231.4" r="13" fill="transparent" stroke="none"><title>LPAC avec carte à 256 m, 512 m : 1,78 ± 0,20</title></circle>
+<circle cx="417.7" cy="232.3" r="4.5" class="dot"><title>LPAC avec carte à 256 m, 768 m : 1,76 ± 0,16</title></circle>
+<circle cx="417.7" cy="232.3" r="13" fill="transparent" stroke="none"><title>LPAC avec carte à 256 m, 768 m : 1,76 ± 0,16</title></circle>
+<circle cx="560.0" cy="234.2" r="4.5" class="dot"><title>LPAC avec carte à 256 m, 1024 m : 1,71 ± 0,19</title></circle>
+<circle cx="560.0" cy="234.2" r="13" fill="transparent" stroke="none"><title>LPAC avec carte à 256 m, 1024 m : 1,71 ± 0,19</title></circle>
+</g>
+<text x="572" y="238.2" font-size="11.5" fill="currentColor" font-family="IBM Plex Sans, sans-serif" font-weight="600">LPAC, carte à 256 m</text>
+<text x="572" y="102.7" font-size="11.5" fill="currentColor" font-family="IBM Plex Sans, sans-serif" font-weight="600">LPAC-K3</text>
+<text x="572" y="193.1" font-size="11.5" fill="currentColor" font-family="IBM Plex Sans, sans-serif" font-weight="400">CVT décentralisé</text>
+<text x="572" y="217.6" font-size="11.5" fill="currentColor" font-family="IBM Plex Sans, sans-serif" font-weight="400">CVT centralisé</text>
+</svg></div>
+      <figcaption><strong>Figure 3.</strong> Coût normalisé selon la portée de communication au test, moyenne sur 11 environnements. Plus bas est meilleur. La courbe jaune est le même modèle, mêmes poids, avec sa carte de voisinage rendue à l’échelle de 256 m (section 4). Les barres sur LPAC donnent l’écart-type entre environnements ; ceux des CVT figurent dans le tableau. Le modèle n’a vu que 128 m à l’entraînement.</figcaption>
+    </figure>
+
+    <div class="tscroll">
+      <table>
+        <caption>Balayage en portée — moyenne ± écart-type sur 11 environnements</caption>
+        <thead><tr><th>Portée (m)</th><th>LPAC-K3</th><th>CVT décentralisé</th><th>CVT centralisé</th><th>Voisins par robot (LPAC)</th></tr></thead>
+        <tbody><tr><td class="num">128</td><td class="num"><strong>1,98</strong> ± 0,46</td><td class="num">2,59 ± 0,70</td><td class="num">2,52 ± 0,74</td><td class="num">1,4</td></tr><tr><td class="num">256</td><td class="num"><strong>1,69</strong> ± 0,18</td><td class="num">2,57 ± 0,71</td><td class="num">2,52 ± 0,74</td><td class="num">4,5</td></tr><tr><td class="num">512</td><td class="num"><strong>2,77</strong> ± 0,38</td><td class="num">2,59 ± 0,67</td><td class="num">2,52 ± 0,74</td><td class="num">11,7</td></tr><tr><td class="num">768</td><td class="num"><strong>4,52</strong> ± 1,14</td><td class="num">2,59 ± 0,67</td><td class="num">2,52 ± 0,74</td><td class="num">18,5</td></tr><tr><td class="num">1024</td><td class="num"><strong>5,22</strong> ± 1,41</td><td class="num">2,59 ± 0,67</td><td class="num">2,52 ± 0,74</td><td class="num">24,9</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="stack-s">
+      <p><strong>L’effondrement est présent dans chacun des 11 environnements.</strong> Le rapport entre le coût à 1024 m et le coût à 256 m va de 2,1 à 4,6 selon l’environnement. À 768 et 1024 m, le coût en fin d’épisode dépasse le coût initial : la politique dégrade la couverture au lieu de l’améliorer.</p>
+      <p><strong>Les baselines se comportent comme le papier le décrit</strong>, ce qui valide le balayage : le CVT centralisé ne dépend pas de la portée, le décentralisé ne bouge plus à partir de 512 m.</p>
+    </div>
+
+    <div class="stack sub">
+      <h3>Pourquoi ce n’est pas la figure 20 du papier</h3>
+      <div class="tscroll">
+        <table>
+          <thead><tr><th></th><th>Papier</th><th>Nos mesures</th></tr></thead>
+          <tbody>
+            <tr><td>Ce qui varie</td><td>un modèle réentraîné par portée</td><td>un seul modèle, la portée de test seule</td></tr>
+            <tr><td>Optimum</td><td>512 m</td><td>256 m</td></tr>
+            <tr><td>Baisse au-delà</td><td>modérée</td><td>coût multiplié par trois</td></tr>
+            <tr><td>LPAC contre les CVT</td><td>meilleur à toutes les portées</td><td>moins bon en moyenne dès 512 m</td></tr>
+            <tr><td>Échantillon</td><td>100 environnements</td><td>11 environnements, 600 pas</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Quand la portée de test augmente, trois choses quittent le régime d’entraînement en même temps : le degré du graphe passe de 1,4 à 25 voisins ; la carte de voisinage couvre une zone huit fois plus large, où les robots se superposent ; et le spectre de l’adjacence normalisée change. Notre résultat mesure un <strong>défaut de transfert</strong>. Il ne dit rien, à lui seul, de la figure 20.</p>
+    </div>
+
+    <div class="stack sub">
+      <h3>À nombre de voisins constant, la chute disparaît</h3>
+      <p>On augmente la portée en réduisant l’équipe, de sorte que chaque robot garde quatre à cinq voisins.</p>
+      <div class="tscroll">
+        <table>
+          <thead><tr><th>Portée</th><th>Robots</th><th>LPAC-K3</th><th>CVT décentralisé</th><th>CVT centralisé</th><th>Voisins par robot</th></tr></thead>
+          <tbody><tr><td class="num">256 m</td><td class="num">32</td><td class="num"><strong>1,69</strong> ± 0,18</td><td class="num">2,57 ± 0,71</td><td class="num">2,52 ± 0,74</td><td class="num">4,5</td></tr><tr><td class="num">512 m</td><td class="num">11</td><td class="num"><strong>1,84</strong> ± 0,27</td><td class="num">2,18 ± 0,38</td><td class="num">2,08 ± 0,40</td><td class="num">3,9</td></tr><tr><td class="num">768 m</td><td class="num">7</td><td class="num"><strong>1,74</strong> ± 0,36</td><td class="num">2,11 ± 0,39</td><td class="num">2,05 ± 0,39</td><td class="num">4,2</td></tr><tr><td class="num">1024 m</td><td class="num">6</td><td class="num"><strong>2,00</strong> ± 0,57</td><td class="num">2,02 ± 0,35</td><td class="num">1,98 ± 0,35</td><td class="num">4,5</td></tr></tbody>
+        </table>
+      </div>
+      <p>LPAC reste entre 1,7 et 2,0 au lieu de monter à 5,2. <strong>L’effondrement suit donc le nombre de voisins, pas la portée en elle-même.</strong> Deux réserves : changer le nombre de robots change aussi la tâche, puisque les baselines bougent ; et ce balayage ne sépare pas le GNN de la carte de voisinage, qui dépendent tous deux du nombre de voisins.</p>
+    </div>
+
+    <div class="stack sub">
+      <h3>Pas d’over-smoothing</h3>
+      <p>Le rang effectif mesure combien de dimensions les représentations des 32 robots occupent réellement. S’il y avait over-smoothing, il s’effondrerait vers 1.</p>
+      <div class="tscroll">
+        <table>
+          <caption>Rang effectif en sortie de chaque couche TAGConv — maximum 32</caption>
+          <thead><tr><th></th><th>128 m</th><th>256 m</th><th>512 m</th><th>768 m</th><th>1024 m</th></tr></thead>
+          <tbody><tr><td>couche 1</td><td class="num">18,7</td><td class="num">16,1</td><td class="num">15,4</td><td class="num">15,6</td><td class="num">15,7</td></tr><tr><td>couche 2</td><td class="num">22,5</td><td class="num">20,2</td><td class="num">18,6</td><td class="num">17,3</td><td class="num">16,0</td></tr><tr><td>couche 3</td><td class="num">20,6</td><td class="num">17,8</td><td class="num">16,1</td><td class="num">15,0</td><td class="num">13,6</td></tr><tr><td>couche 4</td><td class="num">15,9</td><td class="num">13,8</td><td class="num">13,0</td><td class="num">12,6</td><td class="num">11,5</td></tr><tr><td>couche 5</td><td class="num">9,4</td><td class="num">8,0</td><td class="num">8,4</td><td class="num">9,1</td><td class="num">8,9</td></tr></tbody>
+        </table>
+      </div>
+      <p>Le rang baisse d’environ 30 % avec la portée dans les couches 2 à 4, sans s’effondrer, alors que le coût triple. L’explication par l’over-smoothing, que nous attendions, n’est pas soutenue.</p>
+    </div>
+  </section>
+
+  <!-- ================= 4. LA CAUSE ================= -->
+  <section class="project project-c stack-l" id="question">
+    <div class="stack-s">
+      <p class="eyebrow">Section 4</p>
+      <h2>La cause : la carte de voisinage, pas le graphe</h2>
+    </div>
+
+    <p>Le voisinage entre dans LPAC par deux chemins : le graphe donné au GNN, et la carte de voisinage donnée au CNN. Nous les avons modifiés séparément à l’inférence, à 32 robots et 1024 m, sans toucher aux poids.</p>
+
+    <div class="tscroll">
+      <table class="grid22">
+        <caption>Coût normalisé à 1024 m — moyenne ± écart-type sur 11 environnements</caption>
+        <thead><tr><th></th><th>Carte complète</th><th>Carte : 4 plus proches voisins</th><th>Carte à l’échelle 128 m</th><th>Carte à l’échelle 256 m</th></tr></thead>
+        <tbody><tr><th>Graphe complet à portée</th><td class="num">5,22 ± 1,41</td><td class="num">2,91 ± 0,38</td><td class="num">2,35 ± 0,53</td><td class="num">1,71 ± 0,19</td></tr><tr><th>Graphe plafonné à 4 voisins</th><td class="num">5,11 ± 1,42</td><td class="num">2,95 ± 0,58</td><td class="num">2,18 ± 0,43</td><td class="num">1,71 ± 0,21</td></tr></tbody>
+      </table>
+    </div>
+    <p>Lecture par colonnes : changer la carte fait passer le coût de 5,2 à 1,7. Lecture par lignes : plafonner le graphe ne change presque rien. « Carte à l’échelle 256 m » signifie que seuls les voisins situés à moins de 256 m y sont dessinés, avec la résolution et la normalisation d’une portée de 256 m.</p>
+
+    <figure>
+      <div class="figbox"><svg viewBox="0 0 560 250" role="img" aria-label="Comparaison de deux constructions de graphe sur les mêmes huit robots : le graphe à rayon produit quatorze arêtes et un degré moyen de 3,5 ; le graphe des k plus proches voisins avec k égal à 2 produit neuf arêtes et un degré moyen de 2,25.">
+            <!-- panneau A : radius -->
+            <g stroke="currentColor" stroke-width="1.5" opacity="0.5">
+              <line x1="64" y1="152" x2="136" y2="171"/>
+              <line x1="64" y1="152" x2="92" y2="101"/>
+              <line x1="136" y1="171" x2="200" y2="146"/>
+              <line x1="136" y1="171" x2="92" y2="101"/>
+              <line x1="136" y1="171" x2="164" y2="107"/>
+              <line x1="200" y1="146" x2="164" y2="107"/>
+              <line x1="200" y1="146" x2="212" y2="78"/>
+              <line x1="92" y1="101" x2="164" y2="107"/>
+              <line x1="92" y1="101" x2="56" y2="59"/>
+              <line x1="92" y1="101" x2="128" y2="53"/>
+              <line x1="164" y1="107" x2="128" y2="53"/>
+              <line x1="164" y1="107" x2="212" y2="78"/>
+              <line x1="56" y1="59" x2="128" y2="53"/>
+              <line x1="128" y1="53" x2="212" y2="78"/>
+            </g>
+            <g fill="currentColor">
+              <circle cx="64" cy="152" r="6"/><circle cx="136" cy="171" r="6"/><circle cx="200" cy="146" r="6"/>
+              <circle cx="92" cy="101" r="6"/><circle cx="164" cy="107" r="6"/><circle cx="56" cy="59" r="6"/>
+              <circle cx="128" cy="53" r="6"/><circle cx="212" cy="78" r="6"/>
+            </g>
+            <text x="20" y="208" font-size="12.5" font-weight="600" fill="currentColor" font-family="IBM Plex Sans, sans-serif">tous les voisins à portée</text>
+            <text x="20" y="226" font-size="11" fill="currentColor" opacity="0.7" font-family="IBM Plex Mono, monospace">14 arêtes · degré moyen 3,5</text>
+            <text x="20" y="242" font-size="11" fill="currentColor" opacity="0.7" font-family="IBM Plex Sans, sans-serif">le degré suit la portée</text>
+
+            <!-- séparateur -->
+            <line x1="280" y1="30" x2="280" y2="240" stroke="currentColor" stroke-width="1" opacity="0.2"/>
+
+            <!-- panneau B : knn -->
+            <g class="svg-accent" stroke="currentColor" stroke-width="1.8" opacity="0.85">
+              <line x1="384" y1="152" x2="456" y2="171"/>
+              <line x1="384" y1="152" x2="412" y2="101"/>
+              <line x1="456" y1="171" x2="520" y2="146"/>
+              <line x1="520" y1="146" x2="484" y2="107"/>
+              <line x1="520" y1="146" x2="532" y2="78"/>
+              <line x1="412" y1="101" x2="376" y2="59"/>
+              <line x1="412" y1="101" x2="448" y2="53"/>
+              <line x1="484" y1="107" x2="532" y2="78"/>
+              <line x1="376" y1="59" x2="448" y2="53"/>
+            </g>
+            <g fill="currentColor">
+              <circle cx="384" cy="152" r="6"/><circle cx="456" cy="171" r="6"/><circle cx="520" cy="146" r="6"/>
+              <circle cx="412" cy="101" r="6"/><circle cx="484" cy="107" r="6"/><circle cx="376" cy="59" r="6"/>
+              <circle cx="448" cy="53" r="6"/><circle cx="532" cy="78" r="6"/>
+            </g>
+            <text x="340" y="208" font-size="12.5" font-weight="600" fill="currentColor" font-family="IBM Plex Sans, sans-serif">voisinage plafonné, k = 2</text>
+            <text x="340" y="226" font-size="11" fill="currentColor" opacity="0.7" font-family="IBM Plex Mono, monospace">9 arêtes · degré moyen 2,25</text>
+            <text x="340" y="242" font-size="11" fill="currentColor" opacity="0.7" font-family="IBM Plex Sans, sans-serif">le degré reste borné</text>
+          </svg></div>
+      <figcaption><strong>Figure 4.</strong> Ce que veut dire « plafonner le graphe » : mêmes huit robots, mêmes positions. À gauche chaque robot écoute tous ceux qui sont à portée, à droite seulement ses k plus proches. Cette intervention, que nous pensions décisive, n’a pas d’effet mesurable tant que la carte de voisinage est complète.</figcaption>
+    </figure>
+
+    <div class="stack sub">
+      <h3>Avec la carte à 256 m, le modèle ne dépend plus de la portée</h3>
+      <div class="tscroll">
+        <table>
+          <thead><tr><th>Portée (m)</th><th>Modèle tel quel</th><th>Carte à 256 m, graphe complet</th><th>Carte à 256 m, graphe plafonné</th></tr></thead>
+          <tbody><tr><td class="num">512</td><td class="num">2,77 ± 0,38</td><td class="num"><strong>1,78 ± 0,20</strong></td><td class="num">1,75 ± 0,26</td></tr><tr><td class="num">768</td><td class="num">4,52 ± 1,14</td><td class="num"><strong>1,76 ± 0,16</strong></td><td class="num">1,71 ± 0,21</td></tr><tr><td class="num">1024</td><td class="num">5,22 ± 1,41</td><td class="num"><strong>1,71 ± 0,19</strong></td><td class="num">1,71 ± 0,21</td></tr></tbody>
+        </table>
+      </div>
+      <p>Comparaison appariée par environnement, entre le modèle corrigé à 1024 m et le modèle tel quel à 256 m : +0,02 ± 0,16. <strong>À 1024 m, avec un graphe de trente voisins par robot, le modèle retrouve exactement sa performance de 256 m.</strong> Il reste environ 30 % meilleur que les deux CVT à toutes les portées. C’est la courbe jaune de la figure 3.</p>
+    </div>
+
+    <div class="stack sub">
+      <h3>La carte est utile, et le graphe n’est pas tout à fait innocent</h3>
+      <div class="tscroll">
+        <table>
+          <caption>Carte de voisinage vide</caption>
+          <thead><tr><th>Portée (m)</th><th>Modèle tel quel</th><th>Carte vide, graphe complet</th><th>Carte vide, graphe plafonné</th></tr></thead>
+          <tbody><tr><td class="num">128</td><td class="num">1,98 ± 0,46</td><td class="num">2,82 ± 0,62</td><td class="num">2,82 ± 0,62</td></tr><tr><td class="num">256</td><td class="num">1,69 ± 0,18</td><td class="num">2,42 ± 0,48</td><td class="num">2,48 ± 0,41</td></tr><tr><td class="num">1024</td><td class="num">5,22 ± 1,41</td><td class="num">3,20 ± 0,57</td><td class="num">2,65 ± 0,44</td></tr></tbody>
+        </table>
+      </div>
+      <p>À 128 et 256 m, vider la carte coûte 0,7 à 0,8 : elle porte une information dont le modèle se sert. À 1024 m, une carte vide vaut mieux qu’une carte complète, ce qui montre à quel point celle-ci est trompeuse hors de son régime. Et quand la carte est vide, plafonner le graphe redevient utile (3,2 contre 2,7) : la densité du graphe a donc un effet réel, mais second, masqué dès que la carte est correcte.</p>
+    </div>
+
+    <div class="stack sub">
+      <h3>Ce qui est du bruit et ce qui ne l’est pas</h3>
+      <p>L’évaluation est déterministe, mais chaque épisode est une trajectoire sensible. En déplaçant les positions initiales de 1 m, le coût d’un environnement varie d’environ 7 %. Sur la moyenne des 11 environnements, une différence inférieure à 0,03 pour le modèle corrigé, ou à 0,1 pour le modèle tel quel, n’est pas interprétable. Les effets de la carte, de 2 à 3,5, sont très au-dessus. L’effet du graphe avec la carte complète, de 0,1, est dedans.</p>
+      <p>Autre fait de reproductibilité : les résultats sont identiques au bit près entre processeurs Intel, mais diffèrent jusqu’à 5,6 % par environnement sur processeurs AMD. Le Colab final devra annoncer une tolérance et non une égalité.</p>
+    </div>
+
+    <div class="kernel stack-s">
+      <p class="eyebrow">Ce que cela veut dire</p>
+      <p>LPAC encode son voisinage deux fois. L’encodage par le graphe se transfère : l’adjacence normalisée de TAGConv absorbe un voisinage vingt fois plus dense qu’à l’entraînement. L’encodage par l’image ne se transfère pas : une carte de taille fixe dont l’échelle dépend de la portée place le CNN devant des entrées qu’il n’a jamais vues.</p>
+      <p>Cela rejoint l’hypothèse H1 du papier, sans la démontrer pour sa figure 20 : chez nous l’écart au régime d’entraînement suffit à expliquer la panne, alors que le papier réentraîne à chaque portée.</p>
+    </div>
+
+    <div class="stack sub">
+      <h3>Les limites de ce résultat</h3>
+      <div class="tscroll">
+        <table>
+          <thead><tr><th>Limite</th><th>Ce qu’il faut faire</th></tr></thead>
+          <tbody>
+            <tr><td><strong>L’échelle de 256 m a été choisie sur les environnements de test.</strong> C’est l’optimum observé sur ces mêmes 11 environnements.</td><td>Confirmer sur des environnements nouveaux, générés par la bibliothèque avec des graines fixées, et balayer l’échelle de la carte (128, 192, 256, 384, 512 m).</td></tr>
+            <tr><td><strong>Le correctif revient à ignorer les voisins lointains.</strong> Le modèle ne tire aucun bénéfice d’une portée supérieure à 256 m.</td><td>Le dire tel quel. La question de savoir si une politique peut <em>profiter</em> d’une meilleure communication demande un réentraînement.</td></tr>
+            <tr><td><strong>Un seul modèle, entraîné une seule fois, à 128 m.</strong></td><td>Ne rien conclure sur la figure 20. Un modèle réentraîné à 512 m serait le premier pas.</td></tr>
+            <tr><td><strong>Nous ne savons pas pourquoi 256 m fait mieux que 128 m</strong>, la portée d’entraînement.</td><td>Le balayage d’échelle ci-dessus, et la mesure du nombre de voisins dessinés à chaque échelle.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="stack sub">
+      <h3>La question du projet, et la suite</h3>
+      <div class="kernel stack-s">
+        <p class="eyebrow">La question</p>
+        <p><strong>Où doit vivre la géométrie du voisinage dans une politique d’essaim : dans une image donnée à un CNN, ou dans le graphe ?</strong></p>
+        <p>Nous avons montré que l’image est le point de rupture quand la portée change, et qu’on peut le contourner à l’inférence. L’étape de graph ML est de supprimer cette image et de porter les positions relatives par les arêtes du graphe.</p>
+      </div>
+      <div class="tscroll">
+        <table>
+          <thead><tr><th>#</th><th>Expérience</th><th>Entraînement</th><th>Ce qu’elle apporte</th></tr></thead>
+          <tbody>
+            <tr><td class="xid">E1</td><td>Plan factoriel graphe × carte, dose-réponse, carte vide, sensibilité.</td><td class="num">fait</td><td>La cause est dans la carte de voisinage.</td></tr>
+            <tr><td class="xid">E2</td><td>Validation sur des environnements nouveaux, et balayage de l’échelle de la carte.</td><td class="num">aucun</td><td>Lève le biais de sélection sur 256 m ; donne la figure principale du billet.</td></tr>
+            <tr><td class="xid">E3</td><td>Séparer perte d’information et écart de distribution : mêmes voisins dans une carte plus fine, 64 × 64 ramenée à 32 × 32.</td><td class="num">aucun</td><td>Dit si l’hypothèse H1 du papier, les collisions dans la carte, joue un rôle propre.</td></tr>
+            <tr><td class="xid">E4</td><td>Variante « tout dans le graphe » : sans carte de voisinage, positions relatives en attributs d’arêtes d’une couche PyG ; entraînée à 128 m, testée à toutes les portées.</td><td class="num">GPU, crédits</td><td>La contribution de graph ML : un encodage du voisinage qui se transfère sans correctif.</td></tr>
+            <tr><td class="xid">E5</td><td>Réentraîner LPAC à 512 m et avec des portées mélangées.</td><td class="num">GPU, crédits</td><td>Relie nos résultats à la figure 20 du papier.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>E2 et E3 tournent sur CPU en quelques heures. E4 est ce qui ferait du projet une contribution et non seulement un diagnostic ; son coût de calcul est le principal risque, à chiffrer avant de s’engager.</p>
+    </div>
+
+    <div class="stack sub">
+      <h3>Le matériel</h3>
+      <p>Tout est public. La bibliothèque s’installe par <code>pip install coverage_control</code> sous Linux ; le modèle, ses paramètres et les 11 environnements sont en pièce jointe de la release GitHub.</p>
+      <pre><code>curl -L -O https://github.com/KumarRobotics/CoverageControl/releases/download/v1.3.1/lpac_CoverageControl.tar.gz</code></pre>
+      <p>Notre code est dans le dossier <code>07 Projet/</code> : le package <code>lpac_study</code>, les résultats par environnement dans <code>results.csv</code> et <code>results_2x2.csv</code>, les rapports <code>RAPPORT.md</code>, <code>RAPPORT_2x2.md</code> et <code>RAPPORT_M.md</code>. Les calculs ont tourné sur un portable sous WSL et sur FarmShare, nœuds Intel.</p>
+    </div>
+  </section>
+
+  <!-- ================= 5. TRAVAUX LIÉS ================= -->
+  <section class="project stack-l" id="lies">
+    <div class="stack-s">
+      <p class="eyebrow">Section 5</p>
+      <h2>Travaux liés</h2>
+    </div>
+    <p>Nous n’avons trouvé aucun travail qui évalue LPAC, ou une politique comparable, à une portée de communication supérieure à celle de son entraînement. La recherche a porté sur la liste des articles citant LPAC dans Google Scholar et sur quelques requêtes ciblées ; trois thèses de cette liste restent à lire.</p>
+    <div class="tscroll">
+      <table>
+        <thead><tr><th>Travail</th><th>Ce qu’il montre</th><th>Ce qu’il ne fait pas</th></tr></thead>
+        <tbody>
+          <tr><td><strong>LPAC</strong>, 2025</td><td>Transfert à des mondes plus grands et à plus de robots, portée fixée à 128 m. Un modèle par portée pour sa figure 20.</td><td>Aucun test à une portée différente de celle de l’entraînement.</td></tr>
+          <tr><td><strong>Muthusamy et al.</strong>, 2024</td><td>Chaque robot communique avec ses k = 3 plus proches voisins. La politique s’améliore quand la densité d’agents augmente au test.</td><td>Pas de graphe à rayon, pas de comparaison entre les deux constructions, pas de LPAC.</td></tr>
+          <tr><td><strong>MAST</strong>, 2025</td><td>Transformeur de la même équipe ; les grandes fenêtres d’attention généralisent moins bien aux grandes équipes.</td><td>La fenêtre varie à l’entraînement, pas entre entraînement et test.</td></tr>
+          <tr><td><strong>Généralisation des GNN</strong></td><td>Hors robotique : la performance se dégrade quand le degré moyen au test s’écarte de celui de l’entraînement, et le spectre de l’adjacence normalisée dépend du graphe.</td><td>Pas de politique de contrôle, pas de correctif à l’inférence.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Ces résultats vont dans le sens de notre mesure à nombre de voisins constant. Ils signifient aussi qu’« un GNN généralise mal à des graphes plus denses » n’est pas une découverte : notre apport est de le montrer, de le quantifier et de le corriger sur une politique robotique publiée, où il fait tripler le coût.</p>
+    <div class="note">
+      <p><strong>À qui en parler.</strong> Charilaos Kanatsoulis, co-enseignant de CS 224W, est co-auteur du papier de Muthusamy et al. avec Agarwal et Ribeiro, les auteurs de LPAC. C’est la personne à qui montrer la figure 3 en office hours.</p>
+    </div>
+  </section>
+
+  <!-- ================= 6. RISQUES ================= -->
+  <section class="project stack-l" id="risques">
+    <div class="stack-s">
+      <p class="eyebrow">Section 6</p>
+      <h2>Ce qui ferait échouer le projet</h2>
+    </div>
+    <div class="tscroll">
+      <table>
+        <thead><tr><th>Risque</th><th>Pourquoi</th><th>Parade</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Le résultat est jugé trivial</strong></td><td>« Un modèle évalué hors distribution se dégrade » peut sembler attendu.</td><td>L’ampleur ne l’est pas : la politique fait pire que de ne rien apprendre. Le plan 2 × 2 et le correctif font la contribution, pas le constat.</td></tr>
+          <tr><td><strong>Le projet ne porte plus sur un GNN</strong></td><td>La panne est dans l’entrée du CNN ; le GNN, lui, tient.</td><td>Faire de l’encodage du voisinage dans le graphe (E4) le cœur de la contribution, et valider ce cadrage avec l’équipe enseignante.</td></tr>
+          <tr><td><strong>Le correctif est déjà connu de l’équipe d’origine</strong></td><td>Le graphe à k voisins est leur choix dans un autre papier.</td><td>En parler à Charilaos Kanatsoulis avant le proposal. Notre mesure sur LPAC et la séparation GNN / CNN restent à faire.</td></tr>
+          <tr><td><strong>Onze environnements, c’est peu</strong></td><td>Le papier en utilise cent.</td><td>La bibliothèque génère des environnements : en produire davantage avec des graines fixées pour les figures finales.</td></tr>
+          <tr><td><strong>L’extension avec réentraînement dérape</strong></td><td>100 000 points, 100 époques, et les auteurs utilisent deux GPU.</td><td>Elle est optionnelle. Chronométrer un entraînement réduit avant de s’engager, et demander le quota GPU dès maintenant.</td></tr>
+          <tr><td><strong>Le Colab final n’est pas exécutable</strong></td><td>Le balayage complet dure plusieurs heures.</td><td>Un mode rapide existe déjà dans <code>lpac_eval.ipynb</code> ; le Colab noté chargera les résultats complets et rejouera un cas court.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= 7. GRILLE ================= -->
+  <section class="project stack-l" id="grille">
+    <div class="stack-s">
+      <p class="eyebrow">Section 7</p>
+      <h2>Ce qu’exige la grille</h2>
+    </div>
+    <p>Le projet relève du type 1, application réelle, rendue sous forme de billet Medium et de Colab. Le cours précise qu’il ne suffit pas d’appliquer un GNN existant : il faut une nouveauté ou une analyse approfondie.</p>
+    <div class="tscroll">
+      <table>
+        <thead><tr><th>Poste</th><th>Points</th><th>Ce que nous y mettons</th></tr></thead>
+        <tbody>
+          <tr><td>Motivation, données et tâche</td><td class="num">10</td><td>Le coverage control, le modèle publié, la figure 3.</td></tr>
+          <tr><td>Innovation ou effort d’implémentation</td><td class="num">10</td><td>La séparation des deux chemins du voisinage, le correctif à l’inférence, et l’encodage du voisinage dans le graphe.</td></tr>
+          <tr><td>Adéquation et explication du modèle</td><td class="num">10</td><td>TAGConv et sa formule, l’écart entre la prose du papier et son code.</td></tr>
+          <tr><td>Insights et résultats</td><td class="num">10</td><td>Balayages, plan graphe × carte, dose-réponse, carte vide, rang effectif, sensibilité.</td></tr>
+          <tr><td>Figures</td><td class="num">10</td><td>Variété exigée : schémas, courbes, images de l’essaim produites par le simulateur.</td></tr>
+          <tr><td>Extraits de code PyG dans le billet</td><td class="num">10</td><td>Construction du graphe, plafonnement du voisinage, hooks sur les couches.</td></tr>
+          <tr><td>Colab : code et documentation</td><td class="num">25</td><td>Le package <code>lpac_study</code>, déjà documenté.</td></tr>
+          <tr><td>Nom du compte Medium</td><td class="num">5</td><td>À ne pas oublier.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note">
+      <p><strong>Le proposal du 20 octobre</strong> compte pour 4 % de la note finale. Format : style NeurIPS’22, deux pages hors références, sans résumé, avec les noms des trois membres. Il doit décrire le jeu de données, qui doit être public, la tâche et la métrique, la raison de ce choix, et le modèle avec figures et équations.</p>
+    </div>
+  </section>
+
+  <!-- ================= 8. CALENDRIER ================= -->
+  <section class="project stack-l" id="execution">
+    <div class="stack-s">
+      <p class="eyebrow">Section 8</p>
+      <h2>Calendrier et calcul</h2>
+    </div>
+    <ul class="weeks">
+      <li><span class="wk">12-13 oct.</span><span class="wt">Validation de la question à trois. Demande du quota GPU sur Google Cloud et récupération des trois codes de crédits.</span></li>
+      <li><span class="wk">Fait</span><span class="wt"> plan factoriel, carte à 256 m, carte vide, sensibilité.</span></li>
+      <li><span class="wk">14-15 oct.</span><span class="wt">E2 : environnements nouveaux et balayage d’échelle. Lecture de la thèse de Gosrich. Chiffrage d’un entraînement pour E4.</span></li>
+      <li><span class="wk">Cette semaine</span><span class="wt">Office hours avec Charilaos Kanatsoulis, figure 3 en main.</span></li>
+      <li><span class="wk">16-19 oct.</span><span class="wt">Rédaction des deux pages du proposal, avec la figure 3 et le tableau graphe × carte.</span></li>
+      <li><span class="wk">20 oct.</span><span class="wt"><strong>Proposal.</strong></span></li>
+      <li><span class="wk">21 oct. - 10 nov.</span><span class="wt">E3, mise en place et premier entraînement de E4, début du billet. <strong>Milestone le 10 novembre.</strong></span></li>
+      <li><span class="wk">10 nov. - 1 déc.</span><span class="wt">Résultats de E4, E5 si le budget de calcul le permet. Figures finales.</span></li>
+      <li><span class="wk">1-10 déc.</span><span class="wt">Colab exécutable, billet, relecture. <strong>Rapport le 10 décembre.</strong></span></li>
+    </ul>
+    <div class="stack">
+      <h3>Calcul</h3>
+      <p>E1 à E3 tournent sur un portable, sous Linux ou WSL, en quelques heures de CPU. Les crédits Google Cloud du cours servent à E4 et E5 : la demande se fait avec l’adresse @stanford.edu, la redemption sur un compte Google personnel, un code par membre. Le quota GPU n’est pas accordé par défaut et son approbation prend plusieurs jours.</p>
+    </div>
+    <div class="note">
+      <p><strong>Sujet de repli.</strong> Si le projet devait être abandonné, l’alternative étudiée est la résilience d’une politique GNN de planification de trajectoires aux pertes de messages et aux pannes de robots, sur le dépôt <code>proroklab/magat_pathplanning</code>. Son infrastructure est plus fragile : pas de PyG, données sur Google Drive.</p>
+    </div>
+  </section>
+
+  <!-- ================= 9. GLOSSAIRE ================= -->
+  <section class="project stack-l" id="glossaire">
+    <div class="stack-s">
+      <p class="eyebrow">Section 9</p>
+      <h2>Glossaire</h2>
+    </div>
+    <dl class="gloss">
+      <div><dt>IDF, champ de densité d’importance</dt><dd>Fonction sur l’espace disant combien il est important d’avoir un capteur à cet endroit. Inconnue des robots, découverte en se déplaçant.</dd></div>
+      <div><dt>Coût de couverture</dt><dd>Mesure de la qualité du placement de l’essaim par rapport au champ d’importance. Plus bas est meilleur. Nous le rapportons divisé par celui du clairvoyant.</dd></div>
+      <div><dt>CVT</dt><dd>Algorithme classique : chaque robot va vers le centre de masse pondéré de sa cellule de Voronoï. Existe en version décentralisée, centralisée et clairvoyante.</dd></div>
+      <div><dt>Clairvoyant</dt><dd>CVT qui connaît le champ entier et toutes les positions. Indéployable ; sert de référence et de professeur pour l’imitation.</dd></div>
+      <div><dt>Portée de communication</dt><dd>Rayon dans lequel deux robots peuvent échanger. Elle fixe le graphe : à 128 m un robot a 1,4 voisin en moyenne, à 1024 m il en a 25.</dd></div>
+      <div><dt>Carte de voisinage</dt><dd>Image 32 × 32 donnée au CNN de chaque robot, qui encode la position relative des robots à portée. Sa résolution est proportionnelle à la portée.</dd></div>
+      <div><dt>TAGConv</dt><dd>Couche de convolution sur graphe de PyG. Combine les puissances 0 à K de l’adjacence symétriquement normalisée ; K est le nombre de sauts.</dd></div>
+      <div><dt>Degré</dt><dd>Nombre de voisins d’un nœud dans le graphe.</dd></div>
+      <div><dt>Over-smoothing</dt><dd>Convergence des représentations de tous les nœuds vers un même vecteur à force de propagations. Non observé dans nos mesures.</dd></div>
+      <div><dt>Rang effectif</dt><dd>Nombre de dimensions réellement occupées par les représentations des nœuds, calculé comme l’exponentielle de l’entropie des valeurs singulières normalisées.</dd></div>
+      <div><dt>Hors distribution</dt><dd>Se dit d’entrées qui diffèrent de celles vues à l’entraînement. Ici : un nombre de voisins et une carte de voisinage que le modèle n’a jamais rencontrés.</dd></div>
+      <div><dt>Apprentissage par imitation</dt><dd>Entraîner une politique à reproduire les décisions d’un expert à partir de l’information partielle dont elle disposera en déploiement.</dd></div>
+    </dl>
+  </section>
+
+  <!-- ================= 10. RÉFÉRENCES ================= -->
+  <section class="project stack-l" id="refs">
+    <div class="stack-s">
+      <p class="eyebrow">Section 10</p>
+      <h2>Références</h2>
+    </div>
+    <ul class="refs">
+      <li><span class="rtag">Papier central</span>Agarwal, Muthukrishnan, Gosrich, Kumar &amp; Ribeiro. <em>LPAC: Learnable Perception-Action-Communication Loops with Applications to Coverage Control.</em> IEEE T-RO, 2025. <a href="https://arxiv.org/abs/2401.04855">arXiv:2401.04855</a></li>
+      <li><span class="rtag">Code et modèle</span><a href="https://github.com/KumarRobotics/CoverageControl">KumarRobotics/CoverageControl</a>, release v1.3.1</li>
+      <li><span class="rtag">Voisinage à k plus proches</span>Muthusamy, Owerko, Kanatsoulis, Agarwal &amp; Ribeiro. <em>Generalizability of Graph Neural Networks for Decentralized Unlabeled Motion Planning.</em> 2024. <a href="https://arxiv.org/abs/2409.19829">arXiv:2409.19829</a></li>
+      <li><span class="rtag">Même équipe, transformeur</span>Owerko, Vatnsdal, Agarwal, Kumar &amp; Ribeiro. <em>MAST: Multi-Agent Spatial Transformer for Learning to Collaborate.</em> 2025. <a href="https://arxiv.org/abs/2509.17195">arXiv:2509.17195</a></li>
+      <li><span class="rtag">Généralisation et degré</span>Li &amp; Yan. <em>Tackling Size Generalization of Graph Neural Networks on Biological Data from a Spectral Perspective.</em> <a href="https://arxiv.org/abs/2305.15611">arXiv:2305.15611</a></li>
+      <li><span class="rtag">Généralisation, synthèse</span><em>Survey on Generalization Theory for Graph Neural Networks.</em> 2025. <a href="https://arxiv.org/abs/2503.15650">arXiv:2503.15650</a></li>
+      <li><span class="rtag">Mesure du lissage</span>Zhang, Deidda, Higham &amp; Tudisco. <em>Are We Measuring Oversmoothing in Graph Neural Networks Correctly?</em> ICLR 2026. <a href="https://arxiv.org/abs/2502.04591">arXiv:2502.04591</a></li>
+      <li><span class="rtag">Essaims et GNN, origine</span>Tolstaya, Gama, Paulos, Pappas, Kumar &amp; Ribeiro. <em>Learning Decentralized Controllers for Robot Swarms with Graph Neural Networks.</em> <a href="https://arxiv.org/abs/1903.10527">arXiv:1903.10527</a></li>
+    </ul>
+  </section>
+
+  <footer class="foot">
+    <p>Tous les nombres des sections 3 et 4 proviennent de nos évaluations d’octobre 2026, fichiers <code>results.csv</code>, <code>results_2x2.csv</code> et <code>results/rank.csv</code> du dossier du projet. La citation du papier est traduite par nos soins. Les figures 1, 2 et 4 sont des schémas explicatifs, pas des mesures.</p>
+  </footer>
+
+</div>

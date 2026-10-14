@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# Data, checkpoints and release archives live outside the repository
+# (WSL ~/lpac and FarmShare); only small CSV results are tracked.
+*.pt
+*.pth
+*.ckpt
+*.tar.gz
+*.zip
+data/
+lpac/
+
+# Slurm and editor noise
+slurm-*.out
+.DS_Store
+Thumbs.db
+desktop.ini

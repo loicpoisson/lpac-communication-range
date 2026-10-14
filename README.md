@@ -1,0 +1,110 @@
+# Communication range and the LPAC swarm policy
+
+CS 224W (Machine Learning with Graphs), Stanford, Autumn 2026 — course project.
+
+LPAC (Agarwal et al., IEEE T-RO 2025) is a decentralized coverage-control policy for robot
+swarms: each robot runs a CNN on its local maps, a GNN (5 × `TAGConv`, K = 3) over the
+communication graph, and an MLP that outputs a velocity. This project studies what happens
+when the policy is run with a larger communication range than it was trained with.
+
+**Status (14 October 2026)**
+
+- The published LPAC-K3 checkpoint, trained at 128 m, is the best controller at 128 and
+  256 m, then its cost triples by 1024 m and it becomes worse than the non-learned CVT
+  baselines, in all 11 released environments.
+- A model we retrained ourselves with the authors' recipe (100,000 samples, 2 h 35 on one
+  FarmShare L40S GPU) shows the same collapse; two training seeds agree.
+- At inference, capping the graph given to the GNN does not help. Drawing the neighbor map
+  given to the CNN at a fixed 256 m scale restores the 256 m performance at every range:
+  the failure comes from the rasterized neighbor maps, not from the graph.
+- Open: validation on new environments, the same diagnosis on our retrained models, and a
+  variant that carries neighbor geometry on graph edges instead of in an image.
+
+Details, numbers and caveats: [`docs/journal.md`](docs/journal.md). Framing document with
+figures (French): [`docs/framing.html`](docs/framing.html), also online at
+<https://claude.ai/artifact/LcHe2tRjWD1ZMXqiXVh6zV>.
+
+## Repository layout
+
+| Path | Content |
+|---|---|
+| `docs/journal.md` | project log: decisions, measurements, corrections, next steps |
+| `docs/framing.html` | framing document (French) with diagrams |
+| `docs/conversations/` | raw exports of the working conversations |
+| `RAPPORT*.md` | one-page run reports, in French: range sweep (`RAPPORT.md`), graph × map factorial (`RAPPORT_2x2.md`), fixed-scale map, empty map and sensitivity (`RAPPORT_M.md`), training trial (`RAPPORT_TRAIN.md`) |
+| `results.csv`, `results/` | range sweep of the published model: one row per (environment, range, team size, controller); effective rank per layer in `results/rank.csv` |
+| `results_2x2/`, `results_2x2.csv` | inference-time factorial (graph levels G0–G1 × neighbor-map levels C0–C4), noisy repeats |
+| `results_train/`, `training/` | training trial: configs, Slurm scripts, losses, timings, evaluations of retrained models |
+| `fig_*.png` | figures; `fig_email.png` is the self-contained summary figure |
+| `lpac_study/` | Python package (PyTorch Geometric) used by all scripts and the notebook |
+| `lpac_eval.ipynb` | self-contained Colab notebook (installs, downloads, sweeps, plots) |
+| `run_all.sh` | reruns the range sweep from scratch on Linux/WSL |
+| `farmshare_factorial.sbatch` | Slurm job for the factorial on FarmShare (Intel nodes only) |
+
+### Condition codes used in the results
+
+| Code | Meaning |
+|---|---|
+| G0 | graph given to the GNN: all robots within communication range (as published) |
+| G1 | graph capped to each robot's k nearest neighbors within range (undirected) |
+| C0 | neighbor map given to the CNN: as produced by the library (as published) |
+| C1 | map drawing only the k nearest neighbors, at the test-range scale |
+| C2 | map drawn as at training: neighbors within 128 m, 128 m scale |
+| C3 | map drawn at a fixed 256 m scale: neighbors within 256 m |
+| C4 | empty map |
+
+## Reproducing
+
+Everything except training runs on CPU under Linux or WSL. Data, model checkpoints and the
+release archive are kept outside the repository (`~/lpac` by default).
+
+```bash
+bash run_all.sh                     # venv, release archive, range sweep, merge, figures
+```
+
+Step by step, with `LPAC_DATA_DIR` pointing to the extracted `lpac/` folder of the
+CoverageControl v1.3.1 release:
+
+```bash
+python -m lpac_study.sweep --out-dir results/raw
+python -m lpac_study.merge --parts results/raw --out-dir results
+python -m lpac_study.plots --results-dir results --fig-dir .
+
+python -m lpac_study.checks --comm-range 1024
+python -m lpac_study.factorial --baseline results/results.csv --out-dir results_2x2 \
+    --ranges 1024 --cells G0C0 G0C1 G0C2 G1C0 G1C1 G1C2 --k 4
+python -m lpac_study.plots_factorial --results results_2x2/results_2x2.csv \
+    --baseline results/results.csv --fig-dir .
+```
+
+Training uses the authors' scripts (`python/data_generation`, `python/training` at tag
+v1.3.1) through `training/train_launch.py` and the Slurm files in `training/`; see
+`RAPPORT_TRAIN.md`.
+
+Reproducibility notes: evaluations are bit-identical across Intel CPUs but differ by up to
+5.6 % per environment on AMD CPUs; the simulator draws new environments from
+`std::random_device`, so generated environments must be saved to be reused.
+
+## Package `lpac_study`
+
+| Module | Content |
+|---|---|
+| `paths.py` | locates the release files, no hard-coded paths |
+| `simulation.py` | parameters (range, team size), environments, normalized cost |
+| `lpac_policy.py` | the published model, hooks on the 5 `TAGConv` layers, access to the PyG `Data` |
+| `graph_stats.py` | graph degree via `torch_geometric.utils.degree` |
+| `effective_rank.py` | effective rank (exponential of the entropy of normalized singular values) |
+| `episode.py` | one episode of one controller, with measurements |
+| `sweep.py` | range and constant-degree sweeps, resumable CSV |
+| `merge.py`, `plots.py` | merging and figures |
+| `neighbourhood.py` | k-NN graph bounded by range, reconstructed neighbor maps |
+| `checks.py` | checks that reconstructed inputs match the library |
+| `factorial.py` | graph × map factorial at inference (levels C0–C4, noisy repeats) |
+| `plots_factorial.py` | `fig_2x2.png`, `fig_dose.png`, `fig_fix.png` |
+
+## References
+
+- Agarwal, Muthukrishnan, Gosrich, Kumar, Ribeiro. *LPAC: Learnable Perception-Action-Communication Loops with Applications to Coverage Control.* IEEE T-RO, 2025. [arXiv:2401.04855](https://arxiv.org/abs/2401.04855)
+- Code and checkpoint: [KumarRobotics/CoverageControl](https://github.com/KumarRobotics/CoverageControl), release v1.3.1.
+- Muthusamy, Owerko, Kanatsoulis, Agarwal, Ribeiro. *Generalizability of Graph Neural Networks for Decentralized Unlabeled Motion Planning.* 2024. [arXiv:2409.19829](https://arxiv.org/abs/2409.19829)
+- Owerko, Vatnsdal, Agarwal, Kumar, Ribeiro. *MAST: Multi-Agent Spatial Transformer for Learning to Collaborate.* 2025. [arXiv:2509.17195](https://arxiv.org/abs/2509.17195)

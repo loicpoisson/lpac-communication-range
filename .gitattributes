@@ -1,0 +1,4 @@
+# Keep Unix line endings: scripts run under WSL, Linux and Slurm
+* text=auto eol=lf
+*.png binary
+*.ipynb text eol=lf

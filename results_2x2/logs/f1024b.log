@@ -1,0 +1,72 @@
+Using config file: /home/loicp/lpac/data/lpac/params/coverage_control_params.toml
+CUDA error: [35] CUDA driver version is insufficient for CUDA runtime version
+No CUDA device found
+[   346s] r= 1024 env= 3 G0C0 k= 4 ratio=4.477 deg=25.70 map_nb=25.70 (344s)
+Using config file: /home/loicp/lpac/data/lpac/params/coverage_control_params.toml
+CUDA error: [35] CUDA driver version is insufficient for CUDA runtime version
+No CUDA device found
+[   591s] r= 1024 env= 3 G0C1 k= 4 ratio=2.797 deg=29.52 map_nb= 5.18 (242s)
+Using config file: /home/loicp/lpac/data/lpac/params/coverage_control_params.toml
+CUDA error: [35] CUDA driver version is insufficient for CUDA runtime version
+No CUDA device found
+[   868s] r= 1024 env= 3 G0C2 k= 4 ratio=2.174 deg=30.31 map_nb= 1.21 (275s)
+Using config file: /home/loicp/lpac/data/lpac/params/coverage_control_params.toml
+CUDA error: [35] CUDA driver version is insufficient for CUDA runtime version
+No CUDA device found
+[  1077s] r= 1024 env= 3 G1C0 k= 4 ratio=4.670 deg= 4.82 map_nb=26.00 (207s)
+Using config file: /home/loicp/lpac/data/lpac/params/coverage_control_params.toml
+CUDA error: [35] CUDA driver version is insufficient for CUDA runtime version
+No CUDA device found
+[  1313s] r= 1024 env= 3 G1C1 k= 4 ratio=2.928 deg= 5.21 map_nb= 5.21 (235s)
+Using config file: /home/loicp/lpac/data/lpac/params/coverage_control_params.toml
+CUDA error: [35] CUDA driver version is insufficient for CUDA runtime version
+No CUDA device found
+[  1552s] r= 1024 env= 3 G1C2 k= 4 ratio=2.143 deg= 4.94 map_nb= 1.33 (233s)
+Using config file: /home/loicp/lpac/data/lpac/params/coverage_control_params.toml
+CUDA error: [35] CUDA driver version is insufficient for CUDA runtime version
+No CUDA device found
+[  1790s] r= 1024 env= 4 G0C0 k= 4 ratio=5.311 deg=26.31 map_nb=26.31 (236s)
+Using config file: /home/loicp/lpac/data/lpac/params/coverage_control_params.toml
+CUDA error: [35] CUDA driver version is insufficient for CUDA runtime version
+No CUDA device found
+[  2063s] r= 1024 env= 4 G0C1 k= 4 ratio=3.329 deg=28.95 map_nb= 5.43 (272s)
+Using config file: /home/loicp/lpac/data/lpac/params/coverage_control_params.toml
+CUDA error: [35] CUDA driver version is insufficient for CUDA runtime version
+No CUDA device found
+[  2306s] r= 1024 env= 4 G0C2 k= 4 ratio=2.148 deg=30.55 map_nb= 1.60 (242s)
+Using config file: /home/loicp/lpac/data/lpac/params/coverage_control_params.toml
+CUDA error: [35] CUDA driver version is insufficient for CUDA runtime version
+No CUDA device found
+[  2522s] r= 1024 env= 4 G1C0 k= 4 ratio=5.004 deg= 4.81 map_nb=26.61 (214s)
+Using config file: /home/loicp/lpac/data/lpac/params/coverage_control_params.toml
+CUDA error: [35] CUDA driver version is insufficient for CUDA runtime version
+No CUDA device found
+[  2750s] r= 1024 env= 4 G1C1 k= 4 ratio=3.388 deg= 5.37 map_nb= 5.37 (227s)
+Using config file: /home/loicp/lpac/data/lpac/params/coverage_control_params.toml
+CUDA error: [35] CUDA driver version is insufficient for CUDA runtime version
+No CUDA device found
+[  2978s] r= 1024 env= 4 G1C2 k= 4 ratio=2.005 deg= 5.18 map_nb= 1.64 (227s)
+Using config file: /home/loicp/lpac/data/lpac/params/coverage_control_params.toml
+CUDA error: [35] CUDA driver version is insufficient for CUDA runtime version
+No CUDA device found
+[  3210s] r= 1024 env= 5 G0C0 k= 4 ratio=4.656 deg=24.54 map_nb=24.54 (231s)
+Using config file: /home/loicp/lpac/data/lpac/params/coverage_control_params.toml
+CUDA error: [35] CUDA driver version is insufficient for CUDA runtime version
+No CUDA device found
+[  3475s] r= 1024 env= 5 G0C1 k= 4 ratio=2.770 deg=28.54 map_nb= 5.03 (266s)
+Using config file: /home/loicp/lpac/data/lpac/params/coverage_control_params.toml
+CUDA error: [35] CUDA driver version is insufficient for CUDA runtime version
+No CUDA device found
+[  3838s] r= 1024 env= 5 G0C2 k= 4 ratio=2.473 deg=29.47 map_nb= 1.09 (361s)
+Using config file: /home/loicp/lpac/data/lpac/params/coverage_control_params.toml
+CUDA error: [35] CUDA driver version is insufficient for CUDA runtime version
+No CUDA device found
+[  4226s] r= 1024 env= 5 G1C0 k= 4 ratio=5.046 deg= 4.86 map_nb=25.10 (387s)
+Using config file: /home/loicp/lpac/data/lpac/params/coverage_control_params.toml
+CUDA error: [35] CUDA driver version is insufficient for CUDA runtime version
+No CUDA device found
+[  4688s] r= 1024 env= 5 G1C1 k= 4 ratio=2.907 deg= 5.06 map_nb= 5.06 (455s)
+Using config file: /home/loicp/lpac/data/lpac/params/coverage_control_params.toml
+CUDA error: [35] CUDA driver version is insufficient for CUDA runtime version
+No CUDA device found
+[  4940s] r= 1024 env= 5 G1C2 k= 4 ratio=2.249 deg= 4.78 map_nb= 1.15 (250s)

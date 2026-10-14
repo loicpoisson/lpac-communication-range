@@ -1,0 +1,76 @@
+"""The published LPAC-K3 policy, instrumented to expose its communication graph.
+
+The wrapper mirrors ``coverage_control.algorithms.ControllerNN`` (v1.3.1) but
+keeps the PyG ``Data`` object fed to the network and captures the output of
+each of the five ``TAGConv`` layers through forward hooks.  ``torch.compile``
+is not used so that hooks and CPU execution stay simple and deterministic.
+"""
+from __future__ import annotations
+
+from pathlib import Path
+
+import torch
+import coverage_control as cc
+import coverage_control.nn as cc_nn
+from coverage_control import CoverageEnvUtils, CoverageSystem, IOUtils, PointVector
+from torch_geometric.data import Data
+
+from .paths import DataPaths
+
+# Controller options of the authors' eval.toml ([[Controllers]] lpac entry).
+USE_CNN = True
+USE_COMM_MAP = True
+CNN_MAP_SIZE = 32
+
+
+class LPACPolicy:
+    """Pre-trained LPAC model with access to its graph and layer activations."""
+
+    def __init__(self, paths: DataPaths, device: torch.device, state_dict: str | Path | None = None):
+        """``state_dict`` overrides the published checkpoint (same architecture, e.g. a retrained model)."""
+        learning_params = IOUtils.load_toml(str(paths.learning_params))
+        self.device = device
+        self.model = cc_nn.LPAC(learning_params).to(device)
+        if state_dict is None:
+            self.model.load_model(str(paths.model_state_dict))
+        else:  # a checkpoint saved on a GPU must be mapped to the evaluation device
+            weights = torch.load(str(state_dict), map_location=device, weights_only=True)
+            self.model.load_state_dict(weights, strict=True)
+        self.model.eval()
+        self.actions_mean = self.model.actions_mean.to(device)
+        self.actions_std = self.model.actions_std.to(device)
+        self.num_layers = self.model.gnn_backbone.num_layers
+        self._layer_outputs: list[torch.Tensor] = []
+        self._register_layer_hooks()
+
+    def _register_layer_hooks(self) -> None:
+        """Capture the post-ReLU output of every TAGConv layer of the GNN backbone."""
+        backbone = self.model.gnn_backbone
+        for layer_index in range(self.num_layers):
+            layer = backbone._modules[f"graph_conv_{layer_index}"]
+            layer.register_forward_hook(self._store_layer_output)
+
+    def _store_layer_output(self, module, inputs, output) -> None:
+        # GNNBackBone.forward applies torch.relu after each TAGConv call.
+        self._layer_outputs.append(torch.relu(output).detach())
+
+    def build_graph(self, env: CoverageSystem, params: cc.Parameters) -> Data:
+        """PyG graph exactly as the library builds it for the controller.
+
+        Node features are the four CNN input channels, ``pos`` the normalized
+        positions, ``edge_index`` the symmetric radius graph at the current
+        communication range.  ``edge_weight`` is present in the object but the
+        LPAC forward pass does not pass it to the GNN, so the adjacency is binary.
+        """
+        return CoverageEnvUtils.get_torch_geometric_data(
+            env, params, USE_CNN, USE_COMM_MAP, CNN_MAP_SIZE
+        ).to(self.device)
+
+    @torch.no_grad()
+    def act(self, data: Data) -> tuple[PointVector, bool, list[torch.Tensor]]:
+        """Velocity actions for the current graph, plus convergence flag and layer outputs."""
+        self._layer_outputs = []
+        actions = self.model(data) * self.actions_std + self.actions_mean
+        converged = bool(torch.allclose(actions, torch.zeros_like(actions), atol=1e-5))
+        layer_outputs = list(self._layer_outputs)
+        return PointVector(actions.cpu().numpy()), converged, layer_outputs
