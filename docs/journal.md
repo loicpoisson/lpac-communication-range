@@ -150,13 +150,38 @@ per robot in the training maps and graphs). The GPU job hit its 3 h limit at epo
   2.3 at 1024 m, ideally stay flat. Files: `results_train/results_sweep256_best.csv`,
   `training/logs/loss_256m_gpu.json`, figure `fig_range_retrained.png`.
 
-## 8. Running and next (as of 14 October)
+## 8. Seed spread and a decorrelated dataset (14 October, overnight)
 
-Launched overnight on FarmShare (Slurm dependency chains), results not yet retrieved:
+**Third seed of the 128 m, 100k recipe** (best validation 0.450 at epoch 10). The three
+seeds give 2.15 / 2.14 / 2.14 at 128 m, 1.74 / 1.73 / 1.76 at 256 m, 2.49 / 2.51 / 2.36 at
+512 m, 3.46 / 3.54 / 3.74 at 768 m and 4.36 / 4.58 / 4.89 at 1024 m. Standard deviation
+between seeds of the 11-environment mean: 0.01, 0.02, 0.08, 0.14, 0.26. Rule for phase 2:
+a difference between two variants is meaningful above ~0.05 at 256 m and ~0.5 at 1024 m
+(two standard deviations), otherwise repeat with seeds.
 
-- a third seed of the 100k run (noise floor for comparing variants);
-- a decorrelated dataset (one sample every 20 steps) to test early overfitting. For any
-  comparison with the published model, keep the authors' recipe (every 5 steps).
+**Decorrelated dataset** (`EveryNumSteps = 20` instead of 5: one sample every 20 steps,
+four times more episodes for the same 100,000 samples; generation time unchanged, about
+1 080 s per 2 000 samples). Best validation 0.441 at epoch 7 (vs 0.449): slightly easier
+to fit. The sweep, however, is a different animal:
+
+| Range | 128 m | 256 m | 512 m | 768 m | 1024 m |
+|---|---|---|---|---|---|
+| every 20 steps | 2.24 ± 0.34 | 2.01 ± 0.24 | 2.87 ± 0.33 | **3.01 ± 0.41** | **3.02 ± 0.41** |
+| every 5 steps (seed 0) | 2.15 ± 0.51 | 1.74 ± 0.25 | 2.49 ± 0.32 | 3.46 ± 0.71 | 4.36 ± 1.08 |
+| paired (20 − 5) | +0.09 ± 0.25 | +0.27 ± 0.16 (0/11 better) | +0.38 ± 0.47 | −0.44 ± 0.76 | −1.35 ± 0.99 (11/11 better) |
+
+Worse at its own range (2.01 vs 1.74 at 256 m, worse in 11 of 11 environments) and flat
+beyond 768 m, around 3.0, where it beats the 5-step model but still not the CVTs (2 of 11).
+The robots also cluster more (degree 29.6 vs 24.3 at 1024 m). Reading: sampling every
+20 steps under-represents the early, far-from-equilibrium states that teach the policy
+to spread out; the lower MSE does not mean a better controller. For comparisons with the
+published model, keep the authors' recipe (every 5 steps). Files:
+`results_train/results_sweep100k_seed2_best.csv`, `results_train/results_sweep_e20_best.csv`,
+`training/logs/loss_100k_every20_gpu.json`, figure `fig_range_recipes.png`.
+
+## 9. Running and next (as of 14 October)
+
+Nothing running on FarmShare as of 10:30; all overnight chains retrieved (sections 7, 8).
 
 Next, in order:
 

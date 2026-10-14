@@ -42,7 +42,7 @@ d'états convergés. Les « 100 000 data points » du papier = `NumDataset = 100
 | 3e. Entraînement 100k, GPU, 100 époques | **2 h 35** ; meilleure val. **0,449 à l'époque 13** (papier : époque 16) ; ép. 100 : train 0,203, val 0,530 | oat-05 |
 | 3f. Entraînement 100k, CPU 32 cœurs, 12 époques | 7 h 30 (2 035 s + 216 s par époque) ; meilleure val. 0,451 (époque 12, plateau depuis l'époque 9) | wheat-03 |
 | 4. Évaluations, 11 environnements, 128 et 256 m | tableau ci-dessous ; 4 min par modèle (11 tâches) | FarmShare, nœuds Intel |
-| Suites lancées (13 oct., 18 h 45) | balayage 128 à 1024 m du modèle 100k (fait, ci-dessous) ; deuxième graine du run 100k et modèle entraîné à 256 m (faits, ci-dessous) ; troisième graine et jeu décorrélé (`EveryNumSteps = 20`) lancés dans la nuit du 13 au 14 | FarmShare, chaînés par Slurm |
+| Suites lancées (13 oct., 18 h 45) | balayage 128 à 1024 m du modèle 100k (fait, ci-dessous) ; deuxième graine du run 100k et modèle entraîné à 256 m (faits, ci-dessous) ; troisième graine et jeu décorrélé (`EveryNumSteps = 20`) faits dans la nuit du 13 au 14 (voir `docs/journal.md`, section 8 : trois graines à ±0,02 à 256 m et ±0,26 à 1024 m ; le jeu décorrélé donne 2,01 à 256 m et ~3,0 au-delà de 768 m) | FarmShare, chaînés par Slurm |
 
 Courbes : `fig_train_loss.png`. Avec 28 000 points d'entraînement, le minimum de validation arrive à l'époque 5 et le
 modèle mémorise ensuite ; avec 70 000, le minimum est à l'époque 13 et vaut 0,449, dans la plage du papier (0,35 à 0,45

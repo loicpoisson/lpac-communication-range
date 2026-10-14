@@ -1,0 +1,36 @@
+DataDir = "/home/users/lpoisson/lpac/train/large_every20"
+EnvironmentConfig = "/home/users/lpoisson/lpac/train/large_every20/params/coverage_control_params.toml"
+
+# Only required for data generation using C++
+# The generator requires a TorchVision JIT transformer model
+# for resizing robot local maps on the GPU
+# The python script for generating the model is located at
+# CoverageControl/cppsrc/torch/resize.py
+# resize.pt is also present for CNNMapSize of 32
+TorchVisionTransformJIT = "./TorchVisionResize_32.pt" # Relative to DataDir
+
+NumDataset = 2000
+
+# Number of steps to take before data is stores
+# This helps in creating a more diverse dataset
+EveryNumSteps = 20
+TimeStep = 5
+SaveObjective = true
+
+# The robots stop moving once the algorithm has converged
+# Having some of these converged steps can help in stabilizing robot actions
+ConvergedDataRatio = 0.10
+
+# Resizing of maps and Sparsification of tensors are triggered every TriggerPostProcessing dataset
+# This should be set based on RAM resources available on the system
+TriggerPostProcessing = 100
+
+CNNMapSize = 32
+SaveAsSparseQ = true
+NormalizeQ = true
+
+[DataSetSplit]
+TrainRatio = 0.7
+ValRatio =  0.2
+TestRatio = 0.1
+

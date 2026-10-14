@@ -19,6 +19,9 @@ when the policy is run with a larger communication range than it was trained wit
   the failure comes from the rasterized neighbor maps, not from the graph.
 - A model trained at 256 m degrades much less (2.31 at 1024 m instead of 4.4 to 5.2) but
   still degrades: the training range sets the neighborhood regime the map can read.
+- Three training seeds agree to ±0.02 at 256 m and ±0.26 at 1024 m. Sampling the training
+  data every 20 steps instead of 5 flattens the curve (3.0 beyond 768 m) at the price of a
+  worse optimum (2.01 at 256 m); the authors' recipe is kept for all comparisons.
 - Open: validation on new environments, the same diagnosis on our retrained models, and a
   variant that carries neighbor geometry on graph edges instead of in an image.
 
