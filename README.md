@@ -22,8 +22,11 @@ when the policy is run with a larger communication range than it was trained wit
 - Three training seeds agree to ±0.02 at 256 m and ±0.26 at 1024 m. Sampling the training
   data every 20 steps instead of 5 flattens the curve (3.0 beyond 768 m) at the price of a
   worse optimum (2.01 at 256 m); the authors' recipe is kept for all comparisons.
-- Open: validation on new environments, the same diagnosis on our retrained models, and a
-  variant that carries neighbor geometry on graph edges instead of in an image.
+- Validated on 40 new environments and on all four retrained models: the map drawn at a
+  256 m scale is the best level for every model (1.7-1.9 at every range, beating the
+  centralized CVT in 36-39 of 40 environments), and 256 m is the optimum of a scale sweep
+  on both environment sets.
+- Open: a variant that carries neighbor geometry on graph edges instead of in an image.
 
 Details, numbers and caveats: [`docs/journal.md`](docs/journal.md). Framing document with
 figures (French): [`docs/framing.html`](docs/framing.html), also online at

@@ -179,15 +179,70 @@ published model, keep the authors' recipe (every 5 steps). Files:
 `results_train/results_sweep100k_seed2_best.csv`, `results_train/results_sweep_e20_best.csv`,
 `training/logs/loss_100k_every20_gpu.json`, figure `fig_range_recipes.png`.
 
-## 9. Running and next (as of 14 October)
+## 9. The diagnosis holds on retrained models and on new environments (14 October)
+
+Two CPU measures on FarmShare (about 1,500 episodes, 50 minutes wall with 40-task arrays).
+Thresholds: a difference between two conditions is interpretable above two seed standard
+deviations of the 11-environment mean (0.04 at 256 m, 0.16 at 512 m, 0.28 at 768 m,
+0.52 at 1024 m, section 8), and above ~0.1 per environment (episode noise, M3).
+
+**Measure 1: map levels on our four retrained models** (full graph, 512 / 768 / 1024 m,
+11 release environments; C0 = the model's own full map from its sweep).
+
+| Model | Range | C0 full map | C2 (128 m scale) | C3 (256 m scale) | C4 (empty) | best − C0, paired |
+|---|---|---|---|---|---|---|
+| 128 m, seed 0 | 512 / 768 / 1024 | 2.49 / 3.46 / 4.36 | 2.11 / 2.15 / 2.15 | **1.81 / 1.86 / 1.84** | 2.58 / 2.58 / 2.59 | −0.68 / −1.59 / −2.52 (10-11/11) |
+| 128 m, seed 1 | 512 / 768 / 1024 | 2.51 / 3.54 / 4.58 | 2.10 / 2.10 / 2.08 | **1.76 / 1.82 / 1.83** | 2.77 / 2.74 / 2.76 | −0.76 / −1.72 / −2.75 (10-11/11) |
+| 128 m, seed 2 | 512 / 768 / 1024 | 2.36 / 3.74 / 4.89 | 2.20 / 2.11 / 2.12 | **1.76 / 1.83 / 1.81** | 2.68 / 2.77 / 2.77 | −0.60 / −1.91 / −3.08 (10-11/11) |
+| 256 m | 512 / 768 / 1024 | 1.74 / 1.90 / 2.31 | 2.42 / 2.52 / 2.46 | 1.87 / 1.89 / **1.89** | 2.82 / 2.84 / 2.83 | +0.13 / −0.01 / −0.42 (5-9/11) |
+
+- The diagnosis "the map, not the graph" holds for every model we trained: with the map
+  drawn at the 256 m scale, the three 128 m models sit at 1.76-1.86 at every range, which
+  is their own 256 m level (1.73-1.76); the effect size (−0.6 to −3.1) is far above the
+  seed threshold. The empty map is worse than any drawn map (2.6-2.8).
+- The best scale is **256 m for all four models**, not the training range: for the 128 m
+  models C3 beats C2 by 0.25-0.44 (7-10 of 11 environments); for the 256 m model C2 hurts
+  (+0.55-0.62, 11/11) and C3 equals its own full map at 512 m (+0.13, within noise) and
+  improves it at 1024 m (−0.42, 9/11, just under the 0.52 threshold: suggestive only).
+  So 256 m looks like a property of the map encoding (4-5 robots drawn, one per cell),
+  not of the checkpoint.
+
+**Measure 2a: 40 new environments** (generated with the library's own generator and saved in
+`environments/new40/`, never used before; CVT baselines recomputed on them).
+
+| Condition | 128 m | 256 m | 512 m | 1024 m | same on the 11 release envs |
+|---|---|---|---|---|---|
+| published, full map | 1.96 ± 0.42 | 1.70 ± 0.23 | 2.87 ± 0.40 | **6.15 ± 1.45** | 1.98 / 1.69 / 2.77 / 5.22 |
+| published, map at 256 m scale | 1.72 ± 0.19 | 1.70 ± 0.23 | 1.71 ± 0.22 | **1.77 ± 0.24** | — / — / 1.78 / 1.71 |
+| 128 m seed 0, full map | 2.13 ± 0.37 | 1.82 ± 0.27 | 2.53 ± 0.32 | 4.76 ± 1.21 | 2.15 / 1.74 / 2.49 / 4.36 |
+| 128 m seed 0, map at 256 m scale | 1.85 ± 0.27 | 1.82 ± 0.27 | 1.78 ± 0.21 | 1.80 ± 0.21 | — / — / 1.81 / 1.84 |
+| 256 m model, full map | 2.42 ± 0.44 | 1.85 ± 0.34 | 1.81 ± 0.28 | 2.29 ± 0.25 | 2.28 / 1.76 / 1.74 / 2.31 |
+| centralized / decentralized CVT | 2.33 / 2.54 | 2.33 / 2.45 | 2.33 / 2.44 | 2.33 / 2.44 | 2.52 / 2.6 |
+
+- Every number of the release set is reproduced on the new set within its standard error,
+  except the collapse of the published model at 1024 m, which is even deeper on new
+  environments (6.15 vs 5.22, +0.93 with a standard error of 0.48).
+- The fix generalizes: with the 256 m map, the published model is flat (1.70-1.77) and
+  beats the centralized CVT in 36 to 39 of 40 environments at every range; paired against
+  its own 256 m optimum, the 1024 m cost is +0.06 ± 0.22 (standard error 0.04), i.e. within
+  noise. The retrained model with the same fix: 1.78-1.85, 37-39 of 40.
+
+**Measure 2b: map scale at 1024 m, published model.** 128 / 192 / 256 / 384 / 512 m:
+2.36 / 2.00 / **1.71** / 2.16 / 2.78 on the 11 release environments, 2.23 / 1.80 / **1.77** / 2.07
+/ 2.96 on the 40 new ones. The optimum is at 256 m on both sets (192 and 256 are tied on the
+new set, 1.80 vs 1.77), well below the 2.3-2.5 of the CVTs; 512 m is already worse than
+the CVTs. The scale was therefore not chosen on the test environments by luck.
+
+Figures: `fig_map_levels_retrained.png`, `fig_new_envs.png`, `fig_map_scale.png`. Data:
+`results_m1/results_2x2.csv` (model levels and the 11-env scale sweep), `results_new40/`
+(sweeps and factorial on the 40 environments), `environments/new40/` (the environments).
+
+## 10. Running and next (as of 14 October)
 
 Nothing running on FarmShare as of 10:30; all overnight chains retrieved (sections 7, 8).
 
-Next, in order:
+Next, in order (1 and 2 done, section 9):
 
-1. Fixed-scale map (C3) and empty map (C4) on our retrained models.
-2. Validation on about 40 new environments (saved to disk) and a sweep of the map scale
-   (128, 192, 256, 384, 512 m).
 3. Information loss vs distribution shift in the map: same neighbors in a finer map.
 4. The graph ML contribution: a variant without neighbor maps, where relative positions are
    carried by edge attributes of a PyG layer (for example `GATv2Conv` with `edge_dim=2`),

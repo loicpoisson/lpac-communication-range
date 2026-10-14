@@ -17,7 +17,7 @@ import pandas as pd
 KEY = ["env", "comm_range", "num_robots", "controller"]
 FILES = {"results.csv": KEY, "rank.csv": ["env", "comm_range", "num_robots", "layer"],
          "curves.csv": KEY + ["step"]}
-FACTORIAL_KEY = ["env", "comm_range", "cell", "k", "repeat"]
+FACTORIAL_KEY = ["env", "comm_range", "model", "cell", "k", "repeat"]
 FACTORIAL_FILES = {"results_2x2.csv": FACTORIAL_KEY}
 
 
@@ -30,6 +30,8 @@ def merge_file(parts: list[Path], name: str, key: list[str]) -> pd.DataFrame:
     if "repeat" in key:  # files written before the sensitivity repeats existed have no such column
         merged["repeat"] = merged.get("repeat", 0).fillna(0).astype(int)
         merged["noise_sigma"] = merged.get("noise_sigma", 0.0).fillna(0.0)
+    if "model" in key:  # files written before --model-tag existed hold the published checkpoint
+        merged["model"] = merged.get("model", "published").fillna("published")
     return merged.drop_duplicates(subset=key).sort_values(key)
 
 
