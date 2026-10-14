@@ -21,4 +21,5 @@ cd "$PROJECT_DIR"
 # shellcheck disable=SC2086
 "$HOME/lpac/venv/bin/python" -m lpac_study.sweep --out-dir "${OUT:-$PROJECT_DIR/results_train}/env_$ENV_INDEX" \
   --ranges ${RANGES:-128 256} --no-constant-degree --controllers ${CONTROLLERS:-lpac ClairvoyantCVT} \
-  --env-start "$ENV_INDEX" --env-end "$((ENV_INDEX + 1))" --num-envs "${NUM_ENVS:-11}" ${MODEL:+--model "$MODEL"}
+  --env-start "$ENV_INDEX" --env-end "$((ENV_INDEX + 1))" --num-envs "${NUM_ENVS:-11}" ${MODEL:+--model "$MODEL"} \
+  --variant "${VARIANT:-V0}"

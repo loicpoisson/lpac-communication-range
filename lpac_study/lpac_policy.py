@@ -16,6 +16,7 @@ from coverage_control import CoverageEnvUtils, CoverageSystem, IOUtils, PointVec
 from torch_geometric.data import Data
 
 from .paths import DataPaths
+from .variants import build_model, uses_comm_map
 
 # Controller options of the authors' eval.toml ([[Controllers]] lpac entry).
 USE_CNN = True
@@ -26,11 +27,14 @@ CNN_MAP_SIZE = 32
 class LPACPolicy:
     """Pre-trained LPAC model with access to its graph and layer activations."""
 
-    def __init__(self, paths: DataPaths, device: torch.device, state_dict: str | Path | None = None):
-        """``state_dict`` overrides the published checkpoint (same architecture, e.g. a retrained model)."""
+    def __init__(self, paths: DataPaths, device: torch.device, state_dict: str | Path | None = None,
+                 variant: str = "V0"):
+        """``state_dict`` overrides the published checkpoint; ``variant`` selects the architecture (V0 = LPAC)."""
         learning_params = IOUtils.load_toml(str(paths.learning_params))
         self.device = device
-        self.model = cc_nn.LPAC(learning_params).to(device)
+        self.variant = variant
+        self.use_comm_map = USE_COMM_MAP and uses_comm_map(variant)
+        self.model = build_model(variant, learning_params).to(device)
         if state_dict is None:
             self.model.load_model(str(paths.model_state_dict))
         else:  # a checkpoint saved on a GPU must be mapped to the evaluation device
@@ -46,8 +50,9 @@ class LPACPolicy:
     def _register_layer_hooks(self) -> None:
         """Capture the post-ReLU output of every TAGConv layer of the GNN backbone."""
         backbone = self.model.gnn_backbone
-        for layer_index in range(self.num_layers):
-            layer = backbone._modules[f"graph_conv_{layer_index}"]
+        layers = (list(backbone.layers) if hasattr(backbone, "layers")
+                  else [backbone._modules[f"graph_conv_{i}"] for i in range(self.num_layers)])
+        for layer in layers:
             layer.register_forward_hook(self._store_layer_output)
 
     def _store_layer_output(self, module, inputs, output) -> None:
@@ -63,7 +68,7 @@ class LPACPolicy:
         LPAC forward pass does not pass it to the GNN, so the adjacency is binary.
         """
         return CoverageEnvUtils.get_torch_geometric_data(
-            env, params, USE_CNN, USE_COMM_MAP, CNN_MAP_SIZE
+            env, params, USE_CNN, self.use_comm_map, CNN_MAP_SIZE
         ).to(self.device)
 
     @torch.no_grad()

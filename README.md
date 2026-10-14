@@ -27,7 +27,9 @@ when the policy is run with a larger communication range than it was trained wit
   centralized CVT in 36-39 of 40 environments), and 256 m is the optimum of a scale sweep
   on both environment sets. Below 256 m the fixed-scale map can only contain the robots in
   radio range, and it performs as the as-is map does (within noise).
-- Open: a variant that carries neighbor geometry on graph edges instead of in an image.
+- In progress: variants trained with the same recipe, V1 without neighbor maps (2-channel CNN)
+  and V2 = V1 with the relative positions of neighbors as edge attributes of a 5-layer GATv2
+  GNN (`lpac_study/variants.py`), 3 seeds each, evaluated from 128 to 1024 m.
 
 Details, numbers and caveats: [`docs/journal.md`](docs/journal.md). Framing document with
 figures (French): [`docs/framing.html`](docs/framing.html), also online at
@@ -46,6 +48,7 @@ figures (French): [`docs/framing.html`](docs/framing.html), also online at
 | `results_train/`, `training/` | training trial: configs, Slurm scripts, losses, timings, evaluations of retrained models |
 | `fig_*.png` | figures; `fig_email.png` is the self-contained summary figure |
 | `lpac_study/` | Python package (PyTorch Geometric) used by all scripts and the notebook |
+| `lpac_study/variants.py` | model variants V1 (no neighbor map) and V2 (edge geometry, GATv2) as subclasses of the library model; `--variant` on `training/train_launch.py`, `lpac_study.sweep` and the Slurm scripts |
 | `lpac_eval.ipynb` | self-contained Colab notebook (installs, downloads, sweeps, plots) |
 | `run_all.sh` | reruns the range sweep from scratch on Linux/WSL |
 | `farmshare_factorial.sbatch` | Slurm job for the factorial on FarmShare (Intel nodes only) |

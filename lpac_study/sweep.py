@@ -198,7 +198,7 @@ def run_sweep(args: argparse.Namespace) -> None:
     torch.manual_seed(args.seed)
     out_dir = Path(args.out_dir)
     writer = ResultWriter(out_dir)
-    policy = LPACPolicy(paths, device, args.model) if LPAC_NAME in args.controllers else None
+    policy = LPACPolicy(paths, device, args.model, args.variant) if LPAC_NAME in args.controllers else None
     num_envs = min(args.num_envs, paths.count_environments())
     env_indices = range(args.env_start, num_envs if args.env_end is None else min(args.env_end, num_envs))
     cache: dict[tuple, EpisodeRecord] = {}  # (env, robots, controller) of range-independent CVTs
@@ -246,6 +246,7 @@ def write_run_info(out_dir: Path, args: argparse.Namespace, device: torch.device
     """Record software versions and timing next to the results."""
     info = {
         "args": vars(args), "device": str(device), "elapsed_s": round(elapsed, 1), "model": args.model,
+        "variant": args.variant,
         "python": sys.version.split()[0], "platform": platform.platform(),
         "torch": torch.__version__, "torch_geometric": torch_geometric.__version__,
         "coverage_control": getattr(cc, "__version__", "unknown"),
@@ -277,6 +278,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--device", default="auto", help="auto, cpu or cuda")
     parser.add_argument("--seed", type=int, default=0, help="torch seed (the pipeline is deterministic anyway)")
     parser.add_argument("--model", default=None, help="state dict of another LPAC-K3 checkpoint (default: the published one)")
+    parser.add_argument("--variant", default="V0", choices=("V0", "V1", "V2"), help="architecture of --model (lpac_study.variants)")
     return parser
 
 

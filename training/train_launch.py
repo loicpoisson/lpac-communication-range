@@ -16,6 +16,7 @@ import json
 import os
 import pathlib
 import random
+import sys
 import time
 
 import numpy as np
@@ -23,6 +24,9 @@ import torch
 import torch_geometric
 from coverage_control import IOUtils
 from coverage_control.nn import LPAC, CNNGNNDataset, TrainModel
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))  # lpac_study, next to training/
+from lpac_study.variants import build_model, parameter_count, receptive_field_hops, uses_comm_map  # noqa: E402
 
 
 def set_seeds(seed: int) -> None:
@@ -38,13 +42,13 @@ def select_device(name: str) -> torch.device:
     return torch.device(name)
 
 
-def build(config: dict, world_size: int, device: torch.device, num_workers: int):
-    """Model, loaders and optimizer exactly as train_lpac.py builds them."""
+def build(config: dict, world_size: int, device: torch.device, num_workers: int, variant: str = "V0"):
+    """Model, loaders and optimizer exactly as train_lpac.py builds them (variant V0 = the library model)."""
     dataset_path = pathlib.Path(IOUtils.sanitize_path(config["DataDir"]))
     data_dir = dataset_path / "data/"
     training = config["LPACTraining"]
-    use_comm_map = config["ModelConfig"]["UseCommMaps"]
-    model = LPAC(config).to(device)
+    use_comm_map = config["ModelConfig"]["UseCommMaps"] and uses_comm_map(variant)
+    model = build_model(variant, config).to(device)
     train_dataset = CNNGNNDataset(data_dir, "train", use_comm_map, world_size)
     val_dataset = CNNGNNDataset(data_dir, "val", use_comm_map, world_size)
     model.actions_mean = train_dataset.targets_mean.to(device)
@@ -64,6 +68,8 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--device", default="auto")
     parser.add_argument("--num-workers", type=int, default=None, help="override NumWorkers")
+    parser.add_argument("--variant", default="V0", choices=("V0", "V1", "V2"),
+                        help="V0 original LPAC, V1 without neighbour map, V2 edge-geometry GNN (lpac_study.variants)")
     args = parser.parse_args()
 
     set_seeds(args.seed)
@@ -75,11 +81,11 @@ def main() -> None:
     model_dir.mkdir(parents=True, exist_ok=True)
 
     tic = time.time()
-    model, train_loader, val_loader, optimizer, n_train, n_val = build(config, args.world_size, device, num_workers)
+    model, train_loader, val_loader, optimizer, n_train, n_val = build(config, args.world_size, device, num_workers, args.variant)
     load_time = time.time() - tic
     trainer = TrainModel(model, train_loader, val_loader, optimizer, torch.nn.MSELoss(), num_epochs, device, str(model_dir))
-    print(f"device={device} train={n_train} val={n_val} epochs={num_epochs} workers={num_workers} "
-          f"params={sum(p.numel() for p in model.parameters())} load={load_time:.0f}s", flush=True)
+    print(f"device={device} variant={args.variant} train={n_train} val={n_val} epochs={num_epochs} workers={num_workers} "
+          f"params={parameter_count(model)} hops={receptive_field_hops(args.variant, config)} load={load_time:.0f}s", flush=True)
 
     history = {"train": [], "val": []}
     best_val = float("inf")
@@ -104,7 +110,9 @@ def main() -> None:
             print(f"epoch {epoch}/{num_epochs} train {train_loss:.4e} val {val_loss:.4e} "
                   f"({t1 - t0:.0f}s + {t2 - t1:.0f}s)", flush=True)
     (model_dir / "run_info.json").write_text(json.dumps({
-        "device": str(device), "epochs": num_epochs, "seed": args.seed, "num_workers": num_workers,
+        "device": str(device), "variant": args.variant, "params": parameter_count(model),
+        "receptive_field_hops": receptive_field_hops(args.variant, config),
+        "epochs": num_epochs, "seed": args.seed, "num_workers": num_workers,
         "train_size": n_train, "val_size": n_val, "torch": torch.__version__,
         "cuda": torch.version.cuda, "gpu": torch.cuda.get_device_name(0) if device.type == "cuda" else None,
         "config_file": os.path.abspath(args.config_file), "total_s": round(time.time() - tic, 1),

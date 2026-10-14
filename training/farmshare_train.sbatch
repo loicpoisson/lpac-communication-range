@@ -18,4 +18,4 @@ export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-4}"
 cd "$PROJECT_DIR"
 nvidia-smi -L 2>/dev/null || echo "no GPU visible"
 "$VENV/bin/python" train_launch.py "$CONFIG" "${WORLD:-1024}" ${EPOCHS:+--epochs "$EPOCHS"} \
-  --seed "${SEED:-0}" --num-workers "${WORKERS:-$(( ${SLURM_CPUS_PER_TASK:-4} - 2 ))}"
+  --seed "${SEED:-0}" --num-workers "${WORKERS:-$(( ${SLURM_CPUS_PER_TASK:-4} - 2 ))}" --variant "${VARIANT:-V0}"

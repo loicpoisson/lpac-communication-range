@@ -254,11 +254,43 @@ Figures: `fig_map_levels_retrained.png`, `fig_new_envs.png`, `fig_map_scale.png`
 `results_m1/results_2x2.csv` (model levels and the 11-env scale sweep), `results_new40/`
 (sweeps and factorial on the 40 environments), `environments/new40/` (the environments).
 
-## 10. Running and next (as of 14 October)
+## 10. Variants without neighbor maps (14 October, started)
+
+The diagnosis says the neighbor map is what breaks when the range grows, because its
+resolution follows the range. The graph ML question is whether the GNN can carry the
+neighbor geometry itself, so that nothing in the input depends on the range. Three models,
+all trained with the authors' recipe (100,000 samples at 128 m, 100 epochs, best validation
+checkpoint), three seeds each:
+
+| Variant | CNN input | GNN | Parameters | Receptive field |
+|---|---|---|---|---|
+| V0 (as published) | 4 channels: local map, two neighbor-map channels, obstacle map | 5 × `TAGConv`, K = 3, width 256 | 1,806,210 | 15 hops |
+| V1 | 2 channels: local map, obstacle map (`UseCommMaps = false`) | unchanged | 1,805,634 | 15 hops |
+| V2 | as V1 | 5 × `GATv2Conv`, `edge_dim = 2`, 4 heads × 64 concatenated (width 256), ReLU | 1,270,338 | 5 hops |
+
+V2 reads on every edge (j → i) the relative position (p_j − p_i) / W, W the world size, computed
+in the forward pass from `data.pos` and `data.edge_index`; `data.pos` is already (p + W/2) / W, so
+the attribute is a constant of the world, not of the range. V1 removes the map without replacing
+it: it isolates what the map contributes at 128 m (V0 − V1) from what the edge geometry adds
+(V2 − V1). The library model is subclassed, not modified (`lpac_study/variants.py`); the
+dataset is read with `use_comm_map = False`, which gives 2-channel inputs and keeps `pos` and
+`edge_index`. V2 has fewer parameters because a GATv2 layer with 4 heads of 64 holds one
+256 × 64 matrix per head and no K-hop filters; its receptive field is 5 hops instead of 15.
+
+Comparisons planned, with the seed thresholds of section 8 (std of the 11-environment mean
+across seeds: 0.01 / 0.02 / 0.08 / 0.14 / 0.26 at 128 / 256 / 512 / 768 / 1024 m):
+V2 against V0 as is (collapse or not), against V0 with the 256 m map (1.81-1.84 at 1024 m) and
+against the model trained at 256 m (2.31), and V2 against V1 (does the edge geometry help).
+Ranges 128 to 1024 m on the 11 release and the 40 new environments.
+
+Pipeline trial: 2,000 samples (one generation part), 3 epochs on one L40S, then one
+evaluation episode, for V1 and V2 (FarmShare jobs 1845981-1845984). Results below.
+
+## 11. Running and next (as of 14 October)
 
 Nothing running on FarmShare as of 10:30; all overnight chains retrieved (sections 7, 8).
 
-Next, in order (1 and 2 done, section 9):
+Next, in order (1 and 2 done, section 9; 4 started, section 10):
 
 3. Information loss vs distribution shift in the map: same neighbors in a finer map.
 4. The graph ML contribution: a variant without neighbor maps, where relative positions are
