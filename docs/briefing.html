@@ -1,0 +1,1472 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LPAC Range Study</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+/* Layout: one reading column (~70ch); figures, tables and code scroll inside their own boxes */
+:root {
+  --bg: #F3F5F7; --surface: #FFFFFF; --sunk: #E9ECF0; --fg: #14181E; --muted: #596472; --rule: #D7DCE3;
+  --amber: #9E5400; --amber-dim: #F2E6D6; --teal: #0B6065; --teal-dim: #DAEAEB;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s8: #e34948;
+  --hot: #e34948;
+  --f-head: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-body: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F131A; --surface: #161C25; --sunk: #1C232D; --fg: #E3E8EE; --muted: #97A2AF; --rule: #273040;
+    --amber: #E9A647; --amber-dim: #2B2116; --teal: #4FC2C7; --teal-dim: #122527;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+    --hot: #e66767; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F131A; --surface: #161C25; --sunk: #1C232D; --fg: #E3E8EE; --muted: #97A2AF; --rule: #273040;
+  --amber: #E9A647; --amber-dim: #2B2116; --teal: #4FC2C7; --teal-dim: #122527;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+  --hot: #e66767; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 1rem; line-height: 1.68; margin: 0; }
+.wrap { max-width: 52rem; margin: 0 auto; padding-inline: 20px; padding-block: 3rem 5rem; }
+h1, h2, h3, h4 { font-family: var(--f-head); text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(1.9rem, 1.3rem + 2.4vw, 2.9rem); font-weight: 700; line-height: 1.08; letter-spacing: -0.022em; }
+h2 { font-size: clamp(1.4rem, 1.12rem + 1.2vw, 1.9rem); font-weight: 600; line-height: 1.16; letter-spacing: -0.014em; }
+h3 { font-size: 1.14rem; font-weight: 600; line-height: 1.3; }
+h4 { font-size: 0.97rem; font-weight: 600; }
+p { margin: 0; }
+strong { font-weight: 600; }
+ul.plain, ol.plain { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.4rem; }
+.eyebrow { font-family: var(--f-mono); font-size: 0.7rem; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 0; }
+.lede { font-size: 1.1rem; color: var(--muted); font-style: italic; }
+.stack { display: flex; flex-direction: column; gap: 1rem; }
+.stack-s { display: flex; flex-direction: column; gap: 0.6rem; }
+.stack-l { display: flex; flex-direction: column; gap: 2rem; }
+.stack-xl { display: flex; flex-direction: column; gap: 3.2rem; }
+a { color: inherit; text-underline-offset: 2px; text-decoration-color: var(--muted); }
+a:hover { text-decoration-color: currentColor; }
+a:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; border-radius: 2px; }
+code, .mono { font-family: var(--f-mono); font-size: 0.86em; }
+code { background: var(--sunk); padding: 0.1em 0.38em; border-radius: 3px; }
+pre { margin: 0; background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--amber); border-radius: 4px; padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--f-mono); font-size: 0.8rem; line-height: 1.6; }
+pre code { background: none; padding: 0; font-size: inherit; }
+.masthead { border-bottom: 2px solid var(--fg); padding-bottom: 1.6rem; }
+.meta { display: flex; flex-wrap: wrap; gap: 0.5rem 1.4rem; font-family: var(--f-mono); font-size: 0.74rem; color: var(--muted); margin-top: 1.2rem; }
+.meta b { font-weight: 600; color: var(--fg); }
+.toc { background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 1.2rem 1.3rem; }
+.toc ol { margin: 0.7rem 0 0; padding-left: 1.4rem; font-size: 0.92rem; columns: 2 16rem; column-gap: 2rem; }
+.toc li { margin-bottom: 0.3rem; break-inside: avoid; }
+.toc a { text-decoration: none; border-bottom: 1px solid var(--rule); }
+.section { border-top: 1px solid var(--rule); padding-top: 2.6rem; scroll-margin-top: 1rem; }
+.box { background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 1.3rem 1.4rem; }
+.box-key { border-left: 4px solid var(--amber); }
+.box-act { border-left: 4px solid var(--teal); }
+.note { background: var(--sunk); border-radius: 4px; padding: 1rem 1.15rem; font-size: 0.93rem; }
+.finding { display: flex; flex-direction: column; gap: 1rem; padding-top: 1.6rem; border-top: 1px dashed var(--rule); scroll-margin-top: 1rem; }
+.fid { font-family: var(--f-mono); font-size: 0.75rem; font-weight: 600; color: var(--amber); letter-spacing: 0.08em; }
+.verdict { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.8rem; }
+.verdict > div { background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 0.9rem 1rem; min-width: 0; font-size: 0.92rem; }
+.verdict h4 { font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.35rem; }
+.verdict .shows h4 { color: var(--teal); }
+.verdict .not h4 { color: var(--amber); }
+blockquote { margin: 0; padding: 0.9rem 0 0.9rem 1.2rem; border-left: 3px solid var(--amber); font-size: 0.95rem; font-style: italic; color: var(--muted); }
+blockquote .src { display: block; margin-top: 0.55rem; font-family: var(--f-mono); font-size: 0.72rem; font-style: normal; }
+.tscroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 4px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 34rem; font-size: 0.87rem; }
+caption { text-align: left; padding: 0.7rem 0.85rem 0.2rem; font-family: var(--f-mono); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+th, td { text-align: left; padding: 0.62rem 0.85rem; vertical-align: top; border-bottom: 1px solid var(--rule); }
+thead th { font-family: var(--f-head); font-size: 0.74rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); background: var(--sunk); }
+tbody th { font-family: var(--f-head); font-weight: 400; font-size: 0.86rem; background: var(--sunk); }
+tbody tr:last-child td, tbody tr:last-child th { border-bottom: none; }
+td.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.heat { background: color-mix(in srgb, var(--hot) calc(var(--h) * 55%), transparent); }
+figure { margin: 0; }
+.figbox { border: 1px solid var(--rule); border-radius: 4px; background: var(--surface); padding: 1rem; overflow-x: auto; color: var(--fg); }
+.figbox svg { display: block; width: 100%; min-width: 34rem; max-width: 100%; height: auto; }
+.figbox svg text { font-family: var(--f-head); }
+.figbox svg .mono { font-family: var(--f-mono); }
+figcaption { margin-top: 0.7rem; font-size: 0.86rem; color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; font-family: var(--f-head); font-size: 0.82rem; color: var(--muted); margin-bottom: 0.6rem; }
+.legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+.sw { display: inline-block; width: 18px; height: 3px; border-radius: 2px; }
+.sw1 { background: var(--s1); } .sw2 { background: var(--s2); } .sw3 { background: var(--s3); } .sw4 { background: var(--s4); }
+.sw5 { background: var(--s5); } .sw6 { background: var(--s6); } .sw7 { background: var(--s7); }
+.swref { background: repeating-linear-gradient(90deg, var(--muted) 0 5px, transparent 5px 9px); }
+.ser1 { stroke: var(--s1); } .ser2 { stroke: var(--s2); } .ser3 { stroke: var(--s3); } .ser4 { stroke: var(--s4); }
+.ser5 { stroke: var(--s5); } .ser6 { stroke: var(--s6); } .ser7 { stroke: var(--s7); }
+.ser1 .dot { fill: var(--s1); } .ser2 .dot { fill: var(--s2); } .ser3 .dot { fill: var(--s3); } .ser4 .dot { fill: var(--s4); }
+.ser5 .dot { fill: var(--s5); } .ser6 .dot { fill: var(--s6); } .ser7 .dot { fill: var(--s7); }
+.ser6 .band { fill: var(--s6); stroke: none; }
+.dot { stroke: var(--surface); stroke-width: 2; }
+.mapbg { fill: var(--surface); }
+.cell { fill: var(--s1); }
+.cellhot { fill: var(--s8); }
+.svg-accent { color: var(--amber); }
+.svg-fill-bg { fill: var(--surface); }
+.svg-fill-sunk { fill: var(--sunk); }
+.path-graph { color: var(--teal); }
+.path-map { color: var(--amber); }
+.roles { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; }
+.role { background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 1rem 1.1rem; min-width: 0; }
+.role h4 { margin-bottom: 0.3rem; }
+.role p, .role li { font-size: 0.9rem; }
+.weeks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.weeks li { display: grid; grid-template-columns: 8.4rem 1fr; gap: 0 1rem; padding: 0.7rem 0; border-bottom: 1px solid var(--rule); }
+.weeks li:first-child { border-top: 1px solid var(--rule); }
+.weeks .wk { font-family: var(--f-mono); font-size: 0.76rem; font-weight: 600; color: var(--muted); padding-top: 0.15em; }
+.weeks .wt { font-size: 0.93rem; }
+.gloss { margin: 0; }
+.gloss > div { padding: 0.75rem 0; border-bottom: 1px solid var(--rule); }
+.gloss > div:first-child { border-top: 1px solid var(--rule); }
+.gloss dt { font-family: var(--f-head); font-weight: 600; font-size: 0.93rem; }
+.gloss dd { margin: 0.2rem 0 0; font-size: 0.9rem; color: var(--muted); }
+.refs { list-style: none; margin: 0; padding: 0; font-size: 0.88rem; }
+.refs li { padding: 0.6rem 0; border-bottom: 1px solid var(--rule); }
+.rtag { font-family: var(--f-mono); font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); display: block; }
+.status { display: inline-block; font-family: var(--f-mono); font-size: 0.68rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.12rem 0.45rem; border-radius: 3px; }
+.st-done { background: var(--teal-dim); color: var(--teal); }
+.st-run { background: var(--amber-dim); color: var(--amber); }
+.st-todo { background: var(--sunk); color: var(--muted); }
+.foot { border-top: 1px solid var(--rule); padding-top: 1.5rem; font-size: 0.85rem; color: var(--muted); }
+@media (max-width: 460px) { .weeks li { grid-template-columns: 1fr; } .toc ol { columns: 1; } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+</style>
+<div class="wrap stack-xl">
+
+<header class="masthead">
+  <p class="eyebrow">CS 224W · Autumn 2026 · Team briefing · state on 14 October 2026</p>
+  <h1 style="margin-top:0.7rem">Communication range and the LPAC swarm policy</h1>
+  <p class="lede" style="margin-top:0.9rem">A published graph-neural-network policy for robot swarms gets worse when its robots can talk to more of each other. This page explains the problem, everything we measured, what it means, and what each of us does next.</p>
+  <div class="meta">
+    <span><b>Proposal</b> Tue 20 Oct, 11:59 pm PT</span>
+    <span><b>Milestone</b> 10 Nov</span>
+    <span><b>Final report</b> 10 Dec</span>
+    <span><b>Repository</b> github.com/loicpoisson/lpac-communication-range (private)</span>
+  </div>
+</header>
+
+<section class="box box-key stack-s">
+  <p class="eyebrow">Read this first</p>
+  <ul class="plain">
+    <li><strong>The phenomenon.</strong> LPAC is a published policy that coordinates 32 robots through a GNN. Trained with a 128 m radio range, it is the best controller we tested at 128 and 256 m. Give it a longer range and its cost triples by 1024 m, where it becomes worse than simple non-learned algorithms. This happens in all 11 test environments.</li>
+    <li><strong>It is not a quirk of one file.</strong> We retrained LPAC ourselves with the authors' recipe, three times with different seeds. All three collapse the same way.</li>
+    <li><strong>The cause is not the graph.</strong> LPAC sees its neighbors twice: as edges in the graph given to the GNN, and as dots in a small image (the "neighbor map") given to a CNN. Fixing the graph changes nothing. Drawing the image at a fixed 256 m scale, with the same weights, removes the collapse entirely.</li>
+    <li><strong>Training is affordable.</strong> A full training run at the paper's scale takes 2 h 35 on one free Stanford FarmShare GPU.</li>
+    <li><strong>The project.</strong> Show where neighbor geometry should live in a swarm policy. The graph ML contribution is a variant that drops the neighbor image and carries relative positions on the graph's edges, then a test of whether it transfers across communication ranges.</li>
+  </ul>
+</section>
+
+<section class="box box-act stack-s">
+  <p class="eyebrow">What we need from the team this week</p>
+  <ol class="plain">
+    <li>Read sections 1 to 4 of this page (about 20 minutes). Every later result depends on them.</li>
+    <li>Accept the GitHub invitation and send Loïc your GitHub username if you have not.</li>
+    <li>Pick a role in section 11 so the proposal can be split three ways before Friday.</li>
+    <li>Request a GPU quota on Google Cloud with your course credit code, as a backup to FarmShare (approval takes days).</li>
+    <li>Flag anything on this page you do not understand. If it is unclear here, it will be unclear in the proposal.</li>
+  </ol>
+</section>
+
+<nav class="toc" aria-label="Contents">
+  <p class="eyebrow">Contents</p>
+  <ol>
+    <li><a href="#problem">The task: coverage control</a></li>
+    <li><a href="#model">The LPAC model</a></li>
+    <li><a href="#range">What the communication range changes</a></li>
+    <li><a href="#paper">The paper's claim and what we can test</a></li>
+    <li><a href="#setup">Setup and measurement protocol</a></li>
+    <li><a href="#findings">Findings F1 to F9</a></li>
+    <li><a href="#meaning">What we can and cannot claim</a></li>
+    <li><a href="#related">Related work and novelty</a></li>
+    <li><a href="#plan">Plan and decision rules</a></li>
+    <li><a href="#course">Course requirements and compute</a></li>
+    <li><a href="#team">Roles and how we work</a></li>
+    <li><a href="#fixes">Mistakes we corrected</a></li>
+    <li><a href="#glossary">Glossary</a></li>
+    <li><a href="#refs">References</a></li>
+  </ol>
+</nav>
+
+<!-- ======================= 1 ======================= -->
+<section class="section stack-l" id="problem">
+  <div class="stack-s"><p class="eyebrow">Section 1</p><h2>The task: coverage control</h2></div>
+  <p>A team of robots must spread over a square area to watch it. Some places matter more than others: this is the <strong>importance density field</strong> (IDF), for example a fire, a pollution plume or crops to inspect. The robots do not know the field in advance. Each robot only sees what is under its own sensor and builds a local map as it moves. A robot can only talk to robots within its <strong>communication range</strong>. There is no central computer: every robot decides its own next move.</p>
+  <figure>
+    <div class="figbox"><svg viewBox="0 0 560 345" role="img" aria-label="The coverage control problem: a field with two high-importance zones, six robots with limited sensors, the Voronoi partition, and the moves toward weighted centroids.">
+            <defs>
+              <radialGradient id="idf1"><stop offset="0%" stop-color="currentColor" stop-opacity="0.34"/><stop offset="100%" stop-color="currentColor" stop-opacity="0"/></radialGradient>
+              <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><polygon points="0,1 10,5 0,9" fill="currentColor"/></marker>
+            </defs>
+            <rect x="20" y="15" width="300" height="300" rx="2" class="svg-fill-sunk" stroke="currentColor" stroke-width="1.3"/>
+            <g class="svg-accent">
+              <circle cx="232" cy="112" r="72" fill="url(#idf1)"/>
+              <circle cx="108" cy="248" r="58" fill="url(#idf1)"/>
+              <circle cx="232" cy="112" r="30" fill="currentColor" opacity="0.26"/>
+              <circle cx="108" cy="248" r="23" fill="currentColor" opacity="0.26"/>
+            </g>
+            <g fill="none" stroke="currentColor" stroke-width="1.1" stroke-dasharray="4 3" opacity="0.45">
+              <polygon points="158,190 130,315 20,315 20,160"/>
+              <polygon points="186,177 320,302 320,315 130,315 158,190 180,176"/>
+              <polygon points="320,302 186,177 320,98"/>
+              <polygon points="20,156 20,160 158,190 180,176 153,35"/>
+              <polygon points="186,177 320,98 320,15 158,15 153,35 180,176"/>
+              <polygon points="20,15 158,15 153,35 20,156"/>
+            </g>
+            <g fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="2 3" opacity="0.5">
+              <circle cx="90" cy="235" r="34"/><circle cx="200" cy="260" r="34"/><circle cx="270" cy="185" r="34"/>
+              <circle cx="115" cy="120" r="34"/><circle cx="220" cy="100" r="34"/><circle cx="65" cy="65" r="34"/>
+            </g>
+            <g stroke="currentColor" stroke-width="1.7" fill="none" marker-end="url(#ar2)" opacity="0.9">
+              <line x1="90" y1="235" x2="104" y2="243"/>
+              <line x1="200" y1="260" x2="176" y2="238"/>
+              <line x1="270" y1="185" x2="248" y2="146"/>
+              <line x1="115" y1="120" x2="124" y2="166"/>
+              <line x1="220" y1="100" x2="229" y2="108"/>
+              <line x1="65" y1="65" x2="92" y2="94"/>
+            </g>
+            <g fill="currentColor">
+              <circle cx="90" cy="235" r="5.5"/><circle cx="200" cy="260" r="5.5"/><circle cx="270" cy="185" r="5.5"/>
+              <circle cx="115" cy="120" r="5.5"/><circle cx="220" cy="100" r="5.5"/><circle cx="65" cy="65" r="5.5"/>
+            </g>
+            <g font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor">
+              <g class="svg-accent"><circle cx="352" cy="44" r="8" fill="currentColor" opacity="0.26"/></g>
+              <text x="370" y="42">high-importance zone</text>
+              <text x="370" y="57" font-size="10.5" opacity="0.65">the IDF, unknown to the robots</text>
+              <circle cx="352" cy="92" r="5" fill="currentColor"/>
+              <text x="370" y="96">robot</text>
+              <circle cx="352" cy="130" r="9" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="2 3" opacity="0.7"/>
+              <text x="370" y="128">sensor footprint</text>
+              <text x="370" y="143" font-size="10.5" opacity="0.65">nothing is seen beyond it</text>
+              <polygon points="344,170 362,164 364,180 346,184" fill="none" stroke="currentColor" stroke-width="1.1" stroke-dasharray="4 3" opacity="0.6"/>
+              <text x="378" y="172">Voronoi cell</text>
+              <text x="378" y="187" font-size="10.5" opacity="0.65">points closest to this robot</text>
+              <line x1="344" y1="218" x2="366" y2="218" stroke="currentColor" stroke-width="1.7" marker-end="url(#ar2)"/>
+              <text x="378" y="222">move</text>
+              <text x="378" y="237" font-size="10.5" opacity="0.65">toward the weighted centroid</text>
+              <text x="344" y="283" font-size="11" opacity="0.8">No robot knows the field</text>
+              <text x="344" y="298" font-size="11" opacity="0.8">or the position of robots</text>
+              <text x="344" y="313" font-size="11" opacity="0.8">outside its range.</text>
+            </g>
+          </svg></div>
+    <figcaption><strong>Figure 1.</strong> Coverage control. Each robot sees only its sensor footprint. The classic algorithm (CVT, Lloyd's algorithm) gives every robot the Voronoi cell of points closest to it and moves it toward that cell's importance-weighted centroid, which gathers robots where the field matters.</figcaption>
+  </figure>
+  <div class="stack-s">
+    <h3>How performance is measured</h3>
+    <p>The <strong>coverage cost</strong> sums, over the whole field, the importance of each point times its squared distance to the nearest robot. Lower is better. We report the cost <strong>averaged over the 600 steps of an episode</strong>, divided by the same quantity for the clairvoyant algorithm in the same environment. A value of 2.0 means "twice the clairvoyant's cost". This is the metric of the paper's Figures 15, 19 and 20.</p>
+  </div>
+  <div class="tscroll">
+    <table>
+      <caption>The four controllers we compare</caption>
+      <thead><tr><th>Controller</th><th>What it knows</th><th>Role in this study</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Clairvoyant CVT</strong></td><td>The whole field and all robot positions.</td><td>Reference: cost ratio = 1. Impossible to deploy. Also the teacher that LPAC imitates during training.</td></tr>
+        <tr><td><strong>Centralized CVT</strong></td><td>All robots' local maps, sent to a server.</td><td>Non-learned baseline. Does not depend on the communication range.</td></tr>
+        <tr><td><strong>Decentralized CVT</strong></td><td>Its own map and its neighbors' positions.</td><td>Non-learned baseline. Uses neighbors only inside a 256 m local window.</td></tr>
+        <tr><td><strong>LPAC</strong></td><td>Its own maps and messages from robots within range.</td><td>The learned policy we study.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ======================= 2 ======================= -->
+<section class="section stack-l" id="model">
+  <div class="stack-s"><p class="eyebrow">Section 2</p><h2>The LPAC model</h2></div>
+  <p>LPAC (Learnable Perception-Action-Communication; Agarwal, Muthukrishnan, Gosrich, Kumar and Ribeiro, IEEE Transactions on Robotics 2025) runs the same small network on every robot. The released configuration, which we read in the code, is the following.</p>
+
+  <figure>
+    <div class="figbox">
+      <svg viewBox="0 0 760 340" role="img" aria-label="LPAC on one robot: four 32 by 32 input maps, two of which are the neighbor map, go through a CNN to 32 features; the robot position is appended; five TAGConv layers exchange information over the communication graph; an MLP outputs the velocity.">
+        <defs><marker id="pa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><polygon points="0,1 10,5 0,9" fill="currentColor"/></marker></defs>
+        <text x="16" y="52" font-size="12" font-weight="600" fill="currentColor">CNN input, 4 maps of 32 × 32</text>
+        <g stroke="currentColor" stroke-width="1.3">
+          <rect x="16" y="64" width="160" height="40" rx="3" class="svg-fill-sunk"/>
+          <rect x="16" y="172" width="160" height="40" rx="3" class="svg-fill-sunk"/>
+        </g>
+        <g class="path-map">
+          <rect x="16" y="110" width="160" height="27" rx="3" fill="none" stroke="currentColor" stroke-width="2.2"/>
+          <rect x="16" y="140" width="160" height="27" rx="3" fill="none" stroke="currentColor" stroke-width="2.2"/>
+          <text x="96" y="128" font-size="11.5" text-anchor="middle" fill="currentColor" font-weight="600">neighbor map, x</text>
+          <text x="96" y="158" font-size="11.5" text-anchor="middle" fill="currentColor" font-weight="600">neighbor map, y</text>
+        </g>
+        <text x="96" y="82" font-size="11.5" text-anchor="middle" fill="currentColor">local importance map</text>
+        <text x="96" y="97" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.7">256 m around the robot</text>
+        <text x="96" y="190" font-size="11.5" text-anchor="middle" fill="currentColor">obstacle map</text>
+        <text x="96" y="204" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.7">256 m around the robot</text>
+
+        <g stroke="currentColor" stroke-width="1.5" fill="none" marker-end="url(#pa)">
+          <line x1="176" y1="138" x2="206" y2="138"/><line x1="290" y1="138" x2="318" y2="138"/>
+          <line x1="404" y1="138" x2="432" y2="138"/><line x1="566" y1="138" x2="592" y2="138"/><line x1="676" y1="138" x2="704" y2="138"/>
+        </g>
+        <g stroke="currentColor" stroke-width="1.5">
+          <rect x="208" y="108" width="82" height="60" rx="3" class="svg-fill-bg"/>
+          <rect x="320" y="108" width="84" height="60" rx="3" class="svg-fill-bg"/>
+          <rect x="594" y="108" width="82" height="60" rx="3" class="svg-fill-bg"/>
+        </g>
+        <g class="path-graph">
+          <rect x="434" y="100" width="132" height="76" rx="3" stroke="currentColor" stroke-width="2.4" class="svg-fill-bg"/>
+          <rect x="434" y="18" width="132" height="44" rx="3" stroke="currentColor" stroke-width="2.2" fill="none"/>
+          <line x1="500" y1="62" x2="500" y2="96" stroke="currentColor" stroke-width="2" marker-end="url(#pa)"/>
+          <text x="500" y="37" font-size="11.5" text-anchor="middle" fill="currentColor" font-weight="600">communication graph</text>
+          <text x="500" y="53" font-size="10" text-anchor="middle" fill="currentColor">robots within range</text>
+        </g>
+        <g fill="currentColor" text-anchor="middle">
+          <text x="249" y="134" font-size="12.5" font-weight="600">CNN</text><text x="249" y="151" font-size="10.5" opacity="0.75">32 features</text>
+          <text x="362" y="134" font-size="12" font-weight="600">+ position</text><text x="362" y="151" font-size="10.5" opacity="0.75">34 numbers</text>
+          <text x="500" y="128" font-size="12.5" font-weight="600">GNN</text><text x="500" y="145" font-size="10.5" opacity="0.8">5 × TAGConv, K = 3</text><text x="500" y="160" font-size="10.5" opacity="0.8">256 wide</text>
+          <text x="635" y="134" font-size="12.5" font-weight="600">MLP</text><text x="635" y="151" font-size="10.5" opacity="0.75">32, 32 → 2</text>
+        </g>
+        <text x="708" y="134" font-size="11.5" fill="currentColor">velocity</text><text x="708" y="150" font-size="11" fill="currentColor" opacity="0.7">(vx, vy)</text>
+
+        <g font-size="11.5" fill="currentColor">
+          <g class="path-map"><rect x="16" y="262" width="22" height="12" fill="none" stroke="currentColor" stroke-width="2.2"/></g>
+          <text x="46" y="272">Path 1: neighbors drawn as dots in an image, read by the CNN</text>
+          <g class="path-graph"><rect x="16" y="288" width="22" height="12" fill="none" stroke="currentColor" stroke-width="2.2"/></g>
+          <text x="46" y="298">Path 2: neighbors linked by edges, read by the GNN through message passing</text>
+          <text x="16" y="326" opacity="0.7">The same small network runs on each of the 32 robots. Only the GNN step uses information from other robots.</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption><strong>Figure 2.</strong> LPAC on one robot. Neighbors enter the model by two separate paths. This is the single most important fact for understanding our results.</figcaption>
+  </figure>
+
+  <div class="tscroll">
+    <table>
+      <caption>Components, as configured in the released files</caption>
+      <thead><tr><th>Part</th><th>Input</th><th>Output</th><th>Details</th></tr></thead>
+      <tbody>
+        <tr><td>CNN</td><td>4 maps of 32 × 32</td><td>32 numbers</td><td>3 convolution layers, kernel 3. Channels: local importance, neighbor map x, neighbor map y, obstacles.</td></tr>
+        <tr><td>Concatenation</td><td>32 + robot position (x, y)</td><td>34 numbers</td><td>Matches the paper's d₀ = 34.</td></tr>
+        <tr><td>GNN</td><td>34 per robot + graph</td><td>256 per robot</td><td>5 layers of <code>torch_geometric.nn.TAGConv</code>, K = 3, ReLU after each. Binary edges: <code>edge_weight</code> is built but not passed.</td></tr>
+        <tr><td>MLP + linear</td><td>256</td><td>2</td><td>Layers 256 → 32 → 32, then 32 → 2, rescaled by the mean and std of the training actions.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="stack-s">
+    <h3>What TAGConv computes</h3>
+    <p>For node features X, adjacency A and degree matrix D, one TAGConv layer computes</p>
+    <pre><code>X' = Σ_{k=0..K} ( D^-1/2 · A · D^-1/2 )^k · X · W_k</code></pre>
+    <p>This is the symmetrically normalized adjacency used by GCN, applied up to K = 3 times inside each layer, so up to 15 propagation steps across the 5 layers. It is <strong>not</strong> a plain sum over neighbors. The normalization divides by the square roots of the degrees, which keeps message sizes bounded when a robot has many neighbors.</p>
+  </div>
+
+  <div class="stack-s">
+    <h3>What the neighbor map is, exactly</h3>
+    <p>For robot <em>i</em> and communication range R, the map is a 32 × 32 grid covering the square from −R to +R around the robot, in two channels. Each neighbor <em>j</em> within range lands in one cell and adds its relative position to it:</p>
+    <pre><code>cell(i, j)  = round( (p_j − p_i) · 32 / (2R) + 15.5 )     one cell = 2R / 32 metres
+value(i, j) = (p_j − p_i) / R                            channel x and channel y
+map[i, cell] += value(i, j)                              robots in the same cell are summed</code></pre>
+    <p>Two consequences matter. First, <strong>the cell size grows with the range</strong>: 8 m at 128 m, 16 m at 256 m, 64 m at 1024 m. Second, <strong>values are divided by R</strong>, so the same neighbor 50 m away writes 0.39 at 128 m but 0.05 at 1024 m. The two local perception maps do not change with the range; only the neighbor map does.</p>
+  </div>
+
+  <figure>
+    <div class="figbox"><svg viewBox="0 0 580 270" role="img" aria-label="The same swarm drawn into one robot's 32 by 32 neighbor map at three communication ranges: 2 neighbors at 128 m, 4 at 256 m and 27 at 1024 m, where nearby robots crowd into a few central cells.">
+<g transform="translate(10,40)">
+<rect x="0" y="0" width="160" height="160" class="mapbg" stroke="currentColor" stroke-width="1"/>
+<line x1="5" y1="0" x2="5" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="5" x2="160" y2="5" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="10" y1="0" x2="10" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="10" x2="160" y2="10" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="15" y1="0" x2="15" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="15" x2="160" y2="15" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="20" y1="0" x2="20" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="20" x2="160" y2="20" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="25" y1="0" x2="25" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="25" x2="160" y2="25" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="30" y1="0" x2="30" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="30" x2="160" y2="30" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="35" y1="0" x2="35" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="35" x2="160" y2="35" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="40" y1="0" x2="40" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="40" x2="160" y2="40" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="45" y1="0" x2="45" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="45" x2="160" y2="45" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="50" y1="0" x2="50" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="50" x2="160" y2="50" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="55" y1="0" x2="55" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="55" x2="160" y2="55" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="60" y1="0" x2="60" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="60" x2="160" y2="60" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="65" y1="0" x2="65" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="65" x2="160" y2="65" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="70" y1="0" x2="70" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="70" x2="160" y2="70" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="75" y1="0" x2="75" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="75" x2="160" y2="75" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="80" y1="0" x2="80" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="80" x2="160" y2="80" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="85" y1="0" x2="85" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="85" x2="160" y2="85" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="90" y1="0" x2="90" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="90" x2="160" y2="90" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="95" y1="0" x2="95" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="95" x2="160" y2="95" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="100" y1="0" x2="100" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="100" x2="160" y2="100" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="105" y1="0" x2="105" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="105" x2="160" y2="105" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="110" y1="0" x2="110" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="110" x2="160" y2="110" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="115" y1="0" x2="115" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="115" x2="160" y2="115" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="120" y1="0" x2="120" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="120" x2="160" y2="120" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="125" y1="0" x2="125" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="125" x2="160" y2="125" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="130" y1="0" x2="130" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="130" x2="160" y2="130" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="135" y1="0" x2="135" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="135" x2="160" y2="135" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="140" y1="0" x2="140" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="140" x2="160" y2="140" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="145" y1="0" x2="145" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="145" x2="160" y2="145" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="150" y1="0" x2="150" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="150" x2="160" y2="150" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="155" y1="0" x2="155" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="155" x2="160" y2="155" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<rect x="85" y="70" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="105" y="120" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<circle cx="80.0" cy="80.0" r="2.6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+<text x="0" y="-22" font-size="12.5" font-weight="600" fill="currentColor">Range 128 m</text>
+<text x="0" y="-8" font-size="10.5" fill="currentColor" opacity="0.75">what the model saw in training</text>
+<text x="0" y="178" font-size="11" fill="currentColor" class="mono">2 neighbors drawn</text>
+<text x="0" y="194" font-size="11" fill="currentColor" class="mono">0 cells hold 2+ robots</text>
+<text x="0" y="210" font-size="11" fill="currentColor" class="mono">1 cell = 8 m</text>
+</g>
+<g transform="translate(205,40)">
+<rect x="0" y="0" width="160" height="160" class="mapbg" stroke="currentColor" stroke-width="1"/>
+<line x1="5" y1="0" x2="5" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="5" x2="160" y2="5" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="10" y1="0" x2="10" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="10" x2="160" y2="10" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="15" y1="0" x2="15" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="15" x2="160" y2="15" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="20" y1="0" x2="20" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="20" x2="160" y2="20" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="25" y1="0" x2="25" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="25" x2="160" y2="25" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="30" y1="0" x2="30" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="30" x2="160" y2="30" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="35" y1="0" x2="35" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="35" x2="160" y2="35" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="40" y1="0" x2="40" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="40" x2="160" y2="40" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="45" y1="0" x2="45" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="45" x2="160" y2="45" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="50" y1="0" x2="50" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="50" x2="160" y2="50" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="55" y1="0" x2="55" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="55" x2="160" y2="55" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="60" y1="0" x2="60" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="60" x2="160" y2="60" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="65" y1="0" x2="65" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="65" x2="160" y2="65" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="70" y1="0" x2="70" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="70" x2="160" y2="70" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="75" y1="0" x2="75" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="75" x2="160" y2="75" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="80" y1="0" x2="80" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="80" x2="160" y2="80" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="85" y1="0" x2="85" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="85" x2="160" y2="85" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="90" y1="0" x2="90" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="90" x2="160" y2="90" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="95" y1="0" x2="95" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="95" x2="160" y2="95" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="100" y1="0" x2="100" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="100" x2="160" y2="100" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="105" y1="0" x2="105" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="105" x2="160" y2="105" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="110" y1="0" x2="110" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="110" x2="160" y2="110" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="115" y1="0" x2="115" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="115" x2="160" y2="115" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="120" y1="0" x2="120" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="120" x2="160" y2="120" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="125" y1="0" x2="125" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="125" x2="160" y2="125" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="130" y1="0" x2="130" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="130" x2="160" y2="130" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="135" y1="0" x2="135" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="135" x2="160" y2="135" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="140" y1="0" x2="140" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="140" x2="160" y2="140" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="145" y1="0" x2="145" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="145" x2="160" y2="145" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="150" y1="0" x2="150" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="150" x2="160" y2="150" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="155" y1="0" x2="155" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="155" x2="160" y2="155" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<rect x="80" y="75" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="90" y="100" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="105" y="125" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="125" y="80" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<circle cx="80.0" cy="80.0" r="2.6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+<text x="0" y="-22" font-size="12.5" font-weight="600" fill="currentColor">Range 256 m</text>
+<text x="0" y="-8" font-size="10.5" fill="currentColor" opacity="0.75">its best regime</text>
+<text x="0" y="178" font-size="11" fill="currentColor" class="mono">4 neighbors drawn</text>
+<text x="0" y="194" font-size="11" fill="currentColor" class="mono">0 cells hold 2+ robots</text>
+<text x="0" y="210" font-size="11" fill="currentColor" class="mono">1 cell = 16 m</text>
+</g>
+<g transform="translate(400,40)">
+<rect x="0" y="0" width="160" height="160" class="mapbg" stroke="currentColor" stroke-width="1"/>
+<line x1="5" y1="0" x2="5" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="5" x2="160" y2="5" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="10" y1="0" x2="10" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="10" x2="160" y2="10" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="15" y1="0" x2="15" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="15" x2="160" y2="15" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="20" y1="0" x2="20" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="20" x2="160" y2="20" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="25" y1="0" x2="25" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="25" x2="160" y2="25" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="30" y1="0" x2="30" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="30" x2="160" y2="30" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="35" y1="0" x2="35" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="35" x2="160" y2="35" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="40" y1="0" x2="40" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="40" x2="160" y2="40" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="45" y1="0" x2="45" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="45" x2="160" y2="45" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="50" y1="0" x2="50" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="50" x2="160" y2="50" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="55" y1="0" x2="55" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="55" x2="160" y2="55" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="60" y1="0" x2="60" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="60" x2="160" y2="60" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="65" y1="0" x2="65" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="65" x2="160" y2="65" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="70" y1="0" x2="70" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="70" x2="160" y2="70" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="75" y1="0" x2="75" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="75" x2="160" y2="75" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="80" y1="0" x2="80" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="80" x2="160" y2="80" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="85" y1="0" x2="85" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="85" x2="160" y2="85" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="90" y1="0" x2="90" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="90" x2="160" y2="90" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="95" y1="0" x2="95" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="95" x2="160" y2="95" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="100" y1="0" x2="100" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="100" x2="160" y2="100" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="105" y1="0" x2="105" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="105" x2="160" y2="105" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="110" y1="0" x2="110" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="110" x2="160" y2="110" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="115" y1="0" x2="115" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="115" x2="160" y2="115" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="120" y1="0" x2="120" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="120" x2="160" y2="120" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="125" y1="0" x2="125" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="125" x2="160" y2="125" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="130" y1="0" x2="130" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="130" x2="160" y2="130" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="135" y1="0" x2="135" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="135" x2="160" y2="135" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="140" y1="0" x2="140" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="140" x2="160" y2="140" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="145" y1="0" x2="145" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="145" x2="160" y2="145" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="150" y1="0" x2="150" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="150" x2="160" y2="150" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="155" y1="0" x2="155" y2="160" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<line x1="0" y1="155" x2="160" y2="155" stroke="currentColor" stroke-width="0.3" opacity="0.18"/>
+<rect x="80" y="85" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="80" y="75" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="80" y="45" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="80" y="25" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="85" y="90" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="85" y="50" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="90" y="80" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="95" y="25" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="100" y="85" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="100" y="60" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="100" y="20" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="105" y="20" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="110" y="75" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="110" y="45" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="115" y="45" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="120" y="65" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="125" y="55" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="130" y="40" width="5" height="5" class="cellhot"><title>2 robots in this cell</title></rect>
+<rect x="135" y="35" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="140" y="65" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="140" y="55" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="145" y="95" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="145" y="40" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="150" y="90" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="150" y="70" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<rect x="150" y="45" width="5" height="5" class="cell"><title>1 robot in this cell</title></rect>
+<circle cx="80.0" cy="80.0" r="2.6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+<text x="0" y="-22" font-size="12.5" font-weight="600" fill="currentColor">Range 1024 m</text>
+<text x="0" y="-8" font-size="10.5" fill="currentColor" opacity="0.75">where it collapses</text>
+<text x="0" y="178" font-size="11" fill="currentColor" class="mono">27 neighbors drawn</text>
+<text x="0" y="194" font-size="11" fill="currentColor" class="mono">1 cells hold 2+ robots</text>
+<text x="0" y="210" font-size="11" fill="currentColor" class="mono">1 cell = 64 m</text>
+</g>
+</svg></div>
+    <figcaption><strong>Figure 3.</strong> One robot's neighbor map for the same illustrative swarm at three ranges; the robot sits at the center circle, blue cells hold one neighbor, red cells two or more. At 128 m the model sees 2 neighbors, each several cells from the center, with values up to ±1. At 1024 m it sees 27 in a much fuller picture of 64 m cells, and the robots it used to see at 128 m now sit within two cells of the center with values below 0.13. In real episodes robots gather near important areas, so shared cells are more frequent than in this uniform example. The model was trained only on pictures like the left one. Positions are synthetic, drawn uniformly; the drawing rule is the library's.</figcaption>
+  </figure>
+</section>
+
+<!-- ======================= 3 ======================= -->
+<section class="section stack-l" id="range">
+  <div class="stack-s"><p class="eyebrow">Section 3</p><h2>What the communication range changes</h2></div>
+  <p>Raising the range does three things at once. All three were measured on the published model's own trajectories, 32 robots in a 1024 × 1024 m world.</p>
+  <div class="tscroll">
+    <table>
+      <thead><tr><th>Range (m)</th><th>Neighbors per robot</th><th>Isolated robots</th><th>Neighbor-map cell</th><th>Value of a neighbor at 50 m</th></tr></thead>
+      <tbody>
+        <tr><td class="num">128</td><td class="num">1.4</td><td class="num">24&nbsp;%</td><td class="num">8 m</td><td class="num">0.39</td></tr>
+        <tr><td class="num">256</td><td class="num">4.5</td><td class="num">0&nbsp;%</td><td class="num">16 m</td><td class="num">0.20</td></tr>
+        <tr><td class="num">512</td><td class="num">11.7</td><td class="num">0&nbsp;%</td><td class="num">32 m</td><td class="num">0.10</td></tr>
+        <tr><td class="num">768</td><td class="num">18.5</td><td class="num">0&nbsp;%</td><td class="num">48 m</td><td class="num">0.07</td></tr>
+        <tr><td class="num">1024</td><td class="num">24.9</td><td class="num">0&nbsp;%</td><td class="num">64 m</td><td class="num">0.05</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <ol class="plain">
+    <li><strong>The graph gets denser</strong>: from 1.4 to 25 neighbors per robot out of 31 possible. At 1024 m the graph is close to complete.</li>
+    <li><strong>The neighbor map gets coarser and fuller</strong>: more robots are drawn, in bigger cells, with smaller values.</li>
+    <li>Both are far from anything the model saw during training at 128 m.</li>
+  </ol>
+  <p>The question of the project is which of these changes breaks the policy.</p>
+</section>
+
+<!-- ======================= 4 ======================= -->
+<section class="section stack-l" id="paper">
+  <div class="stack-s"><p class="eyebrow">Section 4</p><h2>The paper's claim and what we can test</h2></div>
+  <blockquote>
+    The performance of the LPAC-K3 model improves until a communication range of 512 m and then decreases. This is counterintuitive. […] Investigating these hypotheses and improving the performance of the LPAC model with a larger communication range is an interesting direction for future work.
+    <span class="src">LPAC paper, Section VI-H and Figure 20</span>
+  </blockquote>
+  <p>In Figure 20 the authors <strong>train a separate model for each range</strong> and evaluate each at its own range, on 100 environments. They propose three explanations and test none:</p>
+  <div class="tscroll">
+    <table>
+      <thead><tr><th>Hypothesis</th><th>Authors' wording, summarized</th><th>Our evidence so far</th></tr></thead>
+      <tbody>
+        <tr><td><strong>H1</strong> neighbor map</td><td>The fixed 32 × 32 map sums several robots per cell at large ranges and loses information.</td><td><strong>Supported</strong> in our transfer setting (F4 to F6). Not yet separated from plain distribution shift.</td></tr>
+        <tr><td><strong>H2</strong> aggregation</td><td>The GNN aggregates by summation, which is lossy.</td><td>Does not describe the code: TAGConv uses normalized adjacency.</td></tr>
+        <tr><td><strong>H3</strong> dense graph</td><td>The graph becomes nearly complete and GNNs work better on sparse graphs.</td><td><strong>Secondary.</strong> Capping the graph has no effect when the map is wrong, a real but small effect when the map is empty (F4, F6).</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note stack-s">
+    <p><strong>What we cannot do.</strong> Only one trained model is public: <code>model_k3_1024_state_dict.pt</code>, byte-identical in releases v1.1.0 to v1.3.1, trained at 128 m according to its parameter file. We checked the releases, the other branches and tags, the authors' pages, their GitHub accounts and Hugging Face. The per-range models of Figure 20 are not available.</p>
+    <p><strong>So our main results are transfer results</strong>: one model trained at one range, run at others. They do not reproduce Figure 20. We asked the authors' co-author for the other checkpoints (section 10). We can now train per-range models ourselves (F9), which is how we will connect to Figure 20.</p>
+  </div>
+</section>
+
+<!-- ======================= 5 ======================= -->
+<section class="section stack-l" id="setup">
+  <div class="stack-s"><p class="eyebrow">Section 5</p><h2>Setup and measurement protocol</h2></div>
+  <div class="tscroll">
+    <table>
+      <thead><tr><th>Item</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>Library</td><td><code>pip install coverage_control==1.3.1</code> (Linux wheels only, Python 3.10 to 3.13). Scripts from the GitHub tag <code>v1.3.1</code>; the repository head is incompatible with this wheel.</td></tr>
+        <tr><td>Model and environments</td><td>Release asset <code>lpac_CoverageControl.tar.gz</code>: the checkpoint, its parameter files, and 11 evaluation environments (importance field + 32 initial positions).</td></tr>
+        <tr><td>World</td><td>1024 × 1024 m, 32 robots, sensor 64 × 64 m, max speed 5 m/s, time step 0.2 s, local maps 256 m wide resized to 32 × 32.</td></tr>
+        <tr><td>Episode</td><td>600 steps. Cost averaged over the episode, divided by the clairvoyant's on the same environment.</td></tr>
+        <tr><td>Statistics</td><td>Mean ± standard deviation over the 11 environments. Comparisons are paired: same environment, two conditions, difference per environment.</td></tr>
+        <tr><td>Determinism</td><td>Evaluation is deterministic. Results are bit-identical across Intel CPUs and differ by up to 5.6 % per environment on AMD CPUs, so all evaluation runs on Intel nodes.</td></tr>
+        <tr><td>Where it runs</td><td>A laptop under WSL (Ubuntu 24.04) for development; Stanford FarmShare for parallel evaluation (Intel CPU nodes) and training (L40S GPUs). Free.</td></tr>
+        <tr><td>Code</td><td>Our package <code>lpac_study</code> wraps the published model, rebuilds its graph and maps in PyTorch Geometric, and checks that the rebuilt inputs match the library to 2.4 × 10⁻⁷.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note">
+    <p><strong>How much noise to expect.</strong> Moving the 32 initial positions by 1 m changes an episode's cost by about 7 %: the standard deviation within an environment is 0.35 for the published model at 1024 m and 0.09 once repaired. On the mean of 11 environments, differences below about 0.03 (repaired model) or 0.1 (published model) are not interpretable. Between three retrained seeds, the mean moves by 0.01 at 128 m and 0.26 at 1024 m, so comparing two trained variants requires about 0.05 at 256 m and 0.5 at 1024 m, or more seeds.</p>
+  </div>
+</section>
+
+<!-- ======================= 6 ======================= -->
+<section class="section stack-l" id="findings">
+  <div class="stack-s"><p class="eyebrow">Section 6</p><h2>Findings</h2>
+    <p>Each finding states what was done, the numbers, what it shows and what it does not show. All numbers are cost divided by the clairvoyant's (lower is better), mean ± standard deviation over the 11 released environments.</p></div>
+
+  <article class="finding" id="f1">
+    <p class="fid">F1 · DONE</p>
+    <h3>The published model collapses beyond 256 m</h3>
+    <p>The published checkpoint, unchanged, at five test ranges, with the CVT baselines.</p>
+    <figure>
+      <div class="legend"><span><i class="sw sw1"></i>LPAC-K3 as published</span><span><i class="sw sw2"></i>Decentralized CVT</span><span><i class="sw sw3"></i>Centralized CVT</span><span><i class="sw swref"></i>Clairvoyant (reference)</span></div>
+      <div class="figbox"><svg viewBox="0 0 720 360" role="img" aria-label="Coverage cost of the published LPAC model versus communication range, with the two CVT baselines. LPAC is best at 128 and 256 m, then its cost rises to 5.22 at 1024 m.">
+<line x1="58" y1="308.0" x2="550" y2="308.0" stroke="currentColor" stroke-width="1" opacity="0.45"/>
+<text x="50" y="312.0" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">0</text>
+<line x1="58" y1="267.1" x2="550" y2="267.1" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="271.1" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">1</text>
+<line x1="58" y1="226.3" x2="550" y2="226.3" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="230.3" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">2</text>
+<line x1="58" y1="185.4" x2="550" y2="185.4" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="189.4" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">3</text>
+<line x1="58" y1="144.6" x2="550" y2="144.6" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="148.6" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">4</text>
+<line x1="58" y1="103.7" x2="550" y2="103.7" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="107.7" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">5</text>
+<line x1="58" y1="62.9" x2="550" y2="62.9" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="66.9" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">6</text>
+<line x1="58" y1="22.0" x2="550" y2="22.0" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="26.0" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">7</text>
+<text x="58.0" y="326" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.75" class="mono">128</text>
+<text x="128.3" y="326" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.75" class="mono">256</text>
+<text x="268.9" y="326" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.75" class="mono">512</text>
+<text x="409.4" y="326" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.75" class="mono">768</text>
+<text x="550.0" y="326" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.75" class="mono">1024</text>
+<text x="304" y="348" font-size="12" text-anchor="middle" fill="currentColor" opacity="0.85">Communication range at test time (m)</text>
+<text x="14" y="165" font-size="12" text-anchor="middle" fill="currentColor" opacity="0.85" transform="rotate(-90 14 165)">Cost / clairvoyant cost</text>
+<line x1="58" y1="267.1" x2="550" y2="267.1" stroke="currentColor" stroke-width="1.3" stroke-dasharray="5 4" opacity="0.55"/>
+<g class="ser2">
+<polyline fill="none" stroke-width="2" points="58.0,202.0 128.3,203.1 268.9,202.2 409.4,202.2 550.0,202.2"/>
+<circle cx="58.0" cy="202.0" r="4.5" class="dot"><title>Decentralized CVT, 128 m: 2.59 ± 0.70</title></circle>
+<circle cx="58.0" cy="202.0" r="13" fill="transparent" stroke="none"><title>Decentralized CVT, 128 m: 2.59 ± 0.70</title></circle>
+<circle cx="128.3" cy="203.1" r="4.5" class="dot"><title>Decentralized CVT, 256 m: 2.57 ± 0.71</title></circle>
+<circle cx="128.3" cy="203.1" r="13" fill="transparent" stroke="none"><title>Decentralized CVT, 256 m: 2.57 ± 0.71</title></circle>
+<circle cx="268.9" cy="202.2" r="4.5" class="dot"><title>Decentralized CVT, 512 m: 2.59 ± 0.67</title></circle>
+<circle cx="268.9" cy="202.2" r="13" fill="transparent" stroke="none"><title>Decentralized CVT, 512 m: 2.59 ± 0.67</title></circle>
+<circle cx="409.4" cy="202.2" r="4.5" class="dot"><title>Decentralized CVT, 768 m: 2.59 ± 0.67</title></circle>
+<circle cx="409.4" cy="202.2" r="13" fill="transparent" stroke="none"><title>Decentralized CVT, 768 m: 2.59 ± 0.67</title></circle>
+<circle cx="550.0" cy="202.2" r="4.5" class="dot"><title>Decentralized CVT, 1024 m: 2.59 ± 0.67</title></circle>
+<circle cx="550.0" cy="202.2" r="13" fill="transparent" stroke="none"><title>Decentralized CVT, 1024 m: 2.59 ± 0.67</title></circle>
+</g>
+<g class="ser3">
+<polyline fill="none" stroke-width="2" points="58.0,204.9 128.3,204.9 268.9,204.9 409.4,204.9 550.0,204.9"/>
+<circle cx="58.0" cy="204.9" r="4.5" class="dot"><title>Centralized CVT, 128 m: 2.52 ± 0.74</title></circle>
+<circle cx="58.0" cy="204.9" r="13" fill="transparent" stroke="none"><title>Centralized CVT, 128 m: 2.52 ± 0.74</title></circle>
+<circle cx="128.3" cy="204.9" r="4.5" class="dot"><title>Centralized CVT, 256 m: 2.52 ± 0.74</title></circle>
+<circle cx="128.3" cy="204.9" r="13" fill="transparent" stroke="none"><title>Centralized CVT, 256 m: 2.52 ± 0.74</title></circle>
+<circle cx="268.9" cy="204.9" r="4.5" class="dot"><title>Centralized CVT, 512 m: 2.52 ± 0.74</title></circle>
+<circle cx="268.9" cy="204.9" r="13" fill="transparent" stroke="none"><title>Centralized CVT, 512 m: 2.52 ± 0.74</title></circle>
+<circle cx="409.4" cy="204.9" r="4.5" class="dot"><title>Centralized CVT, 768 m: 2.52 ± 0.74</title></circle>
+<circle cx="409.4" cy="204.9" r="13" fill="transparent" stroke="none"><title>Centralized CVT, 768 m: 2.52 ± 0.74</title></circle>
+<circle cx="550.0" cy="204.9" r="4.5" class="dot"><title>Centralized CVT, 1024 m: 2.52 ± 0.74</title></circle>
+<circle cx="550.0" cy="204.9" r="13" fill="transparent" stroke="none"><title>Centralized CVT, 1024 m: 2.52 ± 0.74</title></circle>
+</g>
+<g class="ser1">
+<line x1="58.0" y1="245.8" x2="58.0" y2="208.1" stroke-width="1.3" opacity="0.55"/>
+<line x1="54.0" y1="245.8" x2="62.0" y2="245.8" stroke-width="1.3" opacity="0.55"/>
+<line x1="54.0" y1="208.1" x2="62.0" y2="208.1" stroke-width="1.3" opacity="0.55"/>
+<line x1="128.3" y1="246.5" x2="128.3" y2="231.4" stroke-width="1.3" opacity="0.55"/>
+<line x1="124.3" y1="246.5" x2="132.3" y2="246.5" stroke-width="1.3" opacity="0.55"/>
+<line x1="124.3" y1="231.4" x2="132.3" y2="231.4" stroke-width="1.3" opacity="0.55"/>
+<line x1="268.9" y1="210.5" x2="268.9" y2="179.5" stroke-width="1.3" opacity="0.55"/>
+<line x1="264.9" y1="210.5" x2="272.9" y2="210.5" stroke-width="1.3" opacity="0.55"/>
+<line x1="264.9" y1="179.5" x2="272.9" y2="179.5" stroke-width="1.3" opacity="0.55"/>
+<line x1="409.4" y1="169.9" x2="409.4" y2="76.5" stroke-width="1.3" opacity="0.55"/>
+<line x1="405.4" y1="169.9" x2="413.4" y2="169.9" stroke-width="1.3" opacity="0.55"/>
+<line x1="405.4" y1="76.5" x2="413.4" y2="76.5" stroke-width="1.3" opacity="0.55"/>
+<line x1="550.0" y1="152.4" x2="550.0" y2="37.1" stroke-width="1.3" opacity="0.55"/>
+<line x1="546.0" y1="152.4" x2="554.0" y2="152.4" stroke-width="1.3" opacity="0.55"/>
+<line x1="546.0" y1="37.1" x2="554.0" y2="37.1" stroke-width="1.3" opacity="0.55"/>
+<polyline fill="none" stroke-width="2" points="58.0,226.9 128.3,239.0 268.9,195.0 409.4,123.2 550.0,94.8"/>
+<circle cx="58.0" cy="226.9" r="4.5" class="dot"><title>LPAC-K3 as published, 128 m: 1.98 ± 0.46</title></circle>
+<circle cx="58.0" cy="226.9" r="13" fill="transparent" stroke="none"><title>LPAC-K3 as published, 128 m: 1.98 ± 0.46</title></circle>
+<circle cx="128.3" cy="239.0" r="4.5" class="dot"><title>LPAC-K3 as published, 256 m: 1.69 ± 0.18</title></circle>
+<circle cx="128.3" cy="239.0" r="13" fill="transparent" stroke="none"><title>LPAC-K3 as published, 256 m: 1.69 ± 0.18</title></circle>
+<circle cx="268.9" cy="195.0" r="4.5" class="dot"><title>LPAC-K3 as published, 512 m: 2.77 ± 0.38</title></circle>
+<circle cx="268.9" cy="195.0" r="13" fill="transparent" stroke="none"><title>LPAC-K3 as published, 512 m: 2.77 ± 0.38</title></circle>
+<circle cx="409.4" cy="123.2" r="4.5" class="dot"><title>LPAC-K3 as published, 768 m: 4.52 ± 1.14</title></circle>
+<circle cx="409.4" cy="123.2" r="13" fill="transparent" stroke="none"><title>LPAC-K3 as published, 768 m: 4.52 ± 1.14</title></circle>
+<circle cx="550.0" cy="94.8" r="4.5" class="dot"><title>LPAC-K3 as published, 1024 m: 5.22 ± 1.41</title></circle>
+<circle cx="550.0" cy="94.8" r="13" fill="transparent" stroke="none"><title>LPAC-K3 as published, 1024 m: 5.22 ± 1.41</title></circle>
+</g>
+<text x="560" y="98.8" font-size="11.5" fill="currentColor" opacity="1" font-weight="600">LPAC-K3 as published</text>
+<text x="560" y="206.2" font-size="11.5" fill="currentColor" opacity="1">Decentralized CVT</text>
+<text x="560" y="221.2" font-size="11.5" fill="currentColor" opacity="1">Centralized CVT</text>
+<text x="560" y="271.1" font-size="11.5" fill="currentColor" opacity="0.7">Clairvoyant = 1</text>
+</svg></div>
+      <figcaption><strong>Figure 4.</strong> Range sweep. Bars on LPAC: standard deviation across environments. The model was trained at 128 m.</figcaption>
+    </figure>
+    <div class="tscroll"><table>
+      <thead><tr><th>Range (m)</th><th>LPAC</th><th>Decentr. CVT</th><th>Centr. CVT</th><th>Neighbors</th><th>Isolated</th><th>Final-step cost</th></tr></thead>
+      <tbody><tr><td class="num">128</td><td class="num"><strong>1.98&nbsp;±&nbsp;0.46</strong></td><td class="num">2.59&nbsp;±&nbsp;0.70</td><td class="num">2.52&nbsp;±&nbsp;0.74</td><td class="num">1.4</td><td class="num">24&nbsp;%</td><td class="num">2.27</td></tr><tr><td class="num">256</td><td class="num"><strong>1.69&nbsp;±&nbsp;0.18</strong></td><td class="num">2.57&nbsp;±&nbsp;0.71</td><td class="num">2.52&nbsp;±&nbsp;0.74</td><td class="num">4.5</td><td class="num">0&nbsp;%</td><td class="num">2.06</td></tr><tr><td class="num">512</td><td class="num"><strong>2.77&nbsp;±&nbsp;0.38</strong></td><td class="num">2.59&nbsp;±&nbsp;0.67</td><td class="num">2.52&nbsp;±&nbsp;0.74</td><td class="num">11.7</td><td class="num">0&nbsp;%</td><td class="num">3.86</td></tr><tr><td class="num">768</td><td class="num"><strong>4.52&nbsp;±&nbsp;1.14</strong></td><td class="num">2.59&nbsp;±&nbsp;0.67</td><td class="num">2.52&nbsp;±&nbsp;0.74</td><td class="num">18.5</td><td class="num">0&nbsp;%</td><td class="num">8.33</td></tr><tr><td class="num">1024</td><td class="num"><strong>5.22&nbsp;±&nbsp;1.41</strong></td><td class="num">2.59&nbsp;±&nbsp;0.67</td><td class="num">2.52&nbsp;±&nbsp;0.74</td><td class="num">24.9</td><td class="num">0&nbsp;%</td><td class="num">10.93</td></tr></tbody>
+    </table></div>
+    <div class="verdict">
+      <div class="shows"><h4>Shows</h4><p>A large, systematic failure: the cost at 1024 m is 2.1 to 4.6 times the cost at 256 m, in every environment. At 768 and 1024 m the final cost is higher than the starting cost: the policy makes coverage worse over time.</p></div>
+      <div class="not"><h4>Does not show</h4><p>The paper's Figure 20 (different setting, see section 4). The CVT curves look flat on average, but the decentralized one moves by −9 % to +5 % per environment between 128 and 512 m; it is exactly constant from 512 m because it only uses a 256 m window.</p></div>
+    </div>
+  </article>
+
+  <article class="finding" id="f2">
+    <p class="fid">F2 · DONE</p>
+    <h3>At a constant number of neighbors, the collapse disappears</h3>
+    <p>We raised the range while shrinking the team, so each robot keeps four to five neighbors.</p>
+    <div class="tscroll"><table>
+      <thead><tr><th>Range (m)</th><th>Robots</th><th>LPAC</th><th>Decentr. CVT</th><th>Centr. CVT</th><th>Neighbors</th></tr></thead>
+      <tbody><tr><td class="num">256</td><td class="num">32</td><td class="num"><strong>1.69&nbsp;±&nbsp;0.18</strong></td><td class="num">2.57&nbsp;±&nbsp;0.71</td><td class="num">2.52&nbsp;±&nbsp;0.74</td><td class="num">4.5</td></tr><tr><td class="num">512</td><td class="num">11</td><td class="num"><strong>1.84&nbsp;±&nbsp;0.27</strong></td><td class="num">2.18&nbsp;±&nbsp;0.38</td><td class="num">2.08&nbsp;±&nbsp;0.40</td><td class="num">3.9</td></tr><tr><td class="num">768</td><td class="num">7</td><td class="num"><strong>1.74&nbsp;±&nbsp;0.36</strong></td><td class="num">2.11&nbsp;±&nbsp;0.39</td><td class="num">2.05&nbsp;±&nbsp;0.39</td><td class="num">4.2</td></tr><tr><td class="num">1024</td><td class="num">6</td><td class="num"><strong>2.00&nbsp;±&nbsp;0.57</strong></td><td class="num">2.02&nbsp;±&nbsp;0.35</td><td class="num">1.98&nbsp;±&nbsp;0.35</td><td class="num">4.5</td></tr></tbody>
+    </table></div>
+    <div class="verdict">
+      <div class="shows"><h4>Shows</h4><p>The failure follows how many neighbors a robot sees, not the range itself.</p></div>
+      <div class="not"><h4>Does not show</h4><p>Which path is responsible: both the graph and the neighbor map depend on the neighbor count. Fewer robots also make the task easier, as the moving baselines show.</p></div>
+    </div>
+  </article>
+
+  <article class="finding" id="f3">
+    <p class="fid">F3 · DONE</p>
+    <h3>No over-smoothing</h3>
+    <p>Over-smoothing (lecture 5) means that repeated message passing makes all nodes' representations identical. We measured the <strong>effective rank</strong> of the 32 robots' representations after each TAGConv layer: the exponential of the entropy of their normalized singular values, between 1 (all identical) and 32.</p>
+    <div class="tscroll"><table>
+      <thead><tr><th>Layer</th><th>128 m</th><th>256 m</th><th>512 m</th><th>768 m</th><th>1024 m</th></tr></thead>
+      <tbody><tr><td>Layer 1</td><td class="num">18.7</td><td class="num">16.1</td><td class="num">15.4</td><td class="num">15.6</td><td class="num">15.7</td></tr><tr><td>Layer 2</td><td class="num">22.5</td><td class="num">20.2</td><td class="num">18.6</td><td class="num">17.3</td><td class="num">16.0</td></tr><tr><td>Layer 3</td><td class="num">20.6</td><td class="num">17.8</td><td class="num">16.1</td><td class="num">15.0</td><td class="num">13.6</td></tr><tr><td>Layer 4</td><td class="num">15.9</td><td class="num">13.8</td><td class="num">13.0</td><td class="num">12.6</td><td class="num">11.5</td></tr><tr><td>Layer 5</td><td class="num">9.4</td><td class="num">8.0</td><td class="num">8.4</td><td class="num">9.1</td><td class="num">8.9</td></tr></tbody>
+    </table></div>
+    <div class="verdict">
+      <div class="shows"><h4>Shows</h4><p>The rank drops about 30 % with range in layers 2 to 4 and never approaches 1, while the cost triples. Representations stay diverse even with 25 neighbors.</p></div>
+      <div class="not"><h4>Does not show</h4><p>That the graph plays no role at all; F4 and F6 measure that directly. We use effective rank rather than Dirichlet energy because Zhang et al. (ICLR 2026) show Dirichlet-type measures fail for shallow networks.</p></div>
+    </div>
+  </article>
+
+  <article class="finding" id="f4">
+    <p class="fid">F4 · DONE</p>
+    <h3>The neighbor map breaks the model, not the graph</h3>
+    <p>At 1024 m, without touching the weights, we changed the graph given to the GNN (rows) and the neighbor map given to the CNN (columns) independently. The robots still move in a 1024 m world; only the model's inputs change.</p>
+    <figure>
+      <div class="figbox"><svg viewBox="0 0 560 250" role="img" aria-label="Same eight robots, two graph constructions: all robots within range gives 14 edges, capping to the 2 nearest within range gives 9 edges.">
+            
+            <g stroke="currentColor" stroke-width="1.5" opacity="0.5">
+              <line x1="64" y1="152" x2="136" y2="171"/>
+              <line x1="64" y1="152" x2="92" y2="101"/>
+              <line x1="136" y1="171" x2="200" y2="146"/>
+              <line x1="136" y1="171" x2="92" y2="101"/>
+              <line x1="136" y1="171" x2="164" y2="107"/>
+              <line x1="200" y1="146" x2="164" y2="107"/>
+              <line x1="200" y1="146" x2="212" y2="78"/>
+              <line x1="92" y1="101" x2="164" y2="107"/>
+              <line x1="92" y1="101" x2="56" y2="59"/>
+              <line x1="92" y1="101" x2="128" y2="53"/>
+              <line x1="164" y1="107" x2="128" y2="53"/>
+              <line x1="164" y1="107" x2="212" y2="78"/>
+              <line x1="56" y1="59" x2="128" y2="53"/>
+              <line x1="128" y1="53" x2="212" y2="78"/>
+            </g>
+            <g fill="currentColor">
+              <circle cx="64" cy="152" r="6"/><circle cx="136" cy="171" r="6"/><circle cx="200" cy="146" r="6"/>
+              <circle cx="92" cy="101" r="6"/><circle cx="164" cy="107" r="6"/><circle cx="56" cy="59" r="6"/>
+              <circle cx="128" cy="53" r="6"/><circle cx="212" cy="78" r="6"/>
+            </g>
+            <text x="20" y="208" font-size="12.5" font-weight="600" fill="currentColor" font-family="IBM Plex Sans, sans-serif">All robots within range</text>
+            <text x="20" y="226" font-size="11" fill="currentColor" opacity="0.7" font-family="IBM Plex Mono, monospace">14 edges, mean degree 3.5</text>
+            <text x="20" y="242" font-size="11" fill="currentColor" opacity="0.7" font-family="IBM Plex Sans, sans-serif">degree grows with range</text>
+
+            
+            <line x1="280" y1="30" x2="280" y2="240" stroke="currentColor" stroke-width="1" opacity="0.2"/>
+
+            
+            <g class="svg-accent" stroke="currentColor" stroke-width="1.8" opacity="0.85">
+              <line x1="384" y1="152" x2="456" y2="171"/>
+              <line x1="384" y1="152" x2="412" y2="101"/>
+              <line x1="456" y1="171" x2="520" y2="146"/>
+              <line x1="520" y1="146" x2="484" y2="107"/>
+              <line x1="520" y1="146" x2="532" y2="78"/>
+              <line x1="412" y1="101" x2="376" y2="59"/>
+              <line x1="412" y1="101" x2="448" y2="53"/>
+              <line x1="484" y1="107" x2="532" y2="78"/>
+              <line x1="376" y1="59" x2="448" y2="53"/>
+            </g>
+            <g fill="currentColor">
+              <circle cx="384" cy="152" r="6"/><circle cx="456" cy="171" r="6"/><circle cx="520" cy="146" r="6"/>
+              <circle cx="412" cy="101" r="6"/><circle cx="484" cy="107" r="6"/><circle cx="376" cy="59" r="6"/>
+              <circle cx="448" cy="53" r="6"/><circle cx="532" cy="78" r="6"/>
+            </g>
+            <text x="340" y="208" font-size="12.5" font-weight="600" fill="currentColor" font-family="IBM Plex Sans, sans-serif">Capped: k = 2 nearest within range</text>
+            <text x="340" y="226" font-size="11" fill="currentColor" opacity="0.7" font-family="IBM Plex Mono, monospace">9 edges, mean degree 2.25</text>
+            <text x="340" y="242" font-size="11" fill="currentColor" opacity="0.7" font-family="IBM Plex Sans, sans-serif">degree stays bounded</text>
+          </svg></div>
+      <figcaption><strong>Figure 5.</strong> What "capping the graph" means: each robot keeps only its k nearest neighbors among those within range, so every edge stays physically possible.</figcaption>
+    </figure>
+    <div class="tscroll"><table>
+      <caption>Cost at 1024 m. Darker red = worse.</caption>
+      <thead><tr><th>Graph given to the GNN</th><th>C0 full map (as published)</th><th>C1 map: 4 nearest only</th><th>C2 map at 128 m scale</th><th>C3 map at 256 m scale</th><th>C4 empty map</th></tr></thead>
+      <tbody><tr><th scope="row"><strong>G0</strong> all robots within range</th><td class="num heat" style="--h:0.98">5.22&nbsp;±&nbsp;1.41</td><td class="num heat" style="--h:0.34">2.91&nbsp;±&nbsp;0.38</td><td class="num heat" style="--h:0.18">2.35&nbsp;±&nbsp;0.53</td><td class="num heat" style="--h:0.00">1.71&nbsp;±&nbsp;0.19</td><td class="num heat" style="--h:0.42">3.20&nbsp;±&nbsp;0.57</td></tr><tr><th scope="row"><strong>G1</strong> capped to 4 nearest</th><td class="num heat" style="--h:0.95">5.11&nbsp;±&nbsp;1.42</td><td class="num heat" style="--h:0.35">2.95&nbsp;±&nbsp;0.58</td><td class="num heat" style="--h:0.13">2.18&nbsp;±&nbsp;0.43</td><td class="num heat" style="--h:0.00">1.71&nbsp;±&nbsp;0.21</td><td class="num heat" style="--h:0.26">2.65&nbsp;±&nbsp;0.44</td></tr></tbody>
+    </table></div>
+    <ul class="plain">
+      <li>Graph effect with the full map (G1 − G0, C0): -0.11&nbsp;±&nbsp;0.77, lower in 5 of 11 environments. Inside the noise.</li>
+      <li>Map effect, 4 nearest only (C1 − C0, G0): -2.31&nbsp;±&nbsp;1.20, lower in 11 of 11 environments.</li>
+      <li>Map effect, 256 m scale (C3 − C0, G0): -3.51&nbsp;±&nbsp;1.33, lower in 11 of 11 environments.</li>
+      <li>Graph effect once the map is at 128 m scale (G1 − G0, C2): -0.17&nbsp;±&nbsp;0.20, lower in 9 of 11 environments.</li>
+    </ul>
+    <div class="verdict">
+      <div class="shows"><h4>Shows</h4><p>Almost all of the collapse comes through the CNN's neighbor map. TAGConv copes with a graph about 20 times denser than in training.</p></div>
+      <div class="not"><h4>Does not show</h4><p>Whether the map fails because robots are summed into shared cells (information loss, the paper's H1) or because its picture is simply unlike the training pictures (distribution shift). That is experiment N3 in section 9.</p></div>
+    </div>
+  </article>
+
+  <article class="finding" id="f5">
+    <p class="fid">F5 · DONE</p>
+    <h3>The more neighbors drawn, the worse</h3>
+    <p>At 1024 m, graph capped to 4, we drew only the k nearest neighbors in the map, at the 1024 m scale.</p>
+    <figure>
+      <div class="figbox"><svg viewBox="0 0 720 360" role="img" aria-label="Cost at 1024 m as a function of how many nearest neighbors are drawn in the neighbor map: 2.26 with 2, 2.95 with 4, 4.58 with 8, 5.58 with 16.">
+<line x1="58" y1="308.0" x2="530" y2="308.0" stroke="currentColor" stroke-width="1" opacity="0.45"/>
+<text x="50" y="312.0" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">0</text>
+<line x1="58" y1="267.1" x2="530" y2="267.1" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="271.1" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">1</text>
+<line x1="58" y1="226.3" x2="530" y2="226.3" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="230.3" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">2</text>
+<line x1="58" y1="185.4" x2="530" y2="185.4" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="189.4" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">3</text>
+<line x1="58" y1="144.6" x2="530" y2="144.6" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="148.6" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">4</text>
+<line x1="58" y1="103.7" x2="530" y2="103.7" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="107.7" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">5</text>
+<line x1="58" y1="62.9" x2="530" y2="62.9" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="66.9" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">6</text>
+<line x1="58" y1="22.0" x2="530" y2="22.0" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="26.0" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">7</text>
+<text x="58.0" y="326" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.75" class="mono">2</text>
+<text x="152.4" y="326" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.75" class="mono">3</text>
+<text x="246.8" y="326" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.75" class="mono">4</text>
+<text x="341.2" y="326" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.75" class="mono">8</text>
+<text x="435.6" y="326" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.75" class="mono">16</text>
+<text x="530.0" y="326" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.75" class="mono">all (≈25)</text>
+<text x="294" y="348" font-size="12" text-anchor="middle" fill="currentColor" opacity="0.85">Number of nearest neighbors drawn in the neighbor map (1024 m range)</text>
+<text x="14" y="165" font-size="12" text-anchor="middle" fill="currentColor" opacity="0.85" transform="rotate(-90 14 165)">Cost / clairvoyant cost</text>
+<line x1="58" y1="239.0" x2="530" y2="239.0" stroke="currentColor" stroke-width="1.3" stroke-dasharray="5 4" opacity="0.55"/>
+<line x1="58" y1="204.9" x2="530" y2="204.9" stroke="currentColor" stroke-width="1.3" stroke-dasharray="2 4" opacity="0.55"/>
+<g class="ser1">
+<line x1="58.0" y1="224.2" x2="58.0" y2="207.2" stroke-width="1.3" opacity="0.55"/>
+<line x1="54.0" y1="224.2" x2="62.0" y2="224.2" stroke-width="1.3" opacity="0.55"/>
+<line x1="54.0" y1="207.2" x2="62.0" y2="207.2" stroke-width="1.3" opacity="0.55"/>
+<line x1="152.4" y1="218.6" x2="152.4" y2="203.1" stroke-width="1.3" opacity="0.55"/>
+<line x1="148.4" y1="218.6" x2="156.4" y2="218.6" stroke-width="1.3" opacity="0.55"/>
+<line x1="148.4" y1="203.1" x2="156.4" y2="203.1" stroke-width="1.3" opacity="0.55"/>
+<line x1="246.8" y1="211.5" x2="246.8" y2="163.9" stroke-width="1.3" opacity="0.55"/>
+<line x1="242.8" y1="211.5" x2="250.8" y2="211.5" stroke-width="1.3" opacity="0.55"/>
+<line x1="242.8" y1="163.9" x2="250.8" y2="163.9" stroke-width="1.3" opacity="0.55"/>
+<line x1="341.2" y1="175.4" x2="341.2" y2="66.7" stroke-width="1.3" opacity="0.55"/>
+<line x1="337.2" y1="175.4" x2="345.2" y2="175.4" stroke-width="1.3" opacity="0.55"/>
+<line x1="337.2" y1="66.7" x2="345.2" y2="66.7" stroke-width="1.3" opacity="0.55"/>
+<line x1="435.6" y1="139.0" x2="435.6" y2="22.0" stroke-width="1.3" opacity="0.55"/>
+<line x1="431.6" y1="139.0" x2="439.6" y2="139.0" stroke-width="1.3" opacity="0.55"/>
+<line x1="431.6" y1="22.0" x2="439.6" y2="22.0" stroke-width="1.3" opacity="0.55"/>
+<line x1="530.0" y1="157.1" x2="530.0" y2="41.3" stroke-width="1.3" opacity="0.55"/>
+<line x1="526.0" y1="157.1" x2="534.0" y2="157.1" stroke-width="1.3" opacity="0.55"/>
+<line x1="526.0" y1="41.3" x2="534.0" y2="41.3" stroke-width="1.3" opacity="0.55"/>
+<polyline fill="none" stroke-width="2" points="58.0,215.7 152.4,210.9 246.8,187.7 341.2,121.0 435.6,80.0 530.0,99.2"/>
+<circle cx="58.0" cy="215.7" r="4.5" class="dot"><title>Graph capped, map: k nearest, 2: 2.26 ± 0.21</title></circle>
+<circle cx="58.0" cy="215.7" r="13" fill="transparent" stroke="none"><title>Graph capped, map: k nearest, 2: 2.26 ± 0.21</title></circle>
+<circle cx="152.4" cy="210.9" r="4.5" class="dot"><title>Graph capped, map: k nearest, 3: 2.38 ± 0.19</title></circle>
+<circle cx="152.4" cy="210.9" r="13" fill="transparent" stroke="none"><title>Graph capped, map: k nearest, 3: 2.38 ± 0.19</title></circle>
+<circle cx="246.8" cy="187.7" r="4.5" class="dot"><title>Graph capped, map: k nearest, 4: 2.95 ± 0.58</title></circle>
+<circle cx="246.8" cy="187.7" r="13" fill="transparent" stroke="none"><title>Graph capped, map: k nearest, 4: 2.95 ± 0.58</title></circle>
+<circle cx="341.2" cy="121.0" r="4.5" class="dot"><title>Graph capped, map: k nearest, 8: 4.58 ± 1.33</title></circle>
+<circle cx="341.2" cy="121.0" r="13" fill="transparent" stroke="none"><title>Graph capped, map: k nearest, 8: 4.58 ± 1.33</title></circle>
+<circle cx="435.6" cy="80.0" r="4.5" class="dot"><title>Graph capped, map: k nearest, 16: 5.58 ± 1.44</title></circle>
+<circle cx="435.6" cy="80.0" r="13" fill="transparent" stroke="none"><title>Graph capped, map: k nearest, 16: 5.58 ± 1.44</title></circle>
+<circle cx="530.0" cy="99.2" r="4.5" class="dot"><title>Graph capped, map: k nearest, all (≈25): 5.11 ± 1.42</title></circle>
+<circle cx="530.0" cy="99.2" r="13" fill="transparent" stroke="none"><title>Graph capped, map: k nearest, all (≈25): 5.11 ± 1.42</title></circle>
+</g>
+<text x="540" y="103.2" font-size="11.5" fill="currentColor" opacity="1" font-weight="600">Graph capped, map: k nearest</text>
+<text x="540" y="208.9" font-size="11.5" fill="currentColor" opacity="0.7">Centralized CVT</text>
+<text x="540" y="243.0" font-size="11.5" fill="currentColor" opacity="0.7">Published model at 256 m</text>
+</svg></div>
+      <figcaption><strong>Figure 6.</strong> Dose-response. The failure starts between 4 and 8 neighbors drawn. Bars: standard deviation across environments.</figcaption>
+    </figure>
+    <div class="tscroll"><table>
+      <thead><tr><th>Neighbors drawn (k)</th><th>Full graph</th><th>Graph capped to 4</th></tr></thead>
+      <tbody><tr><td class="num">2</td><td class="num">2.36&nbsp;±&nbsp;0.36</td><td class="num">2.26&nbsp;±&nbsp;0.21</td></tr><tr><td class="num">3</td><td class="num">2.72&nbsp;±&nbsp;0.30</td><td class="num">2.38&nbsp;±&nbsp;0.19</td></tr><tr><td class="num">4</td><td class="num">2.91&nbsp;±&nbsp;0.38</td><td class="num">2.95&nbsp;±&nbsp;0.58</td></tr><tr><td class="num">8</td><td class="num">4.72&nbsp;±&nbsp;1.17</td><td class="num">4.58&nbsp;±&nbsp;1.33</td></tr><tr><td class="num">16</td><td class="num">5.75&nbsp;±&nbsp;1.80</td><td class="num">5.58&nbsp;±&nbsp;1.44</td></tr><tr><td class="num">all (≈25)</td><td class="num">5.22&nbsp;±&nbsp;1.41</td><td class="num">5.11&nbsp;±&nbsp;1.42</td></tr></tbody>
+    </table></div>
+    <div class="verdict">
+      <div class="shows"><h4>Shows</h4><p>A graded effect, close to monotone (16 is slightly worse than all, within noise). Graph capping changes almost nothing at any k.</p></div>
+      <div class="not"><h4>Does not show</h4><p>That the count alone matters. About 4.5 neighbors at the 256 m scale give 1.69, but 4 neighbors at the 1024 m scale give 2.95: the scale of the map matters too.</p></div>
+    </div>
+  </article>
+
+  <article class="finding" id="f6">
+    <p class="fid">F6 · DONE</p>
+    <h3>A map drawn at a fixed 256 m scale removes the collapse</h3>
+    <p>Same weights, full graph, but the neighbor map shows only neighbors within 256 m, drawn with the 256 m cell size and normalization, whatever the actual range.</p>
+    <figure>
+      <div class="legend"><span><i class="sw sw1"></i>LPAC-K3 as published</span><span><i class="sw sw4"></i>Same weights, map at 256 m scale</span><span><i class="sw sw2"></i>Decentralized CVT</span><span><i class="sw sw3"></i>Centralized CVT</span></div>
+      <div class="figbox"><svg viewBox="0 0 720 360" role="img" aria-label="Published LPAC model with and without the neighbor map drawn at a fixed 256 m scale. With the fixed-scale map the cost stays near 1.7 at every range.">
+<line x1="58" y1="308.0" x2="550" y2="308.0" stroke="currentColor" stroke-width="1" opacity="0.45"/>
+<text x="50" y="312.0" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">0</text>
+<line x1="58" y1="267.1" x2="550" y2="267.1" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="271.1" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">1</text>
+<line x1="58" y1="226.3" x2="550" y2="226.3" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="230.3" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">2</text>
+<line x1="58" y1="185.4" x2="550" y2="185.4" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="189.4" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">3</text>
+<line x1="58" y1="144.6" x2="550" y2="144.6" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="148.6" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">4</text>
+<line x1="58" y1="103.7" x2="550" y2="103.7" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="107.7" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">5</text>
+<line x1="58" y1="62.9" x2="550" y2="62.9" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="66.9" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">6</text>
+<line x1="58" y1="22.0" x2="550" y2="22.0" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="26.0" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">7</text>
+<text x="58.0" y="326" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.75" class="mono">128</text>
+<text x="128.3" y="326" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.75" class="mono">256</text>
+<text x="268.9" y="326" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.75" class="mono">512</text>
+<text x="409.4" y="326" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.75" class="mono">768</text>
+<text x="550.0" y="326" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.75" class="mono">1024</text>
+<text x="304" y="348" font-size="12" text-anchor="middle" fill="currentColor" opacity="0.85">Communication range at test time (m)</text>
+<text x="14" y="165" font-size="12" text-anchor="middle" fill="currentColor" opacity="0.85" transform="rotate(-90 14 165)">Cost / clairvoyant cost</text>
+<line x1="58" y1="267.1" x2="550" y2="267.1" stroke="currentColor" stroke-width="1.3" stroke-dasharray="5 4" opacity="0.55"/>
+<g class="ser2">
+<polyline fill="none" stroke-width="2" points="58.0,202.0 128.3,203.1 268.9,202.2 409.4,202.2 550.0,202.2"/>
+<circle cx="58.0" cy="202.0" r="4.5" class="dot"><title>Decentralized CVT, 128 m: 2.59 ± 0.70</title></circle>
+<circle cx="58.0" cy="202.0" r="13" fill="transparent" stroke="none"><title>Decentralized CVT, 128 m: 2.59 ± 0.70</title></circle>
+<circle cx="128.3" cy="203.1" r="4.5" class="dot"><title>Decentralized CVT, 256 m: 2.57 ± 0.71</title></circle>
+<circle cx="128.3" cy="203.1" r="13" fill="transparent" stroke="none"><title>Decentralized CVT, 256 m: 2.57 ± 0.71</title></circle>
+<circle cx="268.9" cy="202.2" r="4.5" class="dot"><title>Decentralized CVT, 512 m: 2.59 ± 0.67</title></circle>
+<circle cx="268.9" cy="202.2" r="13" fill="transparent" stroke="none"><title>Decentralized CVT, 512 m: 2.59 ± 0.67</title></circle>
+<circle cx="409.4" cy="202.2" r="4.5" class="dot"><title>Decentralized CVT, 768 m: 2.59 ± 0.67</title></circle>
+<circle cx="409.4" cy="202.2" r="13" fill="transparent" stroke="none"><title>Decentralized CVT, 768 m: 2.59 ± 0.67</title></circle>
+<circle cx="550.0" cy="202.2" r="4.5" class="dot"><title>Decentralized CVT, 1024 m: 2.59 ± 0.67</title></circle>
+<circle cx="550.0" cy="202.2" r="13" fill="transparent" stroke="none"><title>Decentralized CVT, 1024 m: 2.59 ± 0.67</title></circle>
+</g>
+<g class="ser3">
+<polyline fill="none" stroke-width="2" points="58.0,204.9 128.3,204.9 268.9,204.9 409.4,204.9 550.0,204.9"/>
+<circle cx="58.0" cy="204.9" r="4.5" class="dot"><title>Centralized CVT, 128 m: 2.52 ± 0.74</title></circle>
+<circle cx="58.0" cy="204.9" r="13" fill="transparent" stroke="none"><title>Centralized CVT, 128 m: 2.52 ± 0.74</title></circle>
+<circle cx="128.3" cy="204.9" r="4.5" class="dot"><title>Centralized CVT, 256 m: 2.52 ± 0.74</title></circle>
+<circle cx="128.3" cy="204.9" r="13" fill="transparent" stroke="none"><title>Centralized CVT, 256 m: 2.52 ± 0.74</title></circle>
+<circle cx="268.9" cy="204.9" r="4.5" class="dot"><title>Centralized CVT, 512 m: 2.52 ± 0.74</title></circle>
+<circle cx="268.9" cy="204.9" r="13" fill="transparent" stroke="none"><title>Centralized CVT, 512 m: 2.52 ± 0.74</title></circle>
+<circle cx="409.4" cy="204.9" r="4.5" class="dot"><title>Centralized CVT, 768 m: 2.52 ± 0.74</title></circle>
+<circle cx="409.4" cy="204.9" r="13" fill="transparent" stroke="none"><title>Centralized CVT, 768 m: 2.52 ± 0.74</title></circle>
+<circle cx="550.0" cy="204.9" r="4.5" class="dot"><title>Centralized CVT, 1024 m: 2.52 ± 0.74</title></circle>
+<circle cx="550.0" cy="204.9" r="13" fill="transparent" stroke="none"><title>Centralized CVT, 1024 m: 2.52 ± 0.74</title></circle>
+</g>
+<g class="ser1">
+<line x1="58.0" y1="245.8" x2="58.0" y2="208.1" stroke-width="1.3" opacity="0.55"/>
+<line x1="54.0" y1="245.8" x2="62.0" y2="245.8" stroke-width="1.3" opacity="0.55"/>
+<line x1="54.0" y1="208.1" x2="62.0" y2="208.1" stroke-width="1.3" opacity="0.55"/>
+<line x1="128.3" y1="246.5" x2="128.3" y2="231.4" stroke-width="1.3" opacity="0.55"/>
+<line x1="124.3" y1="246.5" x2="132.3" y2="246.5" stroke-width="1.3" opacity="0.55"/>
+<line x1="124.3" y1="231.4" x2="132.3" y2="231.4" stroke-width="1.3" opacity="0.55"/>
+<line x1="268.9" y1="210.5" x2="268.9" y2="179.5" stroke-width="1.3" opacity="0.55"/>
+<line x1="264.9" y1="210.5" x2="272.9" y2="210.5" stroke-width="1.3" opacity="0.55"/>
+<line x1="264.9" y1="179.5" x2="272.9" y2="179.5" stroke-width="1.3" opacity="0.55"/>
+<line x1="409.4" y1="169.9" x2="409.4" y2="76.5" stroke-width="1.3" opacity="0.55"/>
+<line x1="405.4" y1="169.9" x2="413.4" y2="169.9" stroke-width="1.3" opacity="0.55"/>
+<line x1="405.4" y1="76.5" x2="413.4" y2="76.5" stroke-width="1.3" opacity="0.55"/>
+<line x1="550.0" y1="152.4" x2="550.0" y2="37.1" stroke-width="1.3" opacity="0.55"/>
+<line x1="546.0" y1="152.4" x2="554.0" y2="152.4" stroke-width="1.3" opacity="0.55"/>
+<line x1="546.0" y1="37.1" x2="554.0" y2="37.1" stroke-width="1.3" opacity="0.55"/>
+<polyline fill="none" stroke-width="2" points="58.0,226.9 128.3,239.0 268.9,195.0 409.4,123.2 550.0,94.8"/>
+<circle cx="58.0" cy="226.9" r="4.5" class="dot"><title>LPAC-K3 as published, 128 m: 1.98 ± 0.46</title></circle>
+<circle cx="58.0" cy="226.9" r="13" fill="transparent" stroke="none"><title>LPAC-K3 as published, 128 m: 1.98 ± 0.46</title></circle>
+<circle cx="128.3" cy="239.0" r="4.5" class="dot"><title>LPAC-K3 as published, 256 m: 1.69 ± 0.18</title></circle>
+<circle cx="128.3" cy="239.0" r="13" fill="transparent" stroke="none"><title>LPAC-K3 as published, 256 m: 1.69 ± 0.18</title></circle>
+<circle cx="268.9" cy="195.0" r="4.5" class="dot"><title>LPAC-K3 as published, 512 m: 2.77 ± 0.38</title></circle>
+<circle cx="268.9" cy="195.0" r="13" fill="transparent" stroke="none"><title>LPAC-K3 as published, 512 m: 2.77 ± 0.38</title></circle>
+<circle cx="409.4" cy="123.2" r="4.5" class="dot"><title>LPAC-K3 as published, 768 m: 4.52 ± 1.14</title></circle>
+<circle cx="409.4" cy="123.2" r="13" fill="transparent" stroke="none"><title>LPAC-K3 as published, 768 m: 4.52 ± 1.14</title></circle>
+<circle cx="550.0" cy="94.8" r="4.5" class="dot"><title>LPAC-K3 as published, 1024 m: 5.22 ± 1.41</title></circle>
+<circle cx="550.0" cy="94.8" r="13" fill="transparent" stroke="none"><title>LPAC-K3 as published, 1024 m: 5.22 ± 1.41</title></circle>
+</g>
+<g class="ser4">
+<line x1="128.3" y1="246.5" x2="128.3" y2="231.4" stroke-width="1.3" opacity="0.55"/>
+<line x1="124.3" y1="246.5" x2="132.3" y2="246.5" stroke-width="1.3" opacity="0.55"/>
+<line x1="124.3" y1="231.4" x2="132.3" y2="231.4" stroke-width="1.3" opacity="0.55"/>
+<line x1="268.9" y1="243.6" x2="268.9" y2="227.2" stroke-width="1.3" opacity="0.55"/>
+<line x1="264.9" y1="243.6" x2="272.9" y2="243.6" stroke-width="1.3" opacity="0.55"/>
+<line x1="264.9" y1="227.2" x2="272.9" y2="227.2" stroke-width="1.3" opacity="0.55"/>
+<line x1="409.4" y1="242.9" x2="409.4" y2="229.7" stroke-width="1.3" opacity="0.55"/>
+<line x1="405.4" y1="242.9" x2="413.4" y2="242.9" stroke-width="1.3" opacity="0.55"/>
+<line x1="405.4" y1="229.7" x2="413.4" y2="229.7" stroke-width="1.3" opacity="0.55"/>
+<line x1="550.0" y1="245.8" x2="550.0" y2="230.7" stroke-width="1.3" opacity="0.55"/>
+<line x1="546.0" y1="245.8" x2="554.0" y2="245.8" stroke-width="1.3" opacity="0.55"/>
+<line x1="546.0" y1="230.7" x2="554.0" y2="230.7" stroke-width="1.3" opacity="0.55"/>
+<polyline fill="none" stroke-width="2.6" points="128.3,239.0 268.9,235.4 409.4,236.3 550.0,238.3"/>
+<circle cx="128.3" cy="239.0" r="4.5" class="dot"><title>Same weights, map at 256 m scale, 256 m: 1.69 ± 0.18</title></circle>
+<circle cx="128.3" cy="239.0" r="13" fill="transparent" stroke="none"><title>Same weights, map at 256 m scale, 256 m: 1.69 ± 0.18</title></circle>
+<circle cx="268.9" cy="235.4" r="4.5" class="dot"><title>Same weights, map at 256 m scale, 512 m: 1.78 ± 0.20</title></circle>
+<circle cx="268.9" cy="235.4" r="13" fill="transparent" stroke="none"><title>Same weights, map at 256 m scale, 512 m: 1.78 ± 0.20</title></circle>
+<circle cx="409.4" cy="236.3" r="4.5" class="dot"><title>Same weights, map at 256 m scale, 768 m: 1.76 ± 0.16</title></circle>
+<circle cx="409.4" cy="236.3" r="13" fill="transparent" stroke="none"><title>Same weights, map at 256 m scale, 768 m: 1.76 ± 0.16</title></circle>
+<circle cx="550.0" cy="238.3" r="4.5" class="dot"><title>Same weights, map at 256 m scale, 1024 m: 1.71 ± 0.19</title></circle>
+<circle cx="550.0" cy="238.3" r="13" fill="transparent" stroke="none"><title>Same weights, map at 256 m scale, 1024 m: 1.71 ± 0.19</title></circle>
+</g>
+<text x="560" y="98.8" font-size="11.5" fill="currentColor" opacity="1" font-weight="600">LPAC-K3 as published</text>
+<text x="560" y="206.2" font-size="11.5" fill="currentColor" opacity="1">Decentralized CVT</text>
+<text x="560" y="221.2" font-size="11.5" fill="currentColor" opacity="1">Centralized CVT</text>
+<text x="560" y="242.3" font-size="11.5" fill="currentColor" opacity="1" font-weight="600">Same weights, map at 256 m scale</text>
+<text x="560" y="271.1" font-size="11.5" fill="currentColor" opacity="0.7">Clairvoyant = 1</text>
+</svg></div>
+      <figcaption><strong>Figure 7.</strong> With the fixed-scale map the model stays near 1.7 at every range, about 30 % better than both CVT baselines.</figcaption>
+    </figure>
+    <div class="tscroll"><table>
+      <thead><tr><th>Range (m)</th><th>As published</th><th>Map at 256 m, full graph</th><th>Map at 256 m, graph capped</th></tr></thead>
+      <tbody><tr><td class="num">512</td><td class="num">2.77&nbsp;±&nbsp;0.38</td><td class="num"><strong>1.78&nbsp;±&nbsp;0.20</strong></td><td class="num">1.75&nbsp;±&nbsp;0.26</td></tr><tr><td class="num">768</td><td class="num">4.52&nbsp;±&nbsp;1.14</td><td class="num"><strong>1.76&nbsp;±&nbsp;0.16</strong></td><td class="num">1.71&nbsp;±&nbsp;0.21</td></tr><tr><td class="num">1024</td><td class="num">5.22&nbsp;±&nbsp;1.41</td><td class="num"><strong>1.71&nbsp;±&nbsp;0.19</strong></td><td class="num">1.71&nbsp;±&nbsp;0.21</td></tr></tbody>
+    </table></div>
+    <p>Paired difference between the repaired model at 1024 m and the unchanged model at 256 m: +0.02&nbsp;±&nbsp;0.16. A sanity check confirms the construction: at 256 m the fixed-scale map is identical to the normal one and reproduces the unchanged model exactly.</p>
+    <h4>The empty map</h4>
+    <div class="tscroll"><table>
+      <thead><tr><th>Range (m)</th><th>As published</th><th>Empty map, full graph</th><th>Empty map, graph capped</th></tr></thead>
+      <tbody><tr><td class="num">128</td><td class="num">1.98&nbsp;±&nbsp;0.46</td><td class="num">2.82&nbsp;±&nbsp;0.62</td><td class="num">2.82&nbsp;±&nbsp;0.62</td></tr><tr><td class="num">256</td><td class="num">1.69&nbsp;±&nbsp;0.18</td><td class="num">2.42&nbsp;±&nbsp;0.48</td><td class="num">2.48&nbsp;±&nbsp;0.41</td></tr><tr><td class="num">1024</td><td class="num">5.22&nbsp;±&nbsp;1.41</td><td class="num">3.20&nbsp;±&nbsp;0.57</td><td class="num">2.65&nbsp;±&nbsp;0.44</td></tr></tbody>
+    </table></div>
+    <div class="verdict">
+      <div class="shows"><h4>Shows</h4><p>The map is useful: removing it costs 0.7 to 0.8 at 128 and 256 m. At 1024 m an empty map is better than the full one. With an empty map, capping the graph helps (-0.56&nbsp;±&nbsp;0.44, lower in 10 of 11 environments): graph density has a real, secondary effect that the broken map hides.</p></div>
+      <div class="not"><h4>Does not show</h4><p>A real improvement: the fix makes the model ignore everyone beyond 256 m, so a longer range brings no gain. And 256 m was chosen on the same 11 environments; it must be confirmed on new ones (N2).</p></div>
+    </div>
+  </article>
+
+  <article class="finding" id="f7">
+    <p class="fid">F7 · DONE</p>
+    <h3>Noise floor and reproducibility</h3>
+    <ul class="plain">
+      <li>Each environment rerun 5 times with initial positions moved by a 1 m Gaussian: about 7 % of the cost (section 5).</li>
+      <li>The clairvoyant itself varies by 0.26 % under the same perturbation, so the normalization is stable.</li>
+      <li>FarmShare AMD nodes gave different numbers (up to 5.6 % per environment) because of different convolution kernels. Those 64 jobs were discarded and rerun on Intel nodes; Slurm now requests Intel.</li>
+      <li>The simulator draws new environments from a hardware random source and cannot be seeded: generated environments must be saved to disk to be reused.</li>
+    </ul>
+  </article>
+
+  <article class="finding" id="f8">
+    <p class="fid">F8 · DONE</p>
+    <h3>Training LPAC is affordable</h3>
+    <p>We used the authors' scripts unchanged: <code>data_generation.py</code> runs the clairvoyant in random environments and records, every 5 steps, all robots' maps, positions and target actions; <code>train_lpac.py</code> fits the network to those actions (mean squared error, Adam, learning rate 10⁻⁴, weight decay 10⁻³, batch 100). One "sample" is the state of all 32 robots at one time step; the paper's 100,000 samples are about 250 episodes.</p>
+    <div class="tscroll"><table>
+      <thead><tr><th>Step</th><th>Measured</th></tr></thead>
+      <tbody>
+        <tr><td>Data generation</td><td>0.55 to 0.73 s per sample on one FarmShare CPU; 100,000 samples in about 25 min with 50 parallel jobs; 0.37 MB per sample, about 37 GB in total.</td></tr>
+        <tr><td>Training on GPU (L40S)</td><td>74 to 84 s per epoch on 70,000 samples; 100 epochs in <strong>2 h 35</strong>. Best validation at epoch 13, then overfitting; the best checkpoint is kept, as the authors do.</td></tr>
+        <tr><td>Training on CPU (32 cores)</td><td>37 min per epoch: not realistic at full scale.</td></tr>
+        <tr><td>Laptop</td><td>Not usable for training.</td></tr>
+        <tr><td>GPU queue</td><td>10 to 25 min at night, over 3 h during the day: submit in the evening.</td></tr>
+      </tbody>
+    </table></div>
+  </article>
+
+  <article class="finding" id="f9">
+    <p class="fid">F9 · DONE</p>
+    <h3>Our own retrained models collapse too</h3>
+    <figure>
+      <div class="legend"><span><i class="sw sw1"></i>Published checkpoint</span><span><i class="sw sw6"></i>Retrained at 128 m (mean of 3 seeds, band = min to max)</span><span><i class="sw sw7"></i>Retrained at 256 m</span><span><i class="sw sw5"></i>Retrained at 128 m, 1 sample every 20 steps</span><span><i class="sw sw3"></i>Centralized CVT</span></div>
+      <div class="figbox"><svg viewBox="0 0 760 360" role="img" aria-label="Range sweep of four models: the published checkpoint, our model retrained at 128 m (three seeds, band = min to max), a model retrained at 256 m, and a model trained with one sample every 20 steps.">
+<line x1="58" y1="308.0" x2="530" y2="308.0" stroke="currentColor" stroke-width="1" opacity="0.45"/>
+<text x="50" y="312.0" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">0</text>
+<line x1="58" y1="267.1" x2="530" y2="267.1" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="271.1" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">1</text>
+<line x1="58" y1="226.3" x2="530" y2="226.3" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="230.3" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">2</text>
+<line x1="58" y1="185.4" x2="530" y2="185.4" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="189.4" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">3</text>
+<line x1="58" y1="144.6" x2="530" y2="144.6" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="148.6" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">4</text>
+<line x1="58" y1="103.7" x2="530" y2="103.7" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="107.7" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">5</text>
+<line x1="58" y1="62.9" x2="530" y2="62.9" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="66.9" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">6</text>
+<line x1="58" y1="22.0" x2="530" y2="22.0" stroke="currentColor" stroke-width="1" opacity="0.12"/>
+<text x="50" y="26.0" font-size="11" text-anchor="end" fill="currentColor" opacity="0.75" class="mono">7</text>
+<text x="58.0" y="326" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.75" class="mono">128</text>
+<text x="125.4" y="326" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.75" class="mono">256</text>
+<text x="260.3" y="326" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.75" class="mono">512</text>
+<text x="395.1" y="326" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.75" class="mono">768</text>
+<text x="530.0" y="326" font-size="11" text-anchor="middle" fill="currentColor" opacity="0.75" class="mono">1024</text>
+<text x="294" y="348" font-size="12" text-anchor="middle" fill="currentColor" opacity="0.85">Communication range at test time (m)</text>
+<text x="14" y="165" font-size="12" text-anchor="middle" fill="currentColor" opacity="0.85" transform="rotate(-90 14 165)">Cost / clairvoyant cost</text>
+<line x1="58" y1="267.1" x2="530" y2="267.1" stroke="currentColor" stroke-width="1.3" stroke-dasharray="5 4" opacity="0.55"/>
+<g class="ser3">
+<polyline fill="none" stroke-width="2" points="58.0,204.9 125.4,204.9 260.3,204.9 395.1,204.9 530.0,204.9"/>
+<circle cx="58.0" cy="204.9" r="4.5" class="dot"><title>Centralized CVT, 128 m: 2.52 ± 0.74</title></circle>
+<circle cx="58.0" cy="204.9" r="13" fill="transparent" stroke="none"><title>Centralized CVT, 128 m: 2.52 ± 0.74</title></circle>
+<circle cx="125.4" cy="204.9" r="4.5" class="dot"><title>Centralized CVT, 256 m: 2.52 ± 0.74</title></circle>
+<circle cx="125.4" cy="204.9" r="13" fill="transparent" stroke="none"><title>Centralized CVT, 256 m: 2.52 ± 0.74</title></circle>
+<circle cx="260.3" cy="204.9" r="4.5" class="dot"><title>Centralized CVT, 512 m: 2.52 ± 0.74</title></circle>
+<circle cx="260.3" cy="204.9" r="13" fill="transparent" stroke="none"><title>Centralized CVT, 512 m: 2.52 ± 0.74</title></circle>
+<circle cx="395.1" cy="204.9" r="4.5" class="dot"><title>Centralized CVT, 768 m: 2.52 ± 0.74</title></circle>
+<circle cx="395.1" cy="204.9" r="13" fill="transparent" stroke="none"><title>Centralized CVT, 768 m: 2.52 ± 0.74</title></circle>
+<circle cx="530.0" cy="204.9" r="4.5" class="dot"><title>Centralized CVT, 1024 m: 2.52 ± 0.74</title></circle>
+<circle cx="530.0" cy="204.9" r="13" fill="transparent" stroke="none"><title>Centralized CVT, 1024 m: 2.52 ± 0.74</title></circle>
+</g>
+<g class="ser1">
+<polyline fill="none" stroke-width="2" points="58.0,226.9 125.4,239.0 260.3,195.0 395.1,123.2 530.0,94.8"/>
+<circle cx="58.0" cy="226.9" r="4.5" class="dot"><title>LPAC-K3 as published, 128 m: 1.98 ± 0.46</title></circle>
+<circle cx="58.0" cy="226.9" r="13" fill="transparent" stroke="none"><title>LPAC-K3 as published, 128 m: 1.98 ± 0.46</title></circle>
+<circle cx="125.4" cy="239.0" r="4.5" class="dot"><title>LPAC-K3 as published, 256 m: 1.69 ± 0.18</title></circle>
+<circle cx="125.4" cy="239.0" r="13" fill="transparent" stroke="none"><title>LPAC-K3 as published, 256 m: 1.69 ± 0.18</title></circle>
+<circle cx="260.3" cy="195.0" r="4.5" class="dot"><title>LPAC-K3 as published, 512 m: 2.77 ± 0.38</title></circle>
+<circle cx="260.3" cy="195.0" r="13" fill="transparent" stroke="none"><title>LPAC-K3 as published, 512 m: 2.77 ± 0.38</title></circle>
+<circle cx="395.1" cy="123.2" r="4.5" class="dot"><title>LPAC-K3 as published, 768 m: 4.52 ± 1.14</title></circle>
+<circle cx="395.1" cy="123.2" r="13" fill="transparent" stroke="none"><title>LPAC-K3 as published, 768 m: 4.52 ± 1.14</title></circle>
+<circle cx="530.0" cy="94.8" r="4.5" class="dot"><title>LPAC-K3 as published, 1024 m: 5.22 ± 1.41</title></circle>
+<circle cx="530.0" cy="94.8" r="13" fill="transparent" stroke="none"><title>LPAC-K3 as published, 1024 m: 5.22 ± 1.41</title></circle>
+</g>
+<g class="ser6">
+<polygon points="58.0,220.6 125.4,237.5 260.3,211.4 395.1,166.7 530.0,129.7 530.0,108.3 395.1,155.3 260.3,205.3 125.4,236.3 58.0,220.1" class="band" opacity="0.22"/>
+<polyline fill="none" stroke-width="2" points="58.0,220.4 125.4,236.9 260.3,207.7 395.1,161.8 530.0,119.6"/>
+<circle cx="58.0" cy="220.4" r="4.5" class="dot"><title>Retrained at 128 m (3 seeds), 128 m: 2.15</title></circle>
+<circle cx="58.0" cy="220.4" r="13" fill="transparent" stroke="none"><title>Retrained at 128 m (3 seeds), 128 m: 2.15</title></circle>
+<circle cx="125.4" cy="236.9" r="4.5" class="dot"><title>Retrained at 128 m (3 seeds), 256 m: 1.74</title></circle>
+<circle cx="125.4" cy="236.9" r="13" fill="transparent" stroke="none"><title>Retrained at 128 m (3 seeds), 256 m: 1.74</title></circle>
+<circle cx="260.3" cy="207.7" r="4.5" class="dot"><title>Retrained at 128 m (3 seeds), 512 m: 2.46</title></circle>
+<circle cx="260.3" cy="207.7" r="13" fill="transparent" stroke="none"><title>Retrained at 128 m (3 seeds), 512 m: 2.46</title></circle>
+<circle cx="395.1" cy="161.8" r="4.5" class="dot"><title>Retrained at 128 m (3 seeds), 768 m: 3.58</title></circle>
+<circle cx="395.1" cy="161.8" r="13" fill="transparent" stroke="none"><title>Retrained at 128 m (3 seeds), 768 m: 3.58</title></circle>
+<circle cx="530.0" cy="119.6" r="4.5" class="dot"><title>Retrained at 128 m (3 seeds), 1024 m: 4.61</title></circle>
+<circle cx="530.0" cy="119.6" r="13" fill="transparent" stroke="none"><title>Retrained at 128 m (3 seeds), 1024 m: 4.61</title></circle>
+</g>
+<g class="ser5">
+<polyline fill="none" stroke-width="2" points="58.0,216.5 125.4,226.0 260.3,190.7 395.1,184.9 530.0,184.8" stroke-dasharray="6 4"/>
+<circle cx="58.0" cy="216.5" r="4.5" class="dot"><title>Retrained at 128 m, 1 sample / 20 steps, 128 m: 2.24 ± 0.34</title></circle>
+<circle cx="58.0" cy="216.5" r="13" fill="transparent" stroke="none"><title>Retrained at 128 m, 1 sample / 20 steps, 128 m: 2.24 ± 0.34</title></circle>
+<circle cx="125.4" cy="226.0" r="4.5" class="dot"><title>Retrained at 128 m, 1 sample / 20 steps, 256 m: 2.01 ± 0.24</title></circle>
+<circle cx="125.4" cy="226.0" r="13" fill="transparent" stroke="none"><title>Retrained at 128 m, 1 sample / 20 steps, 256 m: 2.01 ± 0.24</title></circle>
+<circle cx="260.3" cy="190.7" r="4.5" class="dot"><title>Retrained at 128 m, 1 sample / 20 steps, 512 m: 2.87 ± 0.33</title></circle>
+<circle cx="260.3" cy="190.7" r="13" fill="transparent" stroke="none"><title>Retrained at 128 m, 1 sample / 20 steps, 512 m: 2.87 ± 0.33</title></circle>
+<circle cx="395.1" cy="184.9" r="4.5" class="dot"><title>Retrained at 128 m, 1 sample / 20 steps, 768 m: 3.01 ± 0.41</title></circle>
+<circle cx="395.1" cy="184.9" r="13" fill="transparent" stroke="none"><title>Retrained at 128 m, 1 sample / 20 steps, 768 m: 3.01 ± 0.41</title></circle>
+<circle cx="530.0" cy="184.8" r="4.5" class="dot"><title>Retrained at 128 m, 1 sample / 20 steps, 1024 m: 3.02 ± 0.41</title></circle>
+<circle cx="530.0" cy="184.8" r="13" fill="transparent" stroke="none"><title>Retrained at 128 m, 1 sample / 20 steps, 1024 m: 3.02 ± 0.41</title></circle>
+</g>
+<g class="ser7">
+<polyline fill="none" stroke-width="2" points="58.0,214.8 125.4,236.1 260.3,236.8 395.1,230.4 530.0,213.8"/>
+<circle cx="58.0" cy="214.8" r="4.5" class="dot"><title>Retrained at 256 m, 128 m: 2.28 ± 0.50</title></circle>
+<circle cx="58.0" cy="214.8" r="13" fill="transparent" stroke="none"><title>Retrained at 256 m, 128 m: 2.28 ± 0.50</title></circle>
+<circle cx="125.4" cy="236.1" r="4.5" class="dot"><title>Retrained at 256 m, 256 m: 1.76 ± 0.28</title></circle>
+<circle cx="125.4" cy="236.1" r="13" fill="transparent" stroke="none"><title>Retrained at 256 m, 256 m: 1.76 ± 0.28</title></circle>
+<circle cx="260.3" cy="236.8" r="4.5" class="dot"><title>Retrained at 256 m, 512 m: 1.74 ± 0.17</title></circle>
+<circle cx="260.3" cy="236.8" r="13" fill="transparent" stroke="none"><title>Retrained at 256 m, 512 m: 1.74 ± 0.17</title></circle>
+<circle cx="395.1" cy="230.4" r="4.5" class="dot"><title>Retrained at 256 m, 768 m: 1.90 ± 0.24</title></circle>
+<circle cx="395.1" cy="230.4" r="13" fill="transparent" stroke="none"><title>Retrained at 256 m, 768 m: 1.90 ± 0.24</title></circle>
+<circle cx="530.0" cy="213.8" r="4.5" class="dot"><title>Retrained at 256 m, 1024 m: 2.31 ± 0.24</title></circle>
+<circle cx="530.0" cy="213.8" r="13" fill="transparent" stroke="none"><title>Retrained at 256 m, 1024 m: 2.31 ± 0.24</title></circle>
+</g>
+<text x="540" y="98.8" font-size="11.5" fill="currentColor" opacity="1">LPAC-K3 as published</text>
+<text x="540" y="123.6" font-size="11.5" fill="currentColor" opacity="1" font-weight="600">Retrained at 128 m (3 seeds)</text>
+<text x="540" y="188.8" font-size="11.5" fill="currentColor" opacity="1">Retrained at 128 m, 1 sample / 20 steps</text>
+<text x="540" y="208.9" font-size="11.5" fill="currentColor" opacity="1">Centralized CVT</text>
+<text x="540" y="223.9" font-size="11.5" fill="currentColor" opacity="1" font-weight="600">Retrained at 256 m</text>
+<text x="540" y="271.1" font-size="11.5" fill="currentColor" opacity="0.7">Clairvoyant = 1</text>
+</svg></div>
+      <figcaption><strong>Figure 8.</strong> Range sweep of every model we have. All are evaluated with full graph and full map.</figcaption>
+    </figure>
+    <div class="tscroll"><table>
+      <thead><tr><th>Model</th><th>128 m</th><th>256 m</th><th>512 m</th><th>768 m</th><th>1024 m</th></tr></thead>
+      <tbody><tr><td>Published checkpoint</td><td class="num">1.98&nbsp;±&nbsp;0.46</td><td class="num">1.69&nbsp;±&nbsp;0.18</td><td class="num">2.77&nbsp;±&nbsp;0.38</td><td class="num">4.52&nbsp;±&nbsp;1.14</td><td class="num">5.22&nbsp;±&nbsp;1.41</td></tr><tr><td>Retrained 128 m, seed 0</td><td class="num">2.15&nbsp;±&nbsp;0.51</td><td class="num">1.74&nbsp;±&nbsp;0.25</td><td class="num">2.49&nbsp;±&nbsp;0.32</td><td class="num">3.46&nbsp;±&nbsp;0.71</td><td class="num">4.36&nbsp;±&nbsp;1.08</td></tr><tr><td>Retrained 128 m, seed 1</td><td class="num">2.14&nbsp;±&nbsp;0.46</td><td class="num">1.73&nbsp;±&nbsp;0.21</td><td class="num">2.51&nbsp;±&nbsp;0.30</td><td class="num">3.54&nbsp;±&nbsp;0.64</td><td class="num">4.58&nbsp;±&nbsp;1.08</td></tr><tr><td>Retrained 128 m, seed 2</td><td class="num">2.14&nbsp;±&nbsp;0.48</td><td class="num">1.76&nbsp;±&nbsp;0.23</td><td class="num">2.36&nbsp;±&nbsp;0.29</td><td class="num">3.74&nbsp;±&nbsp;0.60</td><td class="num">4.89&nbsp;±&nbsp;0.83</td></tr><tr><td>Retrained 256 m</td><td class="num">2.28&nbsp;±&nbsp;0.50</td><td class="num">1.76&nbsp;±&nbsp;0.28</td><td class="num">1.74&nbsp;±&nbsp;0.17</td><td class="num">1.90&nbsp;±&nbsp;0.24</td><td class="num">2.31&nbsp;±&nbsp;0.24</td></tr><tr><td>Retrained 128 m, 1 sample / 20 steps</td><td class="num">2.24&nbsp;±&nbsp;0.34</td><td class="num">2.01&nbsp;±&nbsp;0.24</td><td class="num">2.87&nbsp;±&nbsp;0.33</td><td class="num">3.01&nbsp;±&nbsp;0.41</td><td class="num">3.02&nbsp;±&nbsp;0.41</td></tr><tr><td>Spread between the 3 seeds (std of the mean)</td><td class="num">0.01</td><td class="num">0.02</td><td class="num">0.08</td><td class="num">0.14</td><td class="num">0.26</td></tr><tr><td>Centralized CVT</td><td class="num">2.52&nbsp;±&nbsp;0.74</td><td class="num">2.52&nbsp;±&nbsp;0.74</td><td class="num">2.52&nbsp;±&nbsp;0.74</td><td class="num">2.52&nbsp;±&nbsp;0.74</td><td class="num">2.52&nbsp;±&nbsp;0.74</td></tr></tbody>
+    </table></div>
+    <ul class="plain">
+      <li><strong>Retrained at 128 m</strong>: matches the published model at 256 m and reproduces the collapse; the three seeds agree. It degrades less than the published checkpoint beyond 512 m by more than the seed spread, so the size of the collapse depends on the training data or protocol, while its shape does not.</li>
+      <li><strong>Retrained at 256 m</strong>: as good at 256 m, slightly worse at 128 m, and much more robust beyond (2.31 at 1024 m). The collapse is pushed back, not removed: at 1024 m it beats the centralized CVT in only 6 of 11 environments.</li>
+      <li><strong>One sample every 20 steps</strong>: lower validation loss (0.441 vs 0.449) but a worse controller at its own range (2.01 vs 1.74, worse in 11 of 11 environments). Sampling rarely under-represents the early states that teach robots to spread out. A lower imitation loss is not a better controller. We keep the authors' recipe for all comparisons.</li>
+    </ul>
+    <div class="verdict">
+      <div class="shows"><h4>Shows</h4><p>The collapse is a property of how LPAC is built and trained, not of one file. The training range sets the neighborhood regime the model can handle.</p></div>
+      <div class="not"><h4>Does not show</h4><p>Yet: whether the map-versus-graph diagnosis (F4, F6) holds for these models. That measurement is running now (N1).</p></div>
+    </div>
+  </article>
+</section>
+
+<!-- ======================= 7 ======================= -->
+<section class="section stack-l" id="meaning">
+  <div class="stack-s"><p class="eyebrow">Section 7</p><h2>What we can and cannot claim</h2></div>
+  <div class="verdict">
+    <div class="shows"><h4>We can claim</h4>
+      <ul class="plain">
+        <li>LPAC trained at one range fails badly at larger ranges, for the published model and for our own.</li>
+        <li>For the published model, the failure enters through the rasterized neighbor map, not through the GNN's graph.</li>
+        <li>A fixed-scale map restores the best performance at every range, without retraining.</li>
+        <li>The GNN path (normalized TAGConv) tolerates a graph 20 times denser than in training.</li>
+      </ul>
+    </div>
+    <div class="not"><h4>We cannot claim yet</h4>
+      <ul class="plain">
+        <li>Anything about the paper's Figure 20, where each model is trained at its own range.</li>
+        <li>That 256 m is the right fixed scale in general (chosen on the test environments).</li>
+        <li>Why the map fails: information loss versus distribution shift.</li>
+        <li>That a policy can benefit from a longer range. Our fix only stops the damage.</li>
+        <li>Anything beyond 32 robots in a 1024 m world.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="box box-key stack-s">
+    <p class="eyebrow">The project question</p>
+    <p><strong>Where should neighbor geometry live in a swarm policy: in an image read by a CNN, or in the graph read by a GNN?</strong> Our results say the image is where LPAC breaks when the range changes. The graph ML step is to remove the image and carry relative positions on the edges, then test whether that policy transfers across ranges and, ideally, benefits from more communication.</p>
+  </div>
+</section>
+
+<!-- ======================= 8 ======================= -->
+<section class="section stack-l" id="related">
+  <div class="stack-s"><p class="eyebrow">Section 8</p><h2>Related work and novelty</h2></div>
+  <p>We found no work that runs LPAC, or a comparable swarm policy, at a larger communication range than it was trained with. Search: the Google Scholar list of papers citing LPAC (25 entries), targeted web searches, the authors' pages, their GitHub accounts and Hugging Face. Three theses on the citing list are still unread: Gosrich (2024), Owerko (2025) and F. Yang (2026).</p>
+  <div class="tscroll"><table>
+    <thead><tr><th>Work</th><th>What it shows</th><th>What it leaves open</th></tr></thead>
+    <tbody>
+      <tr><td><strong>LPAC</strong> (T-RO 2025)</td><td>Transfer to larger worlds and teams at a fixed 128 m range; per-range models in Figure 20.</td><td>No evaluation outside the training range; the anomaly is unexplained.</td></tr>
+      <tr><td><strong>Muthusamy et al.</strong> (2024), with C. Kanatsoulis</td><td>Robots talk to their k = 3 nearest neighbors; the policy improves when agent density rises at test time. Their code tests checkpoints while varying the radius.</td><td>A different task and a k-nearest graph; no radius graph, no neighbor image.</td></tr>
+      <tr><td><strong>MAST</strong> (2025), same group</td><td>A transformer replacing the GNN; larger attention windows generalize worse to larger teams.</td><td>Windows varied at training time, not between training and test.</td></tr>
+      <tr><td><strong>GNN generalization</strong></td><td>Outside robotics: performance degrades when test degrees differ from training degrees; the normalized adjacency's spectrum depends on the graph.</td><td>No control policy, no inference-time fix.</td></tr>
+    </tbody>
+  </table></div>
+  <p>So "a model fails out of distribution" is not new. Our contribution is to show, measure and locate the failure in a published robotics policy, where it triples the cost, to show that the graph path is the robust one, and to build a policy that does not need the fragile path.</p>
+</section>
+
+<!-- ======================= 9 ======================= -->
+<section class="section stack-l" id="plan">
+  <div class="stack-s"><p class="eyebrow">Section 9</p><h2>Plan and decision rules</h2></div>
+  <div class="tscroll"><table>
+    <thead><tr><th>#</th><th>Experiment</th><th>Status</th><th>Question it answers</th></tr></thead>
+    <tbody>
+      <tr><td><strong>N1</strong></td><td>Maps C2, C3, C4 on our retrained models (3 seeds at 128 m, the 256 m model), at 512, 768, 1024 m.</td><td><span class="status st-run">running</span></td><td>Does "the map, not the graph" hold for every model? Is the best map scale the training range or above?</td></tr>
+      <tr><td><strong>N2</strong></td><td>40 new environments, saved to disk; sweep of the map scale (128, 192, 256, 384, 512 m).</td><td><span class="status st-run">running</span></td><td>Is the 256 m fix real or selected on the test set?</td></tr>
+      <tr><td><strong>N3</strong></td><td>Same neighbors drawn in a finer map (64 × 64 resized to 32 × 32), and the reverse.</td><td><span class="status st-todo">next</span></td><td>Information loss in shared cells (H1) or distribution shift?</td></tr>
+      <tr><td><strong>N4</strong></td><td>The graph-native variant (below), trained at 128 m, tested at all ranges, 3 seeds.</td><td><span class="status st-todo">after N1, N2</span></td><td>Does putting geometry on edges transfer across ranges?</td></tr>
+      <tr><td><strong>N5</strong></td><td>LPAC trained at 512 m (and 1024 m), each evaluated at its own range.</td><td><span class="status st-todo">optional</span></td><td>Reproduce the shape of the paper's Figure 20.</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="stack-s">
+    <h3>The graph-native variant (N4), concretely</h3>
+    <ul class="plain">
+      <li><strong>Input to the CNN</strong>: only the two perception maps (local importance, obstacles). The library already supports this with <code>UseCommMaps = false</code>.</li>
+      <li><strong>Edges</strong>: the same communication graph; each edge carries the relative position (p_j − p_i), in metres or divided by a fixed constant, never by the range.</li>
+      <li><strong>Message passing</strong>: replace TAGConv with a PyG layer that reads edge attributes, for example <code>GATv2Conv(..., edge_dim=2)</code> or <code>TransformerConv(..., edge_dim=2)</code>; keep 5 layers and width 256 so the comparison is fair.</li>
+      <li><strong>Training</strong>: the authors' data recipe and hyperparameters, 100,000 samples, best-validation checkpoint, on a FarmShare GPU at night (about 3 h per run).</li>
+      <li><strong>Evaluation</strong>: the same 5 ranges, the 11 released and the 40 new environments, 3 seeds.</li>
+    </ul>
+  </div>
+
+  <div class="box box-key stack-s">
+    <p class="eyebrow">What counts as success</p>
+    <ul class="plain">
+      <li><strong>Minimum</strong>: at its training range, as good as LPAC retrained at 128 m (within 0.05 at 256 m).</li>
+      <li><strong>Transfer</strong>: at 1024 m, better than LPAC retrained at 256 m (2.31) by more than the 0.5 seed threshold, or flat across ranges.</li>
+      <li><strong>Strong result</strong>: at or below 1.71 at 1024 m, the inference-time fix, without needing a fix; or better with more range.</li>
+      <li><strong>If it fails</strong>: the project still stands as a diagnosis with a zero-training fix, and the failure itself is informative. Say so plainly.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ======================= 10 ======================= -->
+<section class="section stack-l" id="course">
+  <div class="stack-s"><p class="eyebrow">Section 10</p><h2>Course requirements and compute</h2></div>
+  <div class="tscroll"><table>
+    <thead><tr><th>Deliverable</th><th>Due</th><th>Weight</th><th>Content</th></tr></thead>
+    <tbody>
+      <tr><td>Proposal</td><td class="num">20 Oct</td><td>4 % of the course</td><td>NeurIPS'22 style, 2 pages without references, no abstract, all three names. Dataset (must be public, cited), task and metric, why this dataset, model(s) with figures and equations and why they fit.</td></tr>
+      <tr><td>Milestone</td><td class="num">10 Nov</td><td>2 %</td><td>Progress per the project-type instructions.</td></tr>
+      <tr><td>Final</td><td class="num">10 Dec</td><td>24 %</td><td>Private Medium draft link, Medium account name, Google Colab.</td></tr>
+    </tbody>
+  </table></div>
+  <p>We are a <strong>type 1 project</strong> (real-world application). The course says applying an existing GNN is not enough: we need novelty or thorough analysis. The rubric:</p>
+  <div class="tscroll"><table>
+    <thead><tr><th>Criterion</th><th>Points</th><th>What we bring</th></tr></thead>
+    <tbody>
+      <tr><td>Motivation, data and task</td><td class="num">10</td><td>Coverage control, a published model, Figure 4.</td></tr>
+      <tr><td>Innovation or implementation effort</td><td class="num">10</td><td>Locating the failure, the zero-training fix, the graph-native variant.</td></tr>
+      <tr><td>Model explanation</td><td class="num">10</td><td>Two paths, TAGConv, the neighbor map formula.</td></tr>
+      <tr><td>Insights and results</td><td class="num">10</td><td>Sweeps, factorial, dose-response, effective rank, seeds, retrained models.</td></tr>
+      <tr><td>Figures</td><td class="num">10</td><td>Needs variety: diagrams, charts, and simulator snapshots of the swarm.</td></tr>
+      <tr><td>PyG code snippets in the post</td><td class="num">10</td><td>Graph construction, degree capping, layer hooks, the edge-attribute layer.</td></tr>
+      <tr><td>Colab: code and documentation</td><td class="num">25</td><td>Our <code>lpac_study</code> package; the notebook must run a short case and load precomputed results.</td></tr>
+      <tr><td>Medium account name</td><td class="num">5</td><td>Do not forget it.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="stack-s">
+    <h3>Compute</h3>
+    <ul class="plain">
+      <li><strong>FarmShare</strong> (Stanford, free): Intel CPU nodes for evaluation, L40S GPUs for training. Data and checkpoints currently live under Loïc's account; ask him for paths or copies.</li>
+      <li><strong>Google Cloud credits</strong> from the course: request the code with your @stanford.edu address, redeem it while logged into a <em>personal</em> Google account, one code per person. GPU quota must be requested separately and takes days.</li>
+      <li><strong>Laptops</strong>: fine for development and small evaluations under WSL or Linux; the library has no Windows or macOS wheel.</li>
+    </ul>
+  </div>
+  <div class="note">
+    <p><strong>Contact with the teaching staff.</strong> In the week of 12 October Loïc emailed Charilaos Kanatsoulis (co-instructor, co-author of Muthusamy et al. with the LPAC authors) with F1, F4 and F6 and three questions: are the per-range checkpoints available, is the neighbor-map sensitivity known, and is this scope right for CS 224W. Mentors are assigned only after the proposal deadline.</p>
+  </div>
+</section>
+
+<!-- ======================= 11 ======================= -->
+<section class="section stack-l" id="team">
+  <div class="stack-s"><p class="eyebrow">Section 11</p><h2>Roles and how we work</h2></div>
+  <p>A suggested split. Swap freely; what matters is that each part has one owner.</p>
+  <div class="roles">
+    <div class="role"><h4>Experiments</h4><ul class="plain"><li>Runs N1 to N3 and the evaluations of N4.</li><li>Owns the results CSVs, noise thresholds and figures.</li><li>Keeps the FarmShare workflow working.</li></ul></div>
+    <div class="role"><h4>Model</h4><ul class="plain"><li>Writes the graph-native variant (N4) in PyG.</li><li>Gets the original LPAC retraining working on their side first.</li><li>Owns the training runs and seeds.</li></ul></div>
+    <div class="role"><h4>Writing</h4><ul class="plain"><li>Proposal by 20 October, then the Medium post, built as results arrive.</li><li>Owns related work and the Colab's explanations.</li><li>Reads the three unread theses.</li></ul></div>
+  </div>
+  <ul class="weeks">
+    <li><span class="wk">by 16 Oct</span><span class="wt">N1 and N2 results in. Proposal outline split between the three of us.</span></li>
+    <li><span class="wk">17 to 19 Oct</span><span class="wt">Write the two pages: Figure 4 and the factorial table as preliminary results, the variant as the plan.</span></li>
+    <li><span class="wk">20 Oct</span><span class="wt"><strong>Submit the proposal.</strong></span></li>
+    <li><span class="wk">21 Oct to 10 Nov</span><span class="wt">N3; write and train the variant (first seed). Start the post. <strong>Milestone 10 Nov.</strong></span></li>
+    <li><span class="wk">10 Nov to 1 Dec</span><span class="wt">Variant seeds and evaluation on the 40 new environments; N5 if time allows; final figures.</span></li>
+    <li><span class="wk">1 to 10 Dec</span><span class="wt">Colab, post, review. <strong>Final 10 Dec.</strong></span></li>
+  </ul>
+  <div class="stack-s">
+    <h3>The repository</h3>
+    <ul class="plain">
+      <li><strong>Where</strong>: github.com/loicpoisson/lpac-communication-range, private, branch <code>main</code>. Start with <code>README.md</code>, then <code>docs/journal.md</code> (the running log) and the <code>RAPPORT*.md</code> run reports (in French, written before we switched to English).</li>
+      <li><strong>Rules</strong>: documentation in English; add a journal entry and a README status line with every new result; never commit data or checkpoints (<code>*.pt</code>, archives and data folders are ignored); one commit per task, with a message that says what was measured.</li>
+      <li><strong>Running the code</strong>: Linux or WSL. <code>bash run_all.sh</code> rebuilds the first range sweep from scratch; the README lists the commands for the factorial and the training scripts.</li>
+      <li><strong>Working with an AI assistant</strong>: much of the code and the runs so far were produced with Claude Code, under Loïc's direction and checking. Every number on this page was recomputed from the result files. Treat assistant output like a teammate's draft: check it against the data.</li>
+    </ul>
+  </div>
+  <pre><code>git clone https://github.com/loicpoisson/lpac-communication-range.git
+cd lpac-communication-range
+bash run_all.sh                 # Linux / WSL; installs a venv in ~/lpac and reruns the range sweep</code></pre>
+</section>
+
+<!-- ======================= 12 ======================= -->
+<section class="section stack-l" id="fixes">
+  <div class="stack-s"><p class="eyebrow">Section 12</p><h2>Mistakes we corrected</h2></div>
+  <p>Our planning made several wrong assumptions. They are listed so that nobody repeats them in the proposal.</p>
+  <div class="tscroll"><table>
+    <thead><tr><th>We first thought</th><th>What is true</th></tr></thead>
+    <tbody>
+      <tr><td>The GNN sums its neighbors, so the GIN expressivity argument (lecture 6) applies.</td><td>It is TAGConv with normalized adjacency.</td></tr>
+      <tr><td>Over-smoothing explains the collapse.</td><td>Effective rank does not collapse; the neighbor map is the cause.</td></tr>
+      <tr><td>Use <code>knn_graph</code> to cap the degree.</td><td>That links robots out of radio range; we keep the k nearest within range.</td></tr>
+      <tr><td>Measure over-smoothing with Dirichlet energy.</td><td>Use effective rank (Zhang et al., ICLR 2026).</td></tr>
+      <tr><td>No trained model is published.</td><td>One is, attached to the GitHub releases.</td></tr>
+      <tr><td>Training data would take hundreds of terabytes.</td><td>Maps are stored at 32 × 32: about 37 GB for 100,000 samples.</td></tr>
+      <tr><td>The graph is weighted.</td><td>Edge weights are computed but not passed to the GNN.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ======================= 13 ======================= -->
+<section class="section stack-l" id="glossary">
+  <div class="stack-s"><p class="eyebrow">Section 13</p><h2>Glossary</h2></div>
+  <dl class="gloss">
+    <div><dt>Coverage control</dt><dd>Placing a team of robots so their sensors watch the important parts of an area.</dd></div>
+    <div><dt>IDF (importance density field)</dt><dd>How important each point of the area is. Unknown to the robots; discovered by moving.</dd></div>
+    <div><dt>Coverage cost</dt><dd>Importance-weighted squared distance from each point to its nearest robot, summed over the area. Lower is better.</dd></div>
+    <div><dt>Clairvoyant, centralized, decentralized CVT</dt><dd>Voronoi-based (Lloyd) algorithms with full, server-level and neighbor-level information. The clairvoyant is the reference and the imitation teacher.</dd></div>
+    <div><dt>Communication range</dt><dd>Distance within which two robots can exchange messages. It defines the graph and the scale of the neighbor map.</dd></div>
+    <div><dt>Neighbor map</dt><dd>Two 32 × 32 image channels showing, around a robot, the relative positions of robots within range. Read by the CNN.</dd></div>
+    <div><dt>Communication graph</dt><dd>Robots as nodes, an edge between robots within range. Read by the GNN.</dd></div>
+    <div><dt>TAGConv</dt><dd>PyG graph convolution that mixes powers 0 to K of the normalized adjacency.</dd></div>
+    <div><dt>Transfer setting</dt><dd>A model trained at one range and run at another. All our results on the published model are in this setting.</dd></div>
+    <div><dt>G0, G1</dt><dd>Graph given to the GNN: all robots within range (G0, as published) or capped to the k nearest within range (G1).</dd></div>
+    <div><dt>C0 to C4</dt><dd>Neighbor map given to the CNN: as published (C0), k nearest only (C1), drawn at the 128 m scale (C2), at the 256 m scale (C3), empty (C4).</dd></div>
+    <div><dt>H1, H2, H3</dt><dd>The paper's three hypotheses: neighbor map loses information, lossy aggregation, graph too dense.</dd></div>
+    <div><dt>N1 to N5</dt><dd>Our next experiments, section 9.</dd></div>
+    <div><dt>Effective rank</dt><dd>How many dimensions the robots' representations really use: exp of the entropy of normalized singular values. Collapses to 1 under over-smoothing.</dd></div>
+    <div><dt>Over-smoothing</dt><dd>Repeated message passing making all node representations identical. Not observed here.</dd></div>
+    <div><dt>Imitation learning</dt><dd>Training a policy to reproduce an expert's actions from the partial information it will have when deployed.</dd></div>
+    <div><dt>Seed</dt><dd>The random initialization of a training run. Comparing variants needs several.</dd></div>
+    <div><dt>Paired difference</dt><dd>Difference between two conditions computed environment by environment, then averaged; removes the large differences between environments.</dd></div>
+  </dl>
+</section>
+
+<!-- ======================= 14 ======================= -->
+<section class="section stack-l" id="refs">
+  <div class="stack-s"><p class="eyebrow">Section 14</p><h2>References</h2></div>
+  <ul class="refs">
+    <li><span class="rtag">Central paper</span>Agarwal, Muthukrishnan, Gosrich, Kumar &amp; Ribeiro. <em>LPAC: Learnable Perception-Action-Communication Loops with Applications to Coverage Control.</em> IEEE T-RO, 2025. <a href="https://arxiv.org/abs/2401.04855">arXiv:2401.04855</a></li>
+    <li><span class="rtag">Code and checkpoint</span><a href="https://github.com/KumarRobotics/CoverageControl">KumarRobotics/CoverageControl</a>, release v1.3.1</li>
+    <li><span class="rtag">k-nearest communication</span>Muthusamy, Owerko, Kanatsoulis, Agarwal &amp; Ribeiro. <em>Generalizability of Graph Neural Networks for Decentralized Unlabeled Motion Planning.</em> 2024. <a href="https://arxiv.org/abs/2409.19829">arXiv:2409.19829</a>; code <a href="https://github.com/Damowerko/motion-planning">Damowerko/motion-planning</a></li>
+    <li><span class="rtag">Same group, transformer</span>Owerko, Vatnsdal, Agarwal, Kumar &amp; Ribeiro. <em>MAST: Multi-Agent Spatial Transformer for Learning to Collaborate.</em> 2025. <a href="https://arxiv.org/abs/2509.17195">arXiv:2509.17195</a></li>
+    <li><span class="rtag">Same group, diffusion</span>Vatnsdal, Garcia Camargo, Agarwal &amp; Ribeiro. <em>Scalable Multi-Agent Diffusion Policies for Coverage Control.</em> 2025. <a href="https://arxiv.org/abs/2509.17244">arXiv:2509.17244</a></li>
+    <li><span class="rtag">Measuring over-smoothing</span>Zhang, Deidda, Higham &amp; Tudisco. <em>Are We Measuring Oversmoothing in Graph Neural Networks Correctly?</em> ICLR 2026. <a href="https://arxiv.org/abs/2502.04591">arXiv:2502.04591</a></li>
+    <li><span class="rtag">GNN size and degree generalization</span>Li &amp; Yan. <em>Tackling Size Generalization of Graph Neural Networks on Biological Data from a Spectral Perspective.</em> <a href="https://arxiv.org/abs/2305.15611">arXiv:2305.15611</a></li>
+    <li><span class="rtag">Swarms and GNNs, origin</span>Tolstaya, Gama, Paulos, Pappas, Kumar &amp; Ribeiro. <em>Learning Decentralized Controllers for Robot Swarms with Graph Neural Networks.</em> Conference on Robot Learning. <a href="https://arxiv.org/abs/1903.10527">arXiv:1903.10527</a></li>
+    <li><span class="rtag">TAGConv</span>Du, Zhang, Wu, Moura &amp; Kar. <em>Topology Adaptive Graph Convolutional Networks.</em> 2017. <a href="https://arxiv.org/abs/1710.10370">arXiv:1710.10370</a></li>
+  </ul>
+</section>
+
+<footer class="foot">
+  <p>Numbers come from the result files of the repository at commit 520bad0 (results.csv, results_2x2.csv, results/rank.csv, results_train/). Figures 1, 2, 3 and 5 are explanatory drawings, not measurements; Figure 3 uses synthetic positions with the library's drawing rule. Questions or corrections: open an issue in the repository.</p>
+</footer>
+
+</div>
