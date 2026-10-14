@@ -9,11 +9,11 @@ Factor GRAPH (what the GNN sees through ``edge_index``):
 Factor MAP (what the CNN sees through the two communication-map channels):
   C0  the library's map (all robots in range, resolution of the test range);
   C1  only the k nearest neighbours of G1 (same undirected set), test-range resolution;
-  C2  only robots within 128 m, drawn with the 128 m normalization and resolution (training scale);
-  C3  only robots within 256 m, drawn with the 256 m normalization and resolution;
+  C2  only robots within min(128 m, test range), drawn with the 128 m normalization and resolution;
+  C3  only robots within min(256 m, test range), drawn with the 256 m normalization and resolution;
   C4  empty map: both neighbour channels set to zero (the library's value for "no neighbour");
-  S<m> map of the robots within <m> metres, drawn with the <m> m normalization and resolution
-       (C2 = S128, C3 = S256).
+  S<m> map of the robots within min(<m>, test range) metres, drawn with the <m> m normalization
+       and resolution (C2 = S128, C3 = S256); only robots within radio range are ever drawn.
 ``--model`` evaluates another LPAC-K3 checkpoint (same architecture); ``--model-tag`` labels it.
 The simulator itself always runs at the test range; only the model inputs change.
 Costs are normalized by the clairvoyant rows of ``--baseline`` (range-independent).
@@ -84,7 +84,10 @@ class FactorialPolicy(LPACPolicy):
             return capped
         scale = map_scale(self.comm_map)
         if scale is not None:
-            return in_range_mask(positions, scale)
+            # A robot can only draw neighbours it can hear: within the test range, and within
+            # the drawing scale so that they fit on the map (corrected on 14 October; before,
+            # a scale larger than the test range drew robots out of radio range).
+            return in_range_mask(positions, min(scale, test_range))
         if self.comm_map == "C4":
             return torch.zeros_like(capped)
         return in_range_mask(positions, test_range)

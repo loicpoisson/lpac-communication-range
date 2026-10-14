@@ -23,9 +23,10 @@ when the policy is run with a larger communication range than it was trained wit
   data every 20 steps instead of 5 flattens the curve (3.0 beyond 768 m) at the price of a
   worse optimum (2.01 at 256 m); the authors' recipe is kept for all comparisons.
 - Validated on 40 new environments and on all four retrained models: the map drawn at a
-  256 m scale is the best level for every model (1.7-1.9 at every range, beating the
+  256 m scale is the best level for every model (1.7-1.9 from 256 m to 1024 m, beating the
   centralized CVT in 36-39 of 40 environments), and 256 m is the optimum of a scale sweep
-  on both environment sets.
+  on both environment sets. Below 256 m the fixed-scale map can only contain the robots in
+  radio range, and it performs as the as-is map does (within noise).
 - Open: a variant that carries neighbor geometry on graph edges instead of in an image.
 
 Details, numbers and caveats: [`docs/journal.md`](docs/journal.md). Framing document with

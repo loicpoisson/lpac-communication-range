@@ -52,7 +52,7 @@ def plot_map_levels(m1: pd.DataFrame, sweeps: dict[str, pd.DataFrame], path: Pat
             own = mean_std(own[(own["controller"] == "lpac") & (own["comm_range"] >= 512)], ["comm_range"])
             ax.errorbar(own["comm_range"], own["mean"], yerr=own["std"], color=LEVEL_COLORS["C0"],
                         label=LEVEL_LABELS["C0"], **ERRORBAR_STYLE)
-        rows = m1[(m1["model"] == model) & (m1["repeat"] == 0)]
+        rows = m1[(m1["model"] == model) & (m1["repeat"] == 0) & (m1["comm_range"] >= 512)]
         for level in ("C2", "C3", "C4"):
             r = mean_std(rows[rows["map"] == level], ["comm_range"]).sort_values("comm_range")
             if not r.empty:
@@ -165,7 +165,10 @@ def main() -> None:
         for model in sorted(set(m1["model"])):
             rows = m1[(m1["model"] == model) & (m1["map"] == "C3")]
             if not rows.empty:
-                release[label(model, "C3")] = rows
+                key = label(model, "C3")
+                if key in release:  # published C3 rows come from two files: keep one row per (env, range)
+                    rows = pd.concat([release[key], rows]).drop_duplicates(subset=["env", "comm_range"], keep="last")
+                release[key] = rows
     new40 = {}
     for model, frame in load_pairs(args.new40_sweeps).items():
         new40[label(model, "C0")] = frame[frame["controller"] == "lpac"]

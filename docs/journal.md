@@ -213,19 +213,36 @@ deviations of the 11-environment mean (0.04 at 256 m, 0.16 at 512 m, 0.28 at 768
 | Condition | 128 m | 256 m | 512 m | 1024 m | same on the 11 release envs |
 |---|---|---|---|---|---|
 | published, full map | 1.96 ± 0.42 | 1.70 ± 0.23 | 2.87 ± 0.40 | **6.15 ± 1.45** | 1.98 / 1.69 / 2.77 / 5.22 |
-| published, map at 256 m scale | 1.72 ± 0.19 | 1.70 ± 0.23 | 1.71 ± 0.22 | **1.77 ± 0.24** | — / — / 1.78 / 1.71 |
+| published, map at 256 m scale | 1.89 ± 0.36 ¹ | 1.70 ± 0.23 | 1.71 ± 0.22 | **1.77 ± 0.24** | 1.93 ¹ / — / 1.78 / 1.71 |
 | 128 m seed 0, full map | 2.13 ± 0.37 | 1.82 ± 0.27 | 2.53 ± 0.32 | 4.76 ± 1.21 | 2.15 / 1.74 / 2.49 / 4.36 |
-| 128 m seed 0, map at 256 m scale | 1.85 ± 0.27 | 1.82 ± 0.27 | 1.78 ± 0.21 | 1.80 ± 0.21 | — / — / 1.81 / 1.84 |
+| 128 m seed 0, map at 256 m scale | 2.06 ± 0.35 ¹ | 1.82 ± 0.27 | 1.78 ± 0.21 | 1.80 ± 0.21 | 2.05 ¹ / — / 1.81 / 1.84 |
 | 256 m model, full map | 2.42 ± 0.44 | 1.85 ± 0.34 | 1.81 ± 0.28 | 2.29 ± 0.25 | 2.28 / 1.76 / 1.74 / 2.31 |
 | centralized / decentralized CVT | 2.33 / 2.54 | 2.33 / 2.45 | 2.33 / 2.44 | 2.33 / 2.44 | 2.52 / 2.6 |
 
 - Every number of the release set is reproduced on the new set within its standard error,
   except the collapse of the published model at 1024 m, which is even deeper on new
   environments (6.15 vs 5.22, +0.93 with a standard error of 0.48).
-- The fix generalizes: with the 256 m map, the published model is flat (1.70-1.77) and
-  beats the centralized CVT in 36 to 39 of 40 environments at every range; paired against
-  its own 256 m optimum, the 1024 m cost is +0.06 ± 0.22 (standard error 0.04), i.e. within
-  noise. The retrained model with the same fix: 1.78-1.85, 37-39 of 40.
+- The fix generalizes: with the 256 m map, the published model is flat (1.70-1.77) from
+  256 m up and beats the centralized CVT in 36 to 39 of 40 environments at those ranges;
+  paired against its own 256 m optimum, the 1024 m cost is +0.06 ± 0.22 (standard error
+  0.04), i.e. within noise. The retrained model with the same fix: 1.78-1.82, 37-39 of 40.
+- ¹ At 128 m the "256 m scale" map can only contain the robots within radio range, so the
+  condition differs from the as-is map only by the coarser drawing resolution. Corrected
+  values (see the note below): published 1.89 ± 0.36 on the 40 environments, paired −0.07
+  ± 0.30 against the as-is 1.96 (better in 21 of 40, within noise), 1.93 ± 0.25 on the 11
+  release environments (as is: 1.98); retrained seed 0: 2.06 ± 0.35 (as is 2.13, −0.07 ±
+  0.15, 29 of 40) and 2.05 ± 0.47 on the 11 (as is 2.15). The fixed-scale map therefore
+  neither helps nor hurts below its scale: it is a fix for ranges above 256 m only.
+
+**Correction of 14 October (afternoon).** The first version of this table reported 1.72
+(published) and 1.85 (seed 0) at 128 m with the 256 m map. Those numbers were invalid:
+the mask that selects the robots to draw used the map scale alone, so at a test range of
+128 m the map contained robots up to 256 m away, which the robot cannot hear at that
+range. `FactorialPolicy._map_mask` now draws the robots within min(test range, scale) at
+the resolution of the scale; at ranges at or above the scale nothing changes (the 256 m
+control is still bit-identical to the as-is run, M1), and the 128 m points were recomputed
+(`results_fix_c3_128/`). The 1024 m scale sweep (measure 2b) is unaffected, since every
+scale there is below the test range.
 
 **Measure 2b: map scale at 1024 m, published model.** 128 / 192 / 256 / 384 / 512 m:
 2.36 / 2.00 / **1.71** / 2.16 / 2.78 on the 11 release environments, 2.23 / 1.80 / **1.77** / 2.07
