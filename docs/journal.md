@@ -390,8 +390,14 @@ is bit for bit V2 at 256 m (cost 2.7060 = 2.7060 on environment 0, 30 steps; sam
 and for the 128 m cap). The 2,754 planned episodes would therefore only recompute the
 256 m and 128 m columns of section 10. Launched instead: the bit-exact confirmation over
 full episodes on the 11 release environments at 1024 m, V1 and V2 seed 0, caps 256 and
-128 m (jobs 1847989-1847990); the 3-seed, 40-environment numbers are those of section 10
-at 256 m (V1 2.48 / 2.54, V2 2.96 / 2.97). Answer to the question asked: capping the graph
+128 m (jobs 1847989-1847990, 22 episodes, 2 min each). Result: V1 2.5289 against 2.5292
+as is at 256 m, V2 2.9715 against 2.9715; per environment the two runs are equal to the
+last bit in 5 to 8 of 11 cases and differ by at most 0.006 in the others (the factorial
+and the sweep build the edge list in a different order, which changes the floating-point
+summation order inside TAGConv and lets the 600-step trajectories drift slightly). Same
+with the 128 m cap (2.505 against 2.506). The 3-seed, 40-environment numbers are therefore
+those of section 10 at 256 m (V1 2.48 / 2.54, V2 2.96 / 2.97), data in
+`results_night2/cap_V*_s0_11.csv`. Answer to the question asked: capping the graph
 puts V2 back exactly on its 256 m value, so the whole degradation of V2 from 256 to
 1024 m (2.96 to 3.31) comes from the extra edges, whose attributes lie outside the training
 range; for V1 (2.48 to 3.14) it comes from the graph density alone. Capping does not make
@@ -407,6 +413,15 @@ reading the evaluation: the training loss must reach V1's level (about 0.2 at ep
 if not, seeds 1 and 2 stay unlaunched and it is reported as such.
 
 Generation and training times are read from the Slurm accounting and the job logs.
+
+Incident at 00:45: 25 of the 40 generation tasks died at the saving step (exit code 1, no
+traceback) because the home directory hit its quota (about 50 GB of compressed blocks; the
+raw parts of the three earlier datasets were still on disk next to their merged copies).
+Freed 24 GB (raw parts already merged, per-epoch checkpoints except best and last, two
+superseded merged datasets), regenerated the 22 incomplete parts (jobs 1848253-1848256,
+24 GB memory limit) and resubmitted the merge (1848257) and the training chain
+(1848258-1848282). One 2,500-sample part takes 22-24 min on one Intel core pair
+(0.54 s per sample), 5.3-5.9 GB of RAM.
 
 ## 12. Running and next (as of 14 October)
 
