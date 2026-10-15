@@ -295,20 +295,90 @@ Full runs submitted at 13:05: V1 and V2 × seeds 0, 1, 2 on the GPU partition (j
 1846008-1846025, 100 epochs, best-validation checkpoint, each chained with the evaluations
 on the 11 release and the 40 new environments at 128 / 256 / 512 / 768 / 1024 m), plus a
 CPU hedge for seed 0 of each variant (12 epochs on 32 Intel cores, jobs 1846026-1846031)
-in case the GPU queue does not clear overnight. Whichever finishes first is kept; the other
-is cancelled or reported as a fourth seed.
+in case the GPU queue does not clear overnight. The GPU queue cleared at 17:15; all eight
+trainings and their evaluations finished by 23:00.
+
+**Training.** 54-65 s per epoch on an L40S, about 2 h per run. Best validation loss (the
+checkpoint kept): V1 0.536 / 0.528 / 0.543 at epochs 18 / 17 / 26, then overfitting (train
+0.21, validation 0.64 at epoch 100); V2 0.676 / 0.678 / 0.677 at epochs 23 / 22 / 22, with
+no overfitting (train 0.62 at epoch 100): V2 underfits. The V0 reference reaches 0.449 at
+epoch 13. The 12-epoch CPU runs land on the same curves (V1 0.546, V2 0.681) and give the
+same costs within seed noise; they are kept as a fourth point in `results_variants/`.
+
+**Results** (cost ratio, environment mean, mean ± std across the 3 seeds; V0 = our three
+retrained seeds; V0 with the 256 m map from section 9; centralized CVT 2.52 / 2.33).
+
+| 11 release environments | 128 m | 256 m | 512 m | 768 m | 1024 m |
+|---|---|---|---|---|---|
+| V0 as published | 2.15 ± 0.01 | **1.74 ± 0.02** | 2.46 ± 0.08 | 3.58 ± 0.14 | 4.61 ± 0.26 |
+| V1 no neighbor map | 2.49 ± 0.08 | 2.48 ± 0.04 | 2.80 ± 0.13 | 2.98 ± 0.18 | 3.14 ± 0.20 |
+| V2 edge geometry (GATv2) | 2.51 ± 0.00 | 2.96 ± 0.02 | 3.25 ± 0.06 | 3.28 ± 0.06 | 3.31 ± 0.07 |
+| V0 with the map at 256 m scale | = V0 | 1.74 ± 0.02 | 1.78 ± 0.03 | 1.84 ± 0.02 | 1.83 ± 0.02 |
+| V0 trained at 256 m (1 seed) | 2.28 | 1.76 | 1.74 | 1.90 | 2.31 |
+
+| 40 new environments | 128 m | 256 m | 512 m | 768 m | 1024 m |
+|---|---|---|---|---|---|
+| V0 as published (seed 0) | 2.13 | **1.82** | 2.53 | — | 4.76 |
+| V1 no neighbor map | 2.39 ± 0.06 | 2.54 ± 0.03 | 2.84 ± 0.13 | 3.02 ± 0.19 | 3.12 ± 0.23 |
+| V2 edge geometry (GATv2) | 2.57 ± 0.02 | 2.97 ± 0.07 | 3.26 ± 0.07 | 3.27 ± 0.07 | 3.29 ± 0.06 |
+| V0 with the map at 256 m scale (seed 0) | 2.06 | 1.82 | 1.78 | — | 1.80 |
+| V0 trained at 256 m | 2.42 | 1.85 | 1.81 | — | 2.29 |
+
+Paired, seed-matched differences (mean ± std across environments, environments where the
+first is better), 11 release environments, same picture on the 40 new ones in brackets:
+
+- V2 − V0 as is: +1.21 to +1.24 ± 0.5 at 256 m, 0 of 11 better, every seed [+1.07, 1/40];
+  −1.07 to −1.64 at 1024 m, 9-11 of 11 [−1.54, 36/40]. V2 does not collapse, but it starts
+  far above V0 and never reaches it below 768 m.
+- V1 − V0 as is: +0.72 to +0.79 ± 0.3 at 256 m, 0 of 11 [+0.75, 0/40]: removing the map
+  costs 0.75 at the training regime, the largest effect measured on this model apart from
+  the collapse itself. −1.05 to −1.69 at 1024 m [−1.59, 38/40].
+- V2 − V1: +0.44 to +0.51 ± 0.6 at 256 m, 1-3 of 11 better [+0.33, 6/40]; +0.34 to +0.59
+  at 512 m; −0.02 to +0.46 at 1024 m (4 of 11) [+0.06, 17/40]. The edge geometry makes the
+  model worse than no geometry at all between 256 and 768 m and equal at 1024 m.
+- V2 − V0 with the 256 m map: +1.39 to +1.56 ± 0.5 at 512-1024 m, 0 of 11 [+1.42 to
+  +1.48, 0/40]. V2 − V0 trained at 256 m: +1.21 at 256 m, +0.99 at 1024 m, 0-1 of 11.
+- Against the centralized CVT: V1 ties at 128 and 256 m (−0.02, +0.00) and loses beyond;
+  V2 ties at 128 m only (−0.02) and loses by 0.45-0.77 from 256 m [0.57-0.93 on 40].
+- The seed spread of V1 and V2 (std 0.00-0.23) is at or below the V0 thresholds, so all the
+  differences above are far outside seed noise.
+
+**Reading.** The rasterized neighbor map is not a redundant input: without it the model
+loses 0.75 at 256 m and never beats the centralized CVT beyond 128 m. Carrying the same
+geometry on the edges of a 5-layer GATv2 (V2) does not replace it with the authors' recipe:
+V2 underfits (validation 0.68 against 0.53 for V1 and 0.45 for V0) and is worse than V1 at
+every range up to 768 m. Both map-less variants are flatter across ranges (3.1-3.3 at
+1024 m instead of 4.6) because they have less to lose, not because they are better: the
+range-dependent input is gone, but so is most of the useful information. The two fixes
+that work remain the inference-time map at a fixed 256 m scale (1.8 at every range from
+256 m, section 9) and training at 256 m (2.3 at 1024 m, section 7).
+
+Caveats. (1) V2 uses the release hyperparameters (learning rate 1e-4, weight decay 1e-3,
+batch 100, 5 layers, no normalization or residual connection); a GATv2 stack may need its
+own, and the underfitting suggests it. One architecture and one recipe were tried, so the
+result is "this edge-geometry variant does not work out of the box", not "edge geometry
+cannot work". (2) V2's edge attributes are (p_j − p_i) / W: at training they span ±0.125
+(128 m over a 1024 m world), at 1024 m they span ±1, so the distribution shift the map
+suffers from is still present in V2, on the edges; its flat curve means the attention does
+not break, not that the shift is absent. (3) Receptive field 5 hops against 15: at 128 m
+(mean degree 1.9, isolated fraction 0.31) the graph is fragmented and depth matters little;
+at 1024 m (degree 30) one hop already reaches everyone.
+
+Figures: `fig_variants.png` (11 release environments), `fig_variants_new40.png` (40 new
+ones). Data: `results_variants/<variant>_s<seed>_{11,40}.csv` (merged sweeps), `train_*/`
+(loss histories, timings, run info), `configs/`.
 
 ## 11. Running and next (as of 14 October)
 
-Running on FarmShare (submitted 14 October 13:05): the V1 and V2 trainings and their
-evaluation chains (section 10). Results folder on the cluster: `~/lpac_project/results_variants/`.
+Nothing running on FarmShare as of 14 October 23:30; the variant chains are retrieved (section 10).
 
-Next, in order (1 and 2 done, section 9; 4 started, section 10):
+Next, in order (1 and 2 done, section 9; 4 done, section 10):
 
 3. Information loss vs distribution shift in the map: same neighbors in a finer map.
-4. The graph ML contribution: a variant without neighbor maps, where relative positions are
-   carried by edge attributes of a PyG layer (for example `GATv2Conv` with `edge_dim=2`),
-   trained at 128 m and tested across ranges.
+4. Done (section 10): the map-less variants lose 0.75 at 256 m and the edge-geometry
+   GATv2 does not recover it. Possible follow-ups, not started: tune V2 (learning rate,
+   normalization, residual connections) or give it a range-independent graph (edges capped
+   at 256 m at inference, the graph analogue of the fixed-scale map).
 5. Optionally, LPAC trained at 512 m to connect with Fig. 20.
 
 Contact: an email with the results and three questions (other checkpoints, whether the

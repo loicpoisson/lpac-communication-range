@@ -1,0 +1,35 @@
+DataDir = "/home/users/lpoisson/lpac/train/large/d100k"
+
+GPUs = []
+NumWorkers = 6
+# Directory to save the model
+# If a model is already present, it will be loaded
+# Similarly, for the optimizer
+[LPACModel]
+Dir = "/home/users/lpoisson/lpac/train/large/models100k_V2_s0_cpu"
+Model = "model.pt"
+Optimizer = "optimizer.pt"
+
+[ModelConfig]
+UseCommMaps = true
+
+[GNNBackBone]
+InputDim = 7
+NumHops = 3
+NumLayers = 5
+LatentSize = 256
+OutputDim = 2
+
+[LPACTraining]
+LearningRate = 0.0001
+WeightDecay = 0.001
+BatchSize = 100
+NumEpochs = 100
+
+[CNNBackBone]
+InputDim = 4
+NumLayers = 3
+LatentSize = 32
+KernelSize = 3
+ImageSize = 32
+OutputDim = 7

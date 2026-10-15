@@ -1,0 +1,16 @@
+{
+ "device": "cpu",
+ "variant": "V2",
+ "params": 1270338,
+ "receptive_field_hops": 5,
+ "epochs": 12,
+ "seed": 0,
+ "num_workers": 4,
+ "train_size": 70000,
+ "val_size": 20000,
+ "torch": "2.8.0+cpu",
+ "cuda": null,
+ "gpu": null,
+ "config_file": "/home/users/lpoisson/lpac/train/large/params_variants/learning_params_V2_s0_cpu.toml",
+ "total_s": 26213.8
+}
