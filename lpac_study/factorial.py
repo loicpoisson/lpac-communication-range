@@ -5,7 +5,9 @@
 
 Factor GRAPH (what the GNN sees through ``edge_index``):
   G0  every edge within range (the published behaviour);
-  G1  each robot keeps its k nearest robots among those in range, made undirected.
+  G1  each robot keeps its k nearest robots among those in range, made undirected;
+  R<m> edges only between robots within min(<m>, test range) metres: the graph analogue of
+       the fixed-scale map (R256 = edges capped at 256 m), for the map-less variants.
 Factor MAP (what the CNN sees through the two communication-map channels):
   C0  the library's map (all robots in range, resolution of the test range);
   C1  only the k nearest neighbours of G1 (same undirected set), test-range resolution;
@@ -29,6 +31,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import re
 import time
 from pathlib import Path
 
@@ -57,8 +60,8 @@ WORLD_MARGIN = 0.5  # metres kept from the world boundary when perturbing initia
 class FactorialPolicy(LPACPolicy):
     """The published policy whose graph and communication maps are rebuilt per factor level."""
 
-    def __init__(self, paths, device, graph: str, comm_map: str, k: int, state_dict=None):
-        super().__init__(paths, device, state_dict)
+    def __init__(self, paths, device, graph: str, comm_map: str, k: int, state_dict=None, variant: str = "V0"):
+        super().__init__(paths, device, state_dict, variant)
         self.graph, self.comm_map, self.k = graph, comm_map, k
         self.map_neighbour_counts: list[float] = []
 
@@ -69,6 +72,8 @@ class FactorialPolicy(LPACPolicy):
         capped = symmetrize(knn_within_range_mask(positions, test_range, self.k))
         if self.graph == "G1":
             data.edge_index = mask_to_edge_index(capped)
+        elif graph_scale(self.graph) is not None:
+            data.edge_index = mask_to_edge_index(in_range_mask(positions, min(graph_scale(self.graph), test_range)))
         map_mask = self._map_mask(positions, test_range, capped)
         if self.comm_map == "C4":
             data.x[:, COMM_CHANNELS] = 0.0
@@ -102,11 +107,19 @@ def map_scale(level: str):
     return None
 
 
+def graph_scale(level: str):
+    """Edge cap (metres) of a GRAPH level R<metres>, else None."""
+    if level.startswith("R") and level[1:].isdigit():
+        return float(level[1:])
+    return None
+
+
 def parse_cell(cell: str):
-    """Split a cell name such as G0C3 or G1S192 into its GRAPH and MAP levels."""
-    if len(cell) < 4 or not cell.startswith("G") or cell[2] not in "CS":
-        raise ValueError("bad cell name %r: expected G<0|1> followed by C<0-4> or S<metres>" % cell)
-    return cell[:2], cell[2:]
+    """Split a cell name such as G0C3, G1S192 or R256C0 into its GRAPH and MAP levels."""
+    match = re.fullmatch(r"(G[01]|R\d+)([CS]\d+)", cell)
+    if match is None:
+        raise ValueError("bad cell name %r: expected G<0|1> or R<metres>, followed by C<0-4> or S<metres>" % cell)
+    return match.group(1), match.group(2)
 
 
 def load_clairvoyant(baseline: Path, num_robots: int) -> dict[int, tuple[float, float]]:
@@ -145,10 +158,11 @@ def perturbed_positions(positions: np.ndarray, env_index: int, repeat: int, sigm
 
 
 def run_cell(paths: DataPaths, env_index: int, comm_range: float, cell: str, k: int, repeat: int,
-             sigma: float, num_steps: int, clairvoyant: dict, device, model=None, model_tag="published") -> dict:
+             sigma: float, num_steps: int, clairvoyant: dict, device, model=None, model_tag="published",
+             variant="V0") -> dict:
     """One LPAC episode for one factorial cell on one (possibly perturbed) environment."""
     graph, comm_map = parse_cell(cell)
-    policy = FactorialPolicy(paths, device, graph, comm_map, k, model)
+    policy = FactorialPolicy(paths, device, graph, comm_map, k, model, variant)
     params = make_parameters(paths.env_params, comm_range, NUM_ROBOTS)
     positions = load_initial_positions(paths.pos_file(env_index), NUM_ROBOTS)
     positions = perturbed_positions(positions, env_index, repeat, sigma, params.pWorldMapSize)
@@ -191,7 +205,7 @@ def run_factorial(args: argparse.Namespace) -> None:
             for cell in args.cells:
                 for k in args.k:
                     graph, comm_map = parse_cell(cell)
-                    if comm_map != "C1" and graph == "G0" and k != args.k[0]:
+                    if comm_map != "C1" and graph != "G1" and k != args.k[0]:
                         continue  # these cells do not depend on k: computed once
                     for repeat in repeats:
                         key = (env_index, float(comm_range), args.model_tag, cell, int(k), repeat)
@@ -199,7 +213,7 @@ def run_factorial(args: argparse.Namespace) -> None:
                             continue
                         row = run_cell(paths, env_index, float(comm_range), cell, int(k), repeat,
                                        args.noise_sigma, args.num_steps, clairvoyant, device,
-                                       args.model, args.model_tag)
+                                       args.model, args.model_tag, args.variant)
                         append_row(results, row)
                         done.add(key)
                         print(f"[{time.time() - started:6.0f}s] r={comm_range:5.0f} env={env_index:2d} "
@@ -218,6 +232,7 @@ def build_parser() -> argparse.ArgumentParser:
                         help="cells G<0|1><level>, level in C0..C4 or S<metres> (map drawn at that fixed scale)")
     parser.add_argument("--model", default=None, help="state dict of another LPAC-K3 checkpoint (default: published)")
     parser.add_argument("--model-tag", default="published", help="label of the checkpoint written in the CSV")
+    parser.add_argument("--variant", default="V0", choices=("V0", "V1", "V2", "V3"), help="architecture of --model")
     parser.add_argument("--k", type=int, nargs="+", default=[4], help="neighbour caps for G1/C1")
     parser.add_argument("--num-envs", type=int, default=11)
     parser.add_argument("--env-start", type=int, default=0)

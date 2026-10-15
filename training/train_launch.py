@@ -68,8 +68,9 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--device", default="auto")
     parser.add_argument("--num-workers", type=int, default=None, help="override NumWorkers")
-    parser.add_argument("--variant", default="V0", choices=("V0", "V1", "V2"),
-                        help="V0 original LPAC, V1 without neighbour map, V2 edge-geometry GNN (lpac_study.variants)")
+    parser.add_argument("--variant", default="V0", choices=("V0", "V1", "V2", "V3"),
+                        help="V0 original LPAC, V1 without neighbour map, V2 edge-geometry GNN, "
+                             "V3 V1 + PointNetConv front layer (lpac_study.variants)")
     args = parser.parse_args()
 
     set_seeds(args.seed)

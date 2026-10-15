@@ -368,9 +368,49 @@ Figures: `fig_variants.png` (11 release environments), `fig_variants_new40.png` 
 ones). Data: `results_variants/<variant>_s<seed>_{11,40}.csv` (merged sweeps), `train_*/`
 (loss histories, timings, run info), `configs/`.
 
-## 11. Running and next (as of 14 October)
+## 11. Night of 14-15 October: mixed-range training, capped graph, V3 (submitted 00:40)
 
-Nothing running on FarmShare as of 14 October 23:30; the variant chains are retrieved (section 10).
+Three experiments queued on FarmShare, in this order of priority.
+
+**1. V0 trained at mixed ranges.** 100,000 samples with the authors' recipe (one sample
+every 5 steps), in four equal parts of 25,000 at CommunicationRange = 128, 256, 512 and
+1024 m (10 generation tasks of 2,500 samples per range, jobs 1847928-1847931), merged with
+`merge_datasets.py` (job 1847991), then V0 trained with the release hyperparameters and the
+best-validation checkpoint: seed 0 first (job 1847992), seeds 1 and 2 if the GPU queue
+allows (1848015, 1848018), each chained with the evaluations at the five ranges on the 11
+release and the 40 new environments. Question: does training on varied ranges remove the
+collapse without losing the 256 m quality? Comparison with the seed thresholds against the
+128 m model (as is and with the 256 m map) and the 256 m model.
+
+**2. Graph capped at 256 m at inference for V1 and V2** (new GRAPH level `R<m>` in
+`lpac_study/factorial.py`: edges only between robots within min(m, test range)). The local
+check before launching showed that for the map-less variants this measure is an identity:
+their only range-dependent input is the graph, so V2 at 1024 m with edges capped at 256 m
+is bit for bit V2 at 256 m (cost 2.7060 = 2.7060 on environment 0, 30 steps; same for V1
+and for the 128 m cap). The 2,754 planned episodes would therefore only recompute the
+256 m and 128 m columns of section 10. Launched instead: the bit-exact confirmation over
+full episodes on the 11 release environments at 1024 m, V1 and V2 seed 0, caps 256 and
+128 m (jobs 1847989-1847990); the 3-seed, 40-environment numbers are those of section 10
+at 256 m (V1 2.48 / 2.54, V2 2.96 / 2.97). Answer to the question asked: capping the graph
+puts V2 back exactly on its 256 m value, so the whole degradation of V2 from 256 to
+1024 m (2.96 to 3.31) comes from the extra edges, whose attributes lie outside the training
+range; for V1 (2.48 to 3.14) it comes from the graph density alone. Capping does not make
+either variant good: 2.96 and 2.48 remain above the centralized CVT (2.52) or at it.
+
+**3. V3 = V1 + one `PointNetConv` layer in front of the unchanged TAGConv stack**
+(`LPACPointNet` in `lpac_study/variants.py`, every choice commented in the class
+docstring). The layer reads ``[x_j, (p_j - p_i) / 256 m]`` on every edge, max-aggregates,
+and its output is added to the TAGConv input (residual); 1,889,636 parameters (V1 +
+84,002), receptive field 16 hops. Seed 0 only, 100k samples at 128 m, queued after the
+mixed seed-0 training (job 1848021) with its evaluations (1848022-1848023). Control before
+reading the evaluation: the training loss must reach V1's level (about 0.2 at epoch 100);
+if not, seeds 1 and 2 stay unlaunched and it is reported as such.
+
+Generation and training times are read from the Slurm accounting and the job logs.
+
+## 12. Running and next (as of 14 October)
+
+Running on FarmShare (submitted 15 October 00:40): the three chains of section 11.
 
 Next, in order (1 and 2 done, section 9; 4 done, section 10):
 

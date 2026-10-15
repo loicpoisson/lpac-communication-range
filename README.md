@@ -33,6 +33,8 @@ when the policy is run with a larger communication range than it was trained wit
   underfits). Both are flat across ranges (3.1-3.3 at 1024 m) but never beat the centralized
   CVT beyond 128 m: the rasterized map carries information the graph alone does not
   recover with this recipe. Same picture on the 40 new environments.
+- Running (night of 14-15 October): V0 trained on a 100k dataset mixing 128/256/512/1024 m,
+  and V3 = V1 with a PointNetConv layer reading relative positions at a fixed 256 m scale.
 
 Details, numbers and caveats: [`docs/journal.md`](docs/journal.md). Framing document with
 figures (French): [`docs/framing.html`](docs/framing.html), also online at
@@ -52,7 +54,7 @@ figures (French): [`docs/framing.html`](docs/framing.html), also online at
 | `results_variants/` | variants V1/V2: merged evaluations per seed on the 11 and 40 environments, loss histories, configs |
 | `fig_*.png` | figures; `fig_email.png` is the self-contained summary figure; `fig_variants*.png` the variant comparison |
 | `lpac_study/` | Python package (PyTorch Geometric) used by all scripts and the notebook |
-| `lpac_study/variants.py` | model variants V1 (no neighbor map) and V2 (edge geometry, GATv2) as subclasses of the library model; `--variant` on `training/train_launch.py`, `lpac_study.sweep` and the Slurm scripts |
+| `lpac_study/variants.py` | model variants V1 (no neighbor map), V2 (edge geometry, GATv2) and V3 (V1 + PointNetConv front layer) as subclasses of the library model; `--variant` on `training/train_launch.py`, `lpac_study.sweep`, `lpac_study.factorial` and the Slurm scripts |
 | `lpac_eval.ipynb` | self-contained Colab notebook (installs, downloads, sweeps, plots) |
 | `run_all.sh` | reruns the range sweep from scratch on Linux/WSL |
 | `farmshare_factorial.sbatch` | Slurm job for the factorial on FarmShare (Intel nodes only) |
@@ -63,6 +65,7 @@ figures (French): [`docs/framing.html`](docs/framing.html), also online at
 |---|---|
 | G0 | graph given to the GNN: all robots within communication range (as published) |
 | G1 | graph capped to each robot's k nearest neighbors within range (undirected) |
+| R\<m\> | graph with edges only between robots within min(m, test range) metres (R256 = capped at 256 m) |
 | C0 | neighbor map given to the CNN: as produced by the library (as published) |
 | C1 | map drawing only the k nearest neighbors, at the test-range scale |
 | C2 | map drawn as at training: neighbors within 128 m, 128 m scale |
