@@ -37,7 +37,7 @@ r256 = [mean_ratio(rows("results_train/results_sweep256_best.csv"), r, controlle
 v1 = [[mean_ratio(rows(f"results_variants/V1_s{i}_11.csv"), r, controller="lpac") for r in RANGES] for i in range(3)]
 
 plt.rcParams.update({"font.size": 8, "font.family": "serif", "axes.linewidth": 0.6})
-fig, ax = plt.subplots(figsize=(3.35, 2.75))
+fig, ax = plt.subplots(figsize=(3.35, 2.5))
 ax.axhline(1.0, color="0.55", lw=0.8, ls=(0, (4, 3)))
 ax.plot(RANGES, central, color="#1baf7a", lw=1.2, label="Centralized CVT")
 r128_mean = [st.mean(c) for c in zip(*r128)]
@@ -56,7 +56,7 @@ ax.text(1035, 1.08, "clairvoyant", fontsize=6.5, color="0.4", ha="right")
 for s in ("top", "right"):
     ax.spines[s].set_visible(False)
 ax.grid(axis="y", color="0.9", lw=0.5)
-fig.tight_layout(pad=0.3, rect=(0, 0.2, 1, 1))
+fig.tight_layout(pad=0.3, rect=(0, 0.21, 1, 1))
 fig.legend(*ax.get_legend_handles_labels(), fontsize=6, frameon=False, loc="lower center", ncol=2, handlelength=2.0, columnspacing=1.0, borderaxespad=0.1)
 fig.savefig(Path(__file__).with_name("results.pdf"))
 print("published", [round(x, 2) for x in published])
