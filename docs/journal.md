@@ -403,6 +403,65 @@ puts V2 back exactly on its 256 m value, so the whole degradation of V2 from 256
 range; for V1 (2.48 to 3.14) it comes from the graph density alone. Capping does not make
 either variant good: 2.96 and 2.48 remain above the centralized CVT (2.52) or at it.
 
+**Result of experiment 1 (16 October, 01:00; provisional: seed 0, CPU, 7 epochs).** The GPU
+queue did not clear (section 12), so the result comes from the CPU hedge: 12 epochs planned
+on 32 Intel cores, stopped by the 11 h limit after 7 epochs (80 min per epoch on a shared
+node), best validation loss 0.532 at epoch 5, then rising (0.56 at epochs 6-7) while the
+training loss keeps falling, so the checkpoint kept is probably near what the recipe gives.
+The validation loss is on the mixed validation set and is not comparable with the 128 m
+runs. Cost ratio, environment mean (std across environments in brackets):
+
+| | 128 m | 256 m | 512 m | 768 m | 1024 m |
+|---|---|---|---|---|---|
+| mixed ranges, seed 0 (11 release envs) | 2.55 (0.62) | 2.11 (0.33) | **1.87** (0.20) | 1.94 (0.20) | 1.91 (0.21) |
+| 128 m model, seed 0, as is | 2.15 | 1.74 | 2.49 | 3.46 | 4.36 |
+| 128 m model, seed 0, map at 256 m scale | 2.05 | = as is | 1.81 | 1.86 | 1.84 |
+| 256 m model | 2.28 | 1.76 | 1.74 | 1.90 | 2.31 |
+| mixed ranges, seed 0 (40 new envs) | 2.56 (0.47) | 2.22 (0.37) | **2.01** (0.30) | 2.04 (0.32) | 2.02 (0.30) |
+| 128 m model, seed 0, as is (40) | 2.13 | 1.82 | 2.53 | — | 4.76 |
+| 128 m model, map at 256 m scale (40) | 2.06 | 1.82 | 1.78 | — | 1.80 |
+| 256 m model (40) | 2.42 | 1.85 | 1.81 | — | 2.29 |
+
+Paired against the same environments (mean ± std, environments where the mixed model is
+better), 11 release environments [40 new ones]:
+
+- mixed − 128 m model as is: +0.40 ± 0.37 (1/11) at 128 m, +0.38 ± 0.19 (0/11) at 256 m,
+  −0.62 (10/11) at 512 m, −2.45 ± 1.06 (11/11) at 1024 m [+0.43, +0.39, −0.51, −2.73 (39/40)].
+- mixed − 128 m model with the 256 m map: +0.06 / +0.08 / +0.07 ± 0.3 at 512 / 768 /
+  1024 m (3-6 of 11, within noise) [+0.24 / +0.22 ± 0.20, 5 of 40: slightly worse];
+  +0.51 at 128 m (0/11).
+- mixed − 256 m model: +0.35 ± 0.23 (0/11) at 256 m, −0.39 ± 0.17 (11/11) at 1024 m
+  [+0.37 (1/40), −0.27 (29/40)].
+- mixed − centralized CVT (2.52 / 2.33): −0.41 to −0.66 from 256 m (8-10 of 11)
+  [−0.11 to −0.31, 26-34 of 40]; equal at 128 m.
+
+Answer to the question. Training on mixed ranges removes the collapse: the curve is flat
+from 512 m (1.87-1.94 on the release set, 2.01-2.04 on the new one, spread 0.5-0.7 over
+the whole range instead of 2.6-2.9 for the 128 m model), and it beats the centralized CVT
+at every range from 256 m. It does not keep the 256 m quality: 2.11 against 1.74 for the
+128 m model and 1.76 for the 256 m model, 0 of 11 and 2 of 40 environments better, far
+outside the seed noise (0.02 at 256 m). Its best range is 512 m (1.87), and it is worse at
+128 m than every single-range model (2.55). Against the inference-time fix (128 m model
+with the 256 m map, 1.74 / 1.78 / 1.84 / 1.83 at 256-1024 m) it is equal beyond 512 m on the
+release set and 0.2 worse on the new set, and 0.4 worse at 256 m. So, with the authors'
+recipe, mixing ranges in the training data trades the 256 m optimum for robustness; the
+fixed-scale map gets the robustness without the trade.
+
+Caveats. One seed, 7 epochs on CPU with the best checkpoint at epoch 5 (the 128 m runs
+reach their best at epochs 10-13, and the 12-epoch CPU 128 m model gave 2.17 / 1.76, within
+0.02 of the GPU one, so 12 epochs are enough for that recipe; for the mixed recipe the
+validation loss had already turned up at epoch 6, which argues against a large gain from
+more epochs, but the 100-epoch GPU runs with three seeds (jobs 1848258, 1848261, 1848264,
+estimated start 17 October) will settle it). The mixed validation set spans the four ranges,
+so a per-range breakdown of the loss would be needed to see where the model gives up
+quality; the costs above are that breakdown in the end.
+
+Figures: `fig_mixed_range.png` (11 release environments) and `fig_mixed_range_new40.png`
+(40 new ones). Data: `results_night2/mixed_s0_cpu_{11,40}.csv`, loss history and timing in
+`results_night2/train_models_s0_cpu/`, dataset parameters `results_night2/*.toml`
+(generation: 40 tasks of 2,500 samples, 22-24 min each; merge 8 min, 65 GB; training 80
+min per epoch on a shared 32-core Intel node, 7 epochs in 11 h).
+
 **3. V3 = V1 + one `PointNetConv` layer in front of the unchanged TAGConv stack**
 (`LPACPointNet` in `lpac_study/variants.py`, every choice commented in the class
 docstring). The layer reads ``[x_j, (p_j - p_i) / 256 m]`` on every edge, max-aggregates,
@@ -425,7 +484,8 @@ superseded merged datasets), regenerated the 22 incomplete parts (jobs 1848253-1
 
 ## 12. Running and next (as of 14 October)
 
-Running on FarmShare (submitted 15 October 00:40): the three chains of section 11.
+Running on FarmShare as of 16 October 01:00: V3 seed 0 evaluations (CPU model, 11 epochs);
+queued on the GPU partition: V3 seed 0 and the three mixed-range seeds at 100 epochs (section 11).
 
 Next, in order (1 and 2 done, section 9; 4 done, section 10):
 

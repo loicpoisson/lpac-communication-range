@@ -33,8 +33,11 @@ when the policy is run with a larger communication range than it was trained wit
   underfits). Both are flat across ranges (3.1-3.3 at 1024 m) but never beat the centralized
   CVT beyond 128 m: the rasterized map carries information the graph alone does not
   recover with this recipe. Same picture on the 40 new environments.
-- Running (night of 14-15 October): V0 trained on a 100k dataset mixing 128/256/512/1024 m,
-  and V3 = V1 with a PointNetConv layer reading relative positions at a fixed 256 m scale.
+- V0 trained on 100k samples mixing 128/256/512/1024 m (seed 0, 7 epochs on CPU, provisional):
+  no collapse (1.9 at 512-1024 m, beats the centralized CVT from 256 m) but 2.11 at 256 m instead
+  of 1.74: it trades the 256 m optimum for robustness, which the fixed-scale map gets for free.
+- Running: V3 = V1 with a PointNetConv layer reading relative positions at a fixed 256 m scale
+  (seed 0); 100-epoch GPU runs of V3 and of three mixed-range seeds queued.
 
 Details, numbers and caveats: [`docs/journal.md`](docs/journal.md). Framing document with
 figures (French): [`docs/framing.html`](docs/framing.html), also online at
@@ -52,6 +55,7 @@ figures (French): [`docs/framing.html`](docs/framing.html), also online at
 | `results_2x2/`, `results_2x2.csv` | inference-time factorial (graph levels G0–G1 × neighbor-map levels C0–C4), noisy repeats |
 | `results_train/`, `training/` | training trial: configs, Slurm scripts, losses, timings, evaluations of retrained models |
 | `results_variants/` | variants V1/V2: merged evaluations per seed on the 11 and 40 environments, loss histories, configs |
+| `results_night2/` | capped-graph confirmation for V1/V2, mixed-range model evaluations, loss histories and dataset parameters |
 | `fig_*.png` | figures; `fig_email.png` is the self-contained summary figure; `fig_variants*.png` the variant comparison |
 | `lpac_study/` | Python package (PyTorch Geometric) used by all scripts and the notebook |
 | `lpac_study/variants.py` | model variants V1 (no neighbor map), V2 (edge geometry, GATv2) and V3 (V1 + PointNetConv front layer) as subclasses of the library model; `--variant` on `training/train_launch.py`, `lpac_study.sweep`, `lpac_study.factorial` and the Slurm scripts |

@@ -64,6 +64,8 @@ def main() -> None:
     parser.add_argument("--v2", nargs="*", default=[], help="sweep files of the V2 seeds")
     parser.add_argument("--fixed-map", help="results_2x2.csv holding C3 rows of the V0 seeds (map at 256 m scale)")
     parser.add_argument("--r256", help="sweep file of the model trained at 256 m")
+    parser.add_argument("--extra", nargs="*", default=[], help="label=path sweeps drawn as extra dashed curves (1 seed)")
+    parser.add_argument("--suptitle", default="Model variants trained at 128 m (100,000 samples), tested across ranges")
     parser.add_argument("--title", default="11 release environments")
     parser.add_argument("--out", default="fig_variants.png")
     args = parser.parse_args()
@@ -97,12 +99,17 @@ def main() -> None:
         tables["trained at 256 m"] = pd.DataFrame([r]).reset_index(drop=True)
         ax.plot(r.index, r.to_numpy(), color="#e87ba4", linestyle="--", marker="^", markersize=6, linewidth=1.8,
                 label="V0 trained at 256 m (1 seed)")
+    for color, marker, item in zip(("#eda100", "#7b3fb3", "#008300"), ("D", "v", "P"), args.extra):
+        label_x, path = item.split("=", 1)
+        r = env_means(path)
+        tables[label_x] = pd.DataFrame([r]).reset_index(drop=True)
+        ax.plot(r.index, r.to_numpy(), color=color, linestyle="--", marker=marker, markersize=6, linewidth=1.8, label=label_x)
     for controller, style in (("CentralizedCVT", ":"), ("DecentralizedCVT", "-.")):
         value = base[base["controller"] == controller]["ratio_mean"].mean()
         ax.axhline(value, color=COLORS[controller], linestyle=style, linewidth=1.5,
                    label=f"{'centralized' if controller.startswith('C') else 'decentralized'} CVT")
     style_axis(ax, "Communication range at test time (m)", Y_LABEL,
-               f"Model variants trained at 128 m (100,000 samples), tested across ranges — {args.title}\n"
+               f"{args.suptitle} — {args.title}\n"
                "line = mean over seeds of the environment mean, band = min-max across seeds")
     ax.set_xticks([128, 256, 512, 768, 1024])
     ax.set_ylim(bottom=0)
