@@ -471,6 +471,62 @@ mixed seed-0 training (job 1848021) with its evaluations (1848022-1848023). Cont
 reading the evaluation: the training loss must reach V1's level (about 0.2 at epoch 100);
 if not, seeds 1 and 2 stay unlaunched and it is reported as such.
 
+**Result of experiment 3 (16 October, 04:30; seed 0, CPU, 11 epochs).** Same CPU hedge as
+experiment 1 (job 1849304, 32 Intel cores, 50 min per epoch, 11 epochs in 11 h), best
+validation 0.480 at epoch 11. Training-loss control against V1 under the same recipe
+(12 CPU epochs): V3 0.470 at epoch 11 against V1 0.534 at epoch 11 (0.525 at 12), and
+validation 0.480 against 0.546; the control passes, so seeds 1 and 2 are queued on the
+GPU partition (jobs 1851374 and 1851377, behind the mixed-range runs). V1 at 100 GPU
+epochs ends at a training loss of 0.215, which 11 CPU epochs cannot be compared with.
+
+| | 128 m | 256 m | 512 m | 768 m | 1024 m |
+|---|---|---|---|---|---|
+| V3 seed 0, 11 release envs (std across envs) | 2.21 (0.43) | 2.21 (0.25) | 3.39 (0.57) | 4.86 (2.15) | 5.83 (2.71) |
+| V1 seed 0, same CPU recipe | 2.43 | 2.56 | 2.76 | 2.90 | 3.00 |
+| V1 seed 0, 100 GPU epochs | 2.51 | 2.53 | 2.85 | 3.13 | 3.31 |
+| V0 seed 0, as is | 2.15 | 1.74 | 2.49 | 3.46 | 4.36 |
+| V0 seed 0, map at 256 m scale | 2.05 | = as is | 1.81 | 1.86 | 1.84 |
+| V3 seed 0, 40 new envs | 2.17 (0.35) | 2.18 (0.23) | 3.39 (0.66) | 4.68 (1.41) | 5.67 (1.82) |
+| V1 seed 0, same CPU recipe (40) | 2.52 | 2.59 | 2.72 | 2.84 | 2.87 |
+| V0 seed 0, as is (40) | 2.13 | 1.82 | 2.53 | — | 4.76 |
+
+Paired (mean ± std across environments, environments where V3 is better), 11 release
+environments [40 new ones]:
+
+- V3 − V1 (same CPU recipe): −0.22 ± 0.18 (9/11) at 128 m, −0.35 ± 0.34 (10/11) at 256 m
+  [−0.35 (38/40), −0.42 (38/40)]; +0.63 (1/11) at 512 m, +1.97 at 768 m, +2.84 ± 2.23
+  (0/11) at 1024 m [+0.68, +1.84, +2.80 (3/40)]. Same signs against the 100-epoch V1.
+- V3 − V0 as is: +0.06 (3/11) at 128 m, +0.47 ± 0.15 (0/11) at 256 m, +1.47 ± 2.44 (2/11)
+  at 1024 m [+0.04, +0.35, +0.91 (8/40)].
+- V3 − V0 with the 256 m map: +1.58 / +3.00 / +3.99 at 512 / 768 / 1024 m, 0 of 11 [0 of 40].
+
+Reading. Unlike V2, the geometry on the edges helps where it was trained: at 128 and
+256 m V3 is better than V1 by 0.2-0.4 in 9-11 of 11 and 38 of 40 environments, and it is
+the first map-less variant that comes close to V0 at 128 m (2.21 against 2.15). It is
+still 0.47 above V0 at 256 m, so the PointNet layer recovers roughly half of what the map
+gives at that range. And it collapses with the range exactly as V0 does, even more
+steeply (5.8 against 4.4 at 1024 m, with a huge spread across environments: 2.7): the
+relative positions the layer reads span ±0.5 units of 256 m at training and ±4 at 1024 m,
+and the max over 25-30 neighbours of a network that never saw such inputs is unbounded.
+This is the prediction made in section 10 for V2's edge attributes, now observed on a
+layer that actually uses them: the collapse is not a property of the rasterized map but
+of any input whose support grows with the range. The flat variants (V1, V2) are flat
+because they ignore the geometry; the variants that read it (V0 through the map, V3
+through the edges) collapse. As for V1 and V2, capping V3's graph at 256 m at inference
+would put it back on its 256 m value (2.21) at every range, by the identity of experiment
+2, which is still worse than V0 with the 256 m map (1.8).
+
+The mean degree under V3 is 25 at 1024 m against 29.5 under V1: the collapsed policy
+pushes robots apart, which is also what V0's collapse does (section 4).
+
+Caveats: one seed, 11 CPU epochs (the validation loss was still falling: 0.494 → 0.480
+over the last four epochs), so the 128-256 m numbers may still improve with the 100-epoch
+GPU runs; the collapse beyond 512 m will not disappear with more epochs, since it comes
+from inputs outside the training support.
+
+Figures `fig_variants.png` and `fig_variants_new40.png` (V3 added as a dashed curve);
+data `results_variants/V3_s0_cpu_{11,40}.csv`, loss history `results_variants/train_V3_s0_cpu/`.
+
 Generation and training times are read from the Slurm accounting and the job logs.
 
 Incident at 00:45: 25 of the 40 generation tasks died at the saving step (exit code 1, no
@@ -484,8 +540,8 @@ superseded merged datasets), regenerated the 22 incomplete parts (jobs 1848253-1
 
 ## 12. Running and next (as of 14 October)
 
-Running on FarmShare as of 16 October 01:00: V3 seed 0 evaluations (CPU model, 11 epochs);
-queued on the GPU partition: V3 seed 0 and the three mixed-range seeds at 100 epochs (section 11).
+Queued on the GPU partition as of 16 October 04:30 (nothing running): V3 seeds 0, 1, 2 and the
+three mixed-range seeds at 100 epochs, with their evaluation chains (section 11).
 
 Next, in order (1 and 2 done, section 9; 4 done, section 10):
 

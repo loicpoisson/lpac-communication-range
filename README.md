@@ -36,8 +36,10 @@ when the policy is run with a larger communication range than it was trained wit
 - V0 trained on 100k samples mixing 128/256/512/1024 m (seed 0, 7 epochs on CPU, provisional):
   no collapse (1.9 at 512-1024 m, beats the centralized CVT from 256 m) but 2.11 at 256 m instead
   of 1.74: it trades the 256 m optimum for robustness, which the fixed-scale map gets for free.
-- Running: V3 = V1 with a PointNetConv layer reading relative positions at a fixed 256 m scale
-  (seed 0); 100-epoch GPU runs of V3 and of three mixed-range seeds queued.
+- V3 = V1 with a PointNetConv layer reading relative positions at a fixed 256 m scale (seed 0,
+  11 epochs on CPU, provisional): better than V1 at 128-256 m (2.21 vs 2.4-2.6) but it collapses
+  with the range like V0 (5.8 at 1024 m): any input whose support grows with the range breaks,
+  map or edge attribute. 100-epoch GPU runs of V3 (3 seeds) and of three mixed-range seeds queued.
 
 Details, numbers and caveats: [`docs/journal.md`](docs/journal.md). Framing document with
 figures (French): [`docs/framing.html`](docs/framing.html), also online at
