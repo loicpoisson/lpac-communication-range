@@ -41,9 +41,11 @@ when the policy is run with a larger communication range than it was trained wit
   (V0 4.6); still 0.5-1.1 behind the fixed-scale map beyond 512 m. An 11-epoch CPU run of it had
   collapsed (5.8 at 1024 m): under-training, not architecture.
 - Heterogeneous teams at inference (a fraction f of robots hearing to 1024 m, the others 128 m):
-  the cost grows convexly with f (2.0, 2.4, 2.8, 3.8, 5.3), a few far-hearing robots do not drag the
-  team down; the graph changes the other robots' actions by 18-35 % but the damage comes from the
-  far-hearing robots' own map; with the map fixed at 256 m the cost is flat (1.7-2.0) at every f.
+  the cost grows convexly with f (2.0, 2.4, 2.9, 4.0, 5.3 over 8 draws), a few far-hearing robots do
+  not drag the team down; the graph changes the other robots' actions by 20-36 % but the damage comes
+  from the far-hearing robots' own map; with the map fixed at 256 m the cost is flat (1.7-2.1) at
+  every f. Which robots hear far changes the cost by 0.3-0.5 across draws, unpredictably from where
+  they start (the collapsed regime is sensitive to any change of the initial condition).
 - Running (18 October): one V0 per training range for the paper's Fig. 20 (512, 1024 m), V0 trained
   with the fixed-scale map, V3 on mixed ranges, 8-draw heterogeneous teams, a mixture of range
   specialists at inference, and a single model with the robot's range as input (journal section 13).

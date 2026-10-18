@@ -661,11 +661,15 @@ Findings.
   embeddings differ even with a readable map) while the cost stays flat: a changed action is
   not a wrong action. The graph effect exists, is of the order of a quarter of the action,
   and is not what breaks the team; the broken map inputs of the long-range robots are.
-- **Which robots hear far matters as much as how many.** The two draws of the long-range
-  subset differ by 0.33 / 0.45 / 0.64 on average (up to 1.5) for f = 1/4, 1/2, 3/4 with the
-  as-is map, i.e. as much as the whole effect of going from f = 0 to f = 1/4. The subset is
-  drawn by robot index, and where the long-range robots stand in the formation decides how
-  much of the coverage they spoil. Two draws are enough to see this, not to characterize it.
+- **Which robots hear far changes the cost by as much as the fraction does, but not in a way
+  the start positions explain** (corrected on 18 October with 8 draws, section 13). The two
+  draws of the long-range subset differ by 0.33 / 0.45 / 0.64 on average (up to 1.5) for
+  f = 1/4, 1/2, 3/4 with the as-is map, as much as the whole effect of going from f = 0 to
+  f = 1/4. With 8 draws the spread across draws within an environment is 0.30-0.54 (as-is)
+  and 0.17-0.32 (fixed map), the order of the episode noise of section 5 (M3: 0.35 at 1024 m
+  for a 1 m shift of the start), and none of four descriptors of where the long-range
+  robots start predicts it (|Spearman ρ| ≤ 0.18, all p > 0.1). The first reading, "where the
+  long-range robots stand decides how much they spoil", is withdrawn.
 
 Figure `fig_hetero.png`; data `results_hetero/results_hetero.csv` (176 rows). Not done: a
 model trained on heterogeneous teams, which would need the comm maps and edge weights of the
@@ -703,6 +707,42 @@ other variants.
 **C. Heterogeneous teams, 8 draws per fraction** (section 12 had 2), both map modes, with
 four descriptors of where the long-range robots start: distance to the centre, number of
 robots within 128 m, Voronoi share of the importance field, spread. Job 1854555, CPU.
+
+Result of C (18 October, 10:00; 572 episodes, 11 tasks of about 75 min). Cost ratio, mean
+± std across environments of the environment mean over the 8 draws; in brackets the std
+across draws within an environment and the max − min across draws:
+
+| Fraction at 1024 m | 0 | 1/4 | 1/2 | 3/4 | 1 |
+|---|---|---|---|---|---|
+| as-is map | 1.98 ± 0.46 | 2.42 ± 0.46 [0.30, 0.93] | 2.89 ± 0.59 [0.38, 1.03] | 3.95 ± 0.97 [0.54, 1.59] | 5.30 ± 1.51 |
+| map at a fixed 256 m scale | 1.93 ± 0.25 | 2.10 ± 0.19 [0.27, 0.76] | 1.98 ± 0.18 [0.32, 0.96] | 1.86 ± 0.14 [0.17, 0.50] | 1.71 ± 0.19 |
+| probe, 128 m robots (as-is / fixed) | — | 0.21 / 0.14 | 0.29 / 0.22 | 0.36 / 0.31 | — |
+
+- The 2-draw numbers of section 12 hold with 8 draws, slightly higher (2.42 / 2.89 / 3.95
+  against 2.36 / 2.77 / 3.77): +0.44 / +0.91 / +1.97 against f = 0 (11 of 11 environments at
+  every fraction), below the straight line between f = 0 and f = 1 by 0.39 / 0.75 / 0.52
+  (10-11 of 11). The dose-response is convex. With the fixed map the curve is flat within
+  ±0.2 (+0.17 at f = 1/4 is the largest deviation, 9 of 11; −0.07 at f = 3/4).
+- **The draw matters, but not through where the long-range robots start.** Within an
+  environment and a fraction, the 8 draws spread by 0.30-0.54 (as-is) and 0.17-0.32 (fixed
+  map); the max − min reaches 1.6. Four descriptors of the subset at t = 0 (Voronoi share of
+  the importance field, distance to the centre, number of robots within 128 m, spread) were
+  correlated with the cost across draws, within (environment, fraction): every Spearman ρ is
+  between −0.13 and +0.18 with p > 0.1, pooled over fractions |ρ| ≤ 0.09, and a linear model
+  of the four together explains 2 % of the draw variance (as-is map). The descriptors do
+  vary across draws (within-cell std 0.08 of the field share, 0.23 robots of local degree),
+  so the test had something to work with. The spread across draws is therefore of the same
+  nature as the episode noise measured in section 5 (M3: a 1 m shift of the start changes
+  the 1024 m cost by 0.35): the collapsed regime is sensitive to any change of the initial
+  condition, and the identity of the long-range robots is one more such change. Section 12's
+  reading that the position of the long-range robots "decides how much they spoil" is
+  withdrawn above.
+- The probe values are unchanged (128 m robots change their actions by 21-36 % through the
+  graph with the as-is map, 14-31 % with the fixed one, where it costs nothing).
+
+Figures `fig_hetero.png` (now 8 draws) and `fig_hetero_position.png` (cost against each
+descriptor, both centred within (environment, fraction)); data
+`results_hetero/results_hetero8.csv`.
 
 **H1. Mixture of specialists at inference** (`lpac_study/mixture.py`): in the 128/1024 m
 team, each robot runs the model trained at its own range; the two models are applied layer
