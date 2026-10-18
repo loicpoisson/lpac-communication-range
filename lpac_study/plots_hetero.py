@@ -10,6 +10,7 @@ of the short-range robots (graph contamination alone) and of the long-range robo
 from __future__ import annotations
 
 import argparse
+import textwrap
 
 import matplotlib
 
@@ -49,7 +50,7 @@ def plot_position(frame: pd.DataFrame, path: str) -> None:
             ax.scatter(g["dx"], g["dcost"], s=14, color=color, alpha=0.75, label=f"f = {fr:g}", linewidths=0)
         rho = mid[["dx", "dcost"]].corr(method="spearman").iloc[0, 1]
         style_axis(ax, "descriptor - its (env, f) mean", "cost - its (env, f) mean" if ax is axes[0] else "",
-                   f"{label}\nSpearman rho = {rho:+.2f} (within env and f, across draws)")
+                   textwrap.fill(label, 40) + f"\nSpearman rho = {rho:+.2f} (within env and f, across draws)")
         ax.axhline(0, color="#999999", linewidth=0.8)
         ax.axvline(0, color="#999999", linewidth=0.8)
     axes[0].legend(frameon=False, fontsize=8, title="fraction at 1024 m")
