@@ -47,6 +47,7 @@ from .simulation import load_initial_positions, make_environment, make_parameter
 FIELDS = ["env", "fraction", "draw", "map", "model", "num_long", "long_range", "short_range",
           "cost_mean", "cost_final", "ratio_mean", "ratio_final", "clairvoyant_cost_mean",
           "degree_mean", "degree_std", "probe_short", "probe_long", "probe_short_abs", "probe_count",
+          "long_center_dist", "long_degree128", "long_idf_share", "long_spread",
           "converged_step", "wall_s"]
 FIXED_SCALE = 256.0
 
@@ -109,6 +110,39 @@ class HeterogeneousPolicy(LPACPolicy):
             map_mask = reception_mask(positions, torch.minimum(self.ranges, scales))
         data.x[:, COMM_CHANNELS] = comm_maps_per_robot(positions, map_mask, scales, CNN_MAP_SIZE).to(self.device)
         return data
+
+
+def subset_features(env, positions: np.ndarray, is_long: np.ndarray, world_size: float) -> dict:
+    """Where the long-range robots stand at the start of the episode.
+
+    * ``long_center_dist``: mean distance of the long-range robots to the world centre, in units of
+      half the world size (0 = centre, 1 = mid-edge);
+    * ``long_degree128``: mean number of other robots within 128 m of a long-range robot (how
+      clustered they start);
+    * ``long_idf_share``: share of the importance field (``env.GetWorldMap()``) whose nearest robot
+      is a long-range one, i.e. the Voronoi share of the subset at t = 0;
+    * ``long_spread``: mean pairwise distance between long-range robots over the same for all robots.
+    """
+    if not is_long.any() or is_long.all():
+        return {"long_center_dist": float("nan"), "long_degree128": float("nan"), "long_idf_share": float("nan"),
+                "long_spread": float("nan")}
+    p = np.asarray(positions, dtype=np.float64)
+    centre = np.array([world_size / 2.0, world_size / 2.0])
+    dist = np.linalg.norm(p[:, None, :] - p[None, :, :], axis=-1)
+    np.fill_diagonal(dist, np.inf)
+    world = np.asarray(env.GetWorldMap(), dtype=np.float64)
+    ys, xs = np.mgrid[0:world.shape[0], 0:world.shape[1]]
+    cells = np.stack([xs.ravel() + 0.5, ys.ravel() + 0.5], axis=1)  # cell centres in metres (resolution 1 m)
+    nearest = np.argmin(np.linalg.norm(cells[:, None, :] - p[None, :, :], axis=-1), axis=1)
+    mass = world.ravel()
+    share = float(mass[is_long[nearest]].sum() / max(mass.sum(), 1e-9))
+    pl = p[is_long]
+    spread_long = np.mean(np.linalg.norm(pl[:, None] - pl[None, :], axis=-1)) if len(pl) > 1 else float("nan")
+    spread_all = np.mean(np.linalg.norm(p[:, None] - p[None, :], axis=-1))
+    return {"long_center_dist": float(np.linalg.norm(pl - centre, axis=1).mean() / (world_size / 2.0)),
+            "long_degree128": float((dist[is_long] < 128.0).sum(1).mean()),
+            "long_idf_share": share,
+            "long_spread": float(spread_long / spread_all)}
 
 
 def long_range_robots(env_index: int, draw: int, fraction: float, num_robots: int = NUM_ROBOTS) -> np.ndarray:
@@ -220,7 +254,9 @@ def main(argv=None) -> None:
                     env = make_environment(params, paths.env_file(env_index), positions)
                     clair_mean, clair_final = clairvoyant[env_index]
                     tic = time.time()
+                    features = subset_features(env, positions, is_long, params.pWorldMapSize)
                     rec = run_episode(policy, reference, params, env, args.num_steps, args.probe_every, is_long)
+                    rec.update(features)
                     row = {"env": env_index, "fraction": fraction, "draw": draw, "map": map_mode, "model": args.model_tag,
                            "num_long": int(is_long.sum()), "long_range": args.long_range, "short_range": args.short_range,
                            "ratio_mean": rec["cost_mean"] / clair_mean, "ratio_final": rec["cost_final"] / clair_final,
@@ -234,7 +270,8 @@ def main(argv=None) -> None:
                     done.add(key)
                     print(f"[{time.time() - started:6.0f}s] env={env_index:2d} f={fraction:.2f} draw={draw} {map_mode:8s} "
                           f"n_long={row['num_long']:2d} ratio={row['ratio_mean']:.3f} deg={row['degree_mean']:5.2f} "
-                          f"probe_short={row['probe_short']:.3f} probe_long={row['probe_long']:.3f} ({row['wall_s']:.0f}s)",
+                          f"probe_short={row['probe_short']:.3f} probe_long={row['probe_long']:.3f} "
+                          f"idf_share={row['long_idf_share']:.2f} centre={row['long_center_dist']:.2f} ({row['wall_s']:.0f}s)",
                           flush=True)
 
 

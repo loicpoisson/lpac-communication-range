@@ -39,20 +39,25 @@ def edge_weights(positions: torch.Tensor, comm_range: float) -> torch.Tensor:
     return weights
 
 
-def comm_maps(positions: torch.Tensor, comm_range: float, map_size: int = MAP_SIZE) -> torch.Tensor:
+def comm_maps(positions: torch.Tensor, comm_range: float, map_size: int = MAP_SIZE,
+              scale: float | None = None) -> torch.Tensor:
     """``CoverageEnvUtils.get_communication_maps`` on a batch ``(B, N, 2)``: dense ``(B, N, 2, S, S)``.
 
-    Neighbours are the robots strictly within ``comm_range``; cell = round(rel * S / (2 range) + S/2 - 1/2),
-    value = rel / range, summed per cell (sparse_coo_tensor semantics of the library).
+    Neighbours are the robots strictly within ``comm_range``; cell = round(rel * S / (2 scale) + S/2 - 1/2),
+    value = rel / scale, summed per cell (sparse_coo_tensor semantics of the library). ``scale`` is the
+    drawing scale (default: the range itself). With a fixed ``scale`` the neighbours drawn are those
+    within ``min(comm_range, scale)``: the fixed-scale map of the journal (level C3 when scale = 256 m).
     """
     batch, num_robots, _ = positions.shape
+    draw_range = comm_range if scale is None else min(comm_range, scale)
+    scale = comm_range if scale is None else scale
     rel = positions.unsqueeze(1) - positions.unsqueeze(2)  # rel[b, i, j] = p_j - p_i
     dist = torch.cdist(positions, positions, 2)
-    mask = dist < comm_range
+    mask = dist < draw_range
     idx = torch.arange(num_robots)
     mask[:, idx, idx] = False
-    cells = torch.round(rel * map_size / (comm_range * 2.0) + (map_size / 2.0 - 0.5)).long()
-    values = rel / comm_range
+    cells = torch.round(rel * map_size / (scale * 2.0) + (map_size / 2.0 - 0.5)).long()
+    values = rel / scale
     maps = torch.zeros((batch, num_robots, 2, map_size, map_size), dtype=torch.float32)
     b, i, j = mask.nonzero(as_tuple=True)
     cx, cy = cells[b, i, j, 0].clamp(0, map_size - 1), cells[b, i, j, 1].clamp(0, map_size - 1)
@@ -61,12 +66,12 @@ def comm_maps(positions: torch.Tensor, comm_range: float, map_size: int = MAP_SI
     return maps
 
 
-def rebuild(positions: torch.Tensor, comm_range: float, chunk: int = 1000):
+def rebuild(positions: torch.Tensor, comm_range: float, chunk: int = 1000, scale: float | None = None):
     """Sparse ``comm_maps`` and ``edge_weights`` for all samples, built chunk by chunk."""
     maps, weights = [], []
     for start in range(0, positions.shape[0], chunk):
         p = positions[start:start + chunk]
-        maps.append(comm_maps(p, comm_range).to_sparse_coo())
+        maps.append(comm_maps(p, comm_range, scale=scale).to_sparse_coo())
         weights.append(edge_weights(p, comm_range).to_sparse_coo())
     return torch.cat(maps).coalesce(), torch.cat(weights).coalesce()
 
@@ -89,24 +94,28 @@ def check(folder: Path, comm_range: float) -> None:
               f"nonzeros stored {int((stored != 0).sum())} rebuilt {int((mine != 0).sum())}")
 
 
-def write(src: Path, dst: Path, comm_range: float) -> None:
+def write(src: Path, dst: Path, comm_range: float, scale: float | None = None) -> None:
     dst.mkdir(parents=True, exist_ok=True)
+    splits = [s for s in SPLITS if (src / s).is_dir()]
+    if not splits:  # an unsplit part written by data_generation.py --split False
+        splits = ["."]
     for item in src.iterdir():
-        if item.is_file():
+        if item.is_file() and (splits != ["."] or item.name not in RANGE_FILES):
             link(item, dst / item.name)
-    for split in SPLITS:
-        if not (src / split).is_dir():
-            continue
+    for split in splits:
         (dst / split).mkdir(exist_ok=True)
         positions = load(src / split / "robot_positions.pt")
-        maps, weights = rebuild(positions, comm_range)
+        maps, weights = rebuild(positions, comm_range, scale=scale)
         torch.save(maps, dst / split / "comm_maps.pt")
         torch.save(weights, dst / split / "edge_weights.pt")
-        for item in (src / split).iterdir():
-            if item.name not in RANGE_FILES:
-                link(item, dst / split / item.name)
-        print(f"{split}: {positions.shape[0]} samples redrawn at {comm_range:.0f} m, "
-              f"{weights.values().numel() / positions.shape[0] / positions.shape[1]:.2f} neighbours per robot")
+        if split != ".":
+            for item in (src / split).iterdir():
+                if item.name not in RANGE_FILES:
+                    link(item, dst / split / item.name)
+        print(f"{split}: {positions.shape[0]} samples redrawn at {comm_range:.0f} m"
+              f"{'' if scale is None else f' (map scale {scale:.0f} m)'}, "
+              f"{weights.values().numel() / positions.shape[0] / positions.shape[1]:.2f} neighbours per robot, "
+              f"{maps.values().numel() / 2 / positions.shape[0] / positions.shape[1]:.2f} robots drawn per map")
 
 
 def link(src: Path, dst: Path) -> None:
@@ -124,13 +133,15 @@ def main() -> None:
     parser.add_argument("--dst", help="destination dataset root")
     parser.add_argument("--check", help="folder holding robot_positions.pt, comm_maps.pt, edge_weights.pt to compare against")
     parser.add_argument("--range", type=float, required=True, help="communication range in metres")
+    parser.add_argument("--fixed-scale", type=float, default=None,
+                        help="draw the maps at this fixed scale with the robots within min(range, scale); the graph keeps the range")
     args = parser.parse_args()
     if args.check:
         check(Path(args.check), args.range)
     else:
         if not (args.src and args.dst):
             parser.error("--src and --dst are required unless --check is given")
-        write(Path(args.src), Path(args.dst), args.range)
+        write(Path(args.src), Path(args.dst), args.range, args.fixed_scale)
 
 
 if __name__ == "__main__":
