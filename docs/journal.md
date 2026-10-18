@@ -694,6 +694,15 @@ costs about five times one at 128 m; 4 h 30 limits, best-validation checkpoint),
 and 1854548, then evaluations at the five ranges on both environment sets; the diagonal is
 drawn by `lpac_study/plots_fig20.py` with the existing 128 m and 256 m models.
 
+First half (18 October, 15:30). r512: 30 epochs in the 4 h 30 limit (453 s per epoch), best
+validation 0.423 at epoch 5, then rising to 0.505; cost ratio 2.56 / 2.34 / 1.79 / 1.69 / 1.75
+at 128-1024 m on the 11 release environments (2.57 / 2.34 / 1.85 / 1.77 / 1.92 on the 40 new
+ones). At its own range it is 0.70 below the 128 m model (9 of 11, 36 of 40) and equal to the
+256 m model (+0.05 ± 0.38, 7 of 11; +0.04, 21 of 40). It does not collapse at 1024 m (1.75,
+the map scale is only doubled) and it is poor below its range (2.3-2.6 at 128-256 m, where
+the map is zoomed in and nearly empty). Provisional diagonal 2.15 / 1.76 / 1.79 at 128 / 256 /
+512 m; the 1024 m model is training (started 13:45).
+
 **A. V0 trained with the fixed-scale map ("V0F").** The mixed-range dataset of section 11
 with its maps redrawn at the fixed 256 m scale (robots within min(range, 256 m); the graph
 keeps the real range), plus the control on the 128 m dataset alone; `redraw_ranges.py
