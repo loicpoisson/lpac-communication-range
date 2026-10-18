@@ -33,13 +33,13 @@ when the policy is run with a larger communication range than it was trained wit
   underfits). Both are flat across ranges (3.1-3.3 at 1024 m) but never beat the centralized
   CVT beyond 128 m: the rasterized map carries information the graph alone does not
   recover with this recipe. Same picture on the 40 new environments.
-- V0 trained on 100k samples mixing 128/256/512/1024 m (seed 0, 7 epochs on CPU, provisional):
-  no collapse (1.9 at 512-1024 m, beats the centralized CVT from 256 m) but 2.11 at 256 m instead
-  of 1.74: it trades the 256 m optimum for robustness, which the fixed-scale map gets for free.
-- V3 = V1 with a PointNetConv layer reading relative positions at a fixed 256 m scale (seed 0,
-  11 epochs on CPU, provisional): better than V1 at 128-256 m (2.21 vs 2.4-2.6) but it collapses
-  with the range like V0 (5.8 at 1024 m): any input whose support grows with the range breaks,
-  map or edge attribute. 100-epoch GPU runs of V3 (3 seeds) and of three mixed-range seeds queued.
+- V0 trained on 100k samples mixing 128/256/512/1024 m (3 seeds): no collapse (1.9-2.0 at
+  512-1024 m, beats the centralized CVT from 256 m) but 2.08 at 256 m instead of 1.74: it trades
+  the 256 m optimum for robustness, which the fixed-scale map gets for free.
+- V3 = V1 with a PointNetConv layer reading relative positions at a fixed 256 m scale (3 seeds,
+  100 epochs): the best map-less model, 2.0 at 256 m (V0 1.74, V1 2.48) and only 2.6 at 1024 m
+  (V0 4.6); still 0.5-1.1 behind the fixed-scale map beyond 512 m. An 11-epoch CPU run of it had
+  collapsed (5.8 at 1024 m): under-training, not architecture.
 
 Details, numbers and caveats: [`docs/journal.md`](docs/journal.md). Framing document with
 figures (French): [`docs/framing.html`](docs/framing.html), also online at

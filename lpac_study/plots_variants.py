@@ -26,10 +26,12 @@ import pandas as pd
 from .plots import COLORS, ERRORBAR_STYLE, TEXT, style_axis
 
 Y_LABEL = "Coverage cost / clairvoyant cost\n(episode average)"
-VARIANT_COLORS = {"V0": "#2a78d6", "V1": "#eb6834", "V2": "#1baf7a"}
+VARIANT_COLORS = {"V0": "#2a78d6", "V1": "#eb6834", "V2": "#1baf7a", "V3": "#eda100", "mixed": "#7b3fb3"}
 VARIANT_LABELS = {"V0": "V0: as published (neighbour map + TAGConv)",
                   "V1": "V1: no neighbour map (TAGConv)",
-                  "V2": "V2: no map, relative positions on edges (GATv2)"}
+                  "V2": "V2: no map, relative positions on edges (GATv2)",
+                  "V3": "V3: no map, PointNetConv on relative positions / 256 m, then TAGConv",
+                  "mixed": "V0 trained at mixed ranges 128/256/512/1024 m"}
 
 
 def env_means(path: str, controller: str = "lpac") -> pd.Series:
@@ -62,6 +64,8 @@ def main() -> None:
     parser.add_argument("--v0", nargs="*", default=[], help="sweep files of the V0 seeds")
     parser.add_argument("--v1", nargs="*", default=[], help="sweep files of the V1 seeds")
     parser.add_argument("--v2", nargs="*", default=[], help="sweep files of the V2 seeds")
+    parser.add_argument("--v3", nargs="*", default=[], help="sweep files of the V3 seeds")
+    parser.add_argument("--mixed", nargs="*", default=[], help="sweep files of the V0 seeds trained at mixed ranges")
     parser.add_argument("--fixed-map", help="results_2x2.csv holding C3 rows of the V0 seeds (map at 256 m scale)")
     parser.add_argument("--r256", help="sweep file of the model trained at 256 m")
     parser.add_argument("--extra", nargs="*", default=[], help="label=path sweeps drawn as extra dashed curves (1 seed)")
@@ -74,7 +78,7 @@ def main() -> None:
     base = base[(base["sweep"] == "range") & (base["num_robots"] == 32)]
     fig, ax = plt.subplots(figsize=(8.5, 5.4), dpi=150)
     tables = {}
-    for variant, paths in (("V0", args.v0), ("V1", args.v1), ("V2", args.v2)):
+    for variant, paths in (("V0", args.v0), ("V1", args.v1), ("V2", args.v2), ("V3", args.v3), ("mixed", args.mixed)):
         if paths:
             tables[variant] = seed_table(paths)
             draw_variant(ax, tables[variant], VARIANT_COLORS[variant], VARIANT_LABELS[variant])

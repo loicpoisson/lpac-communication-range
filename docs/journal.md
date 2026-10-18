@@ -456,8 +456,31 @@ estimated start 17 October) will settle it). The mixed validation set spans the 
 so a per-range breakdown of the loss would be needed to see where the model gives up
 quality; the costs above are that breakdown in the end.
 
+**Three GPU seeds (17 October).** The GPU jobs ran on 16-17 October and hit their 3 h 30
+limit after 32 epochs: an epoch of the mixed dataset takes 327 s on an L40S against 54-65 s
+for the 128 m dataset, because the samples at 512 and 1024 m have 15-30 neighbours per
+robot instead of 2. Best validation at epochs 7 / 4 / 4 (0.531 / 0.525 / 0.520), then
+rising with the training loss still falling (0.19-0.21 at epoch 32): the recipe overfits
+the mixed set early, and the best checkpoints are well inside the 32 epochs. Cost ratio,
+mean ± std across the three seeds of the environment mean:
+
+| | 128 m | 256 m | 512 m | 768 m | 1024 m |
+|---|---|---|---|---|---|
+| mixed ranges, 3 seeds, 11 release envs | 2.40 ± 0.03 | 2.08 ± 0.05 | **1.91 ± 0.12** | 1.97 ± 0.05 | 1.93 ± 0.09 |
+| mixed ranges, 3 seeds, 40 new envs | 2.43 ± 0.04 | 2.15 ± 0.03 | **2.01 ± 0.03** | 2.01 ± 0.01 | 2.00 ± 0.07 |
+
+Seed-matched paired differences on the 11 release environments: mixed − V0 as is
++0.23 to +0.30 at 128 m and +0.28 to +0.41 at 256 m (0-2 of 11 better, every seed),
+−0.48 to −0.59 at 512 m (10-11 of 11), −2.5 to −3.0 at 1024 m (11 of 11); mixed − V0 with
+the 256 m map +0.04 to +0.27 at 512-1024 m (1-5 of 11; seed 1 is the worst, +0.20 ± 0.14)
+[40 envs, seed 0: +0.19 to +0.27, 6-7 of 40]; mixed seed 0 − 256 m model +0.30 at 256 m,
+−0.42 at 1024 m (11 of 11). The CPU result stands in every respect: no collapse, 0.3 lost
+at 256 m, equal to the fixed-scale map beyond 512 m on the release set and 0.2 behind it on
+the new set, worse than every single-range model at 128 m. Data
+`results_night2/mixed_s{0,1,2}_{11,40}.csv`, loss histories `results_night2/train_models_s*/`.
+
 Figures: `fig_mixed_range.png` (11 release environments) and `fig_mixed_range_new40.png`
-(40 new ones). Data: `results_night2/mixed_s0_cpu_{11,40}.csv`, loss history and timing in
+(40 new ones, three GPU seeds). Data of the CPU run: `results_night2/mixed_s0_cpu_{11,40}.csv`, loss history and timing in
 `results_night2/train_models_s0_cpu/`, dataset parameters `results_night2/*.toml`
 (generation: 40 tasks of 2,500 samples, 22-24 min each; merge 8 min, 65 GB; training 80
 min per epoch on a shared 32-core Intel node, 7 epochs in 11 h).
@@ -519,13 +542,56 @@ would put it back on its 256 m value (2.21) at every range, by the identity of e
 The mean degree under V3 is 25 at 1024 m against 29.5 under V1: the collapsed policy
 pushes robots apart, which is also what V0's collapse does (section 4).
 
-Caveats: one seed, 11 CPU epochs (the validation loss was still falling: 0.494 → 0.480
-over the last four epochs), so the 128-256 m numbers may still improve with the 100-epoch
-GPU runs; the collapse beyond 512 m will not disappear with more epochs, since it comes
-from inputs outside the training support.
+Caveats written at the time: one seed, 11 CPU epochs (the validation loss was still
+falling), so the 128-256 m numbers may improve with the 100-epoch GPU runs; "the collapse
+beyond 512 m will not disappear with more epochs, since it comes from inputs outside the
+training support". The second half of that sentence turned out to be wrong, see below.
 
-Figures `fig_variants.png` and `fig_variants_new40.png` (V3 added as a dashed curve);
-data `results_variants/V3_s0_cpu_{11,40}.csv`, loss history `results_variants/train_V3_s0_cpu/`.
+**Three GPU seeds, 100 epochs (17 October): V3 does not collapse once trained.** Jobs
+1848021, 1851374, 1851377 (2 h 09 to 2 h 25 each); best validation 0.443 / 0.439 / 0.441 at
+epochs 23 / 23 / 22, the level of V0 (0.449) and far below V1 (0.53); training loss 0.38
+at the best epoch, 0.20-0.21 at epoch 100. Cost ratio, mean ± std across seeds:
+
+| | 128 m | 256 m | 512 m | 768 m | 1024 m |
+|---|---|---|---|---|---|
+| V3, 3 seeds, 11 release envs | 2.24 ± 0.06 | **2.01 ± 0.06** | 2.31 ± 0.16 | 2.49 ± 0.22 | 2.58 ± 0.29 |
+| V3, 3 seeds, 40 new envs | 2.13 ± 0.01 | **2.03 ± 0.08** | 2.25 ± 0.25 | 2.39 ± 0.32 | 2.44 ± 0.35 |
+| V3 seed 0, 11 CPU epochs (above) | 2.21 | 2.21 | 3.39 | 4.86 | 5.83 |
+| V0, 3 seeds (section 10) | 2.15 ± 0.01 | 1.74 ± 0.02 | 2.46 ± 0.08 | 3.58 ± 0.14 | 4.61 ± 0.26 |
+| V1, 3 seeds (section 10) | 2.49 ± 0.08 | 2.48 ± 0.04 | 2.80 ± 0.13 | 2.98 ± 0.18 | 3.14 ± 0.20 |
+
+Seed-matched paired differences, 11 release environments [40 new ones, seed 0]:
+
+- V3 − V1: −0.10 to −0.34 at 128 m, −0.46 to −0.48 at 256 m, −0.36 to −0.68 at 512 m,
+  −0.39 to −0.77 at 1024 m, 8-10 of 11 at every range [−0.26 to −0.45, 30-36 of 40].
+  V3 beats V1 everywhere.
+- V3 − V0 as is: +0.04 to +0.15 at 128 m (2-3 of 11), +0.23 to +0.34 at 256 m (0-2 of 11),
+  about 0 at 512 m, −0.7 to −1.4 at 768 m and −1.4 to −2.5 at 1024 m (9-11 of 11)
+  [−0.01, +0.29, +0.01, —, −1.92 (36 of 40)].
+- V3 − V0 with the 256 m map: +0.45 to +0.69 at 512 m, +0.52 to +0.88 at 768 m, +0.57 to
+  +1.08 at 1024 m, 0-1 of 11 [+0.76, +1.04, 0-1 of 40].
+- V3 seed 0 − centralized CVT: −0.34 and −0.45 at 128-256 m (8-10 of 11), −0.03 at 512 m,
+  +0.22 and +0.40 at 768-1024 m (2-4 of 11) [−0.21, −0.21, +0.21, —, +0.51]. Seed 0 is the
+  worst seed at long range (2.92 at 1024 m, one environment at 4.8); seeds 1 and 2 give 2.40
+  and 2.43 and tie with the CVT there.
+
+Corrected reading. The collapse of the CPU model (5.8 at 1024 m) was an artefact of
+under-training: at 11 epochs the PointNet layer was unbounded outside its training support,
+at 100 epochs it is not, and the fully trained V3 degrades only mildly with the range
+(2.0 → 2.6 against 1.74 → 4.6 for V0 and 2.48 → 3.14 for V1). So reading the neighbour
+geometry on the edges at a fixed scale, in front of an unchanged TAGConv stack, gives the
+best map-less model of this study: it matches V0 at 128 m, stays 0.25-0.35 behind it at
+256 m (0-2 of 11 environments better: the rasterized map still carries something the layer
+does not), and avoids most of the collapse. It does not reach the inference-time fix (V0
+with the 256 m map, 1.74-1.84 at every range), which remains the best option by 0.5-1.1
+beyond 512 m. The statement of 16 October that "any input whose support grows with the
+range breaks" is therefore too strong: it holds for the rasterized map and for an
+under-trained edge layer, not for a trained one. The earlier V2 result (GATv2, underfits)
+is unchanged.
+
+Figures `fig_variants.png` and `fig_variants_new40.png` (V3 as a three-seed curve); data
+`results_variants/V3_s{0,1,2}_{11,40}.csv`, loss histories `results_variants/train_models100k_V3_s*/`;
+the CPU run stays in `results_variants/V3_s0_cpu_{11,40}.csv` and `train_V3_s0_cpu/`.
 
 Generation and training times are read from the Slurm accounting and the job logs.
 
@@ -540,8 +606,8 @@ superseded merged datasets), regenerated the 22 incomplete parts (jobs 1848253-1
 
 ## 12. Running and next (as of 14 October)
 
-Queued on the GPU partition as of 16 October 04:30 (nothing running): V3 seeds 0, 1, 2 and the
-three mixed-range seeds at 100 epochs, with their evaluation chains (section 11).
+Nothing queued on the GPU partition as of 17 October 21:30; all chains of section 11 retrieved.
+Running on CPU: the heterogeneous-range experiment (section 12).
 
 Next, in order (1 and 2 done, section 9; 4 done, section 10):
 
