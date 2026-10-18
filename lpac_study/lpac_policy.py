@@ -16,7 +16,7 @@ from coverage_control import CoverageEnvUtils, CoverageSystem, IOUtils, PointVec
 from torch_geometric.data import Data
 
 from .paths import DataPaths
-from .variants import build_model, uses_comm_map
+from .variants import build_model, uses_comm_map, uses_range_input
 
 # Controller options of the authors' eval.toml ([[Controllers]] lpac entry).
 USE_CNN = True
@@ -67,9 +67,12 @@ class LPACPolicy:
         communication range.  ``edge_weight`` is present in the object but the
         LPAC forward pass does not pass it to the GNN, so the adjacency is binary.
         """
-        return CoverageEnvUtils.get_torch_geometric_data(
+        data = CoverageEnvUtils.get_torch_geometric_data(
             env, params, USE_CNN, self.use_comm_map, CNN_MAP_SIZE
         ).to(self.device)
+        if uses_range_input(self.variant):  # homogeneous team: every robot has the test range
+            data.ranges = torch.full((data.x.shape[0],), float(params.pCommunicationRange), device=self.device)
+        return data
 
     @torch.no_grad()
     def act(self, data: Data) -> tuple[PointVector, bool, list[torch.Tensor]]:

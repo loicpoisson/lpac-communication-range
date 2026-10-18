@@ -44,6 +44,9 @@ when the policy is run with a larger communication range than it was trained wit
   the cost grows convexly with f (2.0, 2.4, 2.8, 3.8, 5.3), a few far-hearing robots do not drag the
   team down; the graph changes the other robots' actions by 18-35 % but the damage comes from the
   far-hearing robots' own map; with the map fixed at 256 m the cost is flat (1.7-2.0) at every f.
+- Running (18 October): one V0 per training range for the paper's Fig. 20 (512, 1024 m), V0 trained
+  with the fixed-scale map, V3 on mixed ranges, 8-draw heterogeneous teams, a mixture of range
+  specialists at inference, and a single model with the robot's range as input (journal section 13).
 
 Details, numbers and caveats: [`docs/journal.md`](docs/journal.md). Framing document with
 figures (French): [`docs/framing.html`](docs/framing.html), also online at
@@ -65,7 +68,9 @@ figures (French): [`docs/framing.html`](docs/framing.html), also online at
 | `results_hetero/`, `farmshare_hetero.sbatch` | heterogeneous ranges at inference (`lpac_study.heterogeneous`): per-robot ranges, frozen-state probe |
 | `fig_*.png` | figures; `fig_email.png` is the self-contained summary figure; `fig_variants*.png` the variant comparison |
 | `lpac_study/` | Python package (PyTorch Geometric) used by all scripts and the notebook |
-| `lpac_study/variants.py` | model variants V1 (no neighbor map), V2 (edge geometry, GATv2) and V3 (V1 + PointNetConv front layer) as subclasses of the library model; `--variant` on `training/train_launch.py`, `lpac_study.sweep`, `lpac_study.factorial` and the Slurm scripts |
+| `lpac_study/variants.py` | model variants V1 (no neighbor map), V2 (edge geometry, GATv2), V3 (V1 + PointNetConv front layer) and V0R (V0 + own range as GNN input) as subclasses of the library model; `--variant` on `training/train_launch.py`, `lpac_study.sweep`, `lpac_study.factorial` and the Slurm scripts |
+| `lpac_study/heterogeneous.py`, `lpac_study/mixture.py` | heterogeneous teams at inference (range per robot, frozen-state probe, start-position descriptors) and the mixture of range specialists |
+| `training/redraw_ranges.py` | rebuilds the range-dependent tensors of a dataset at another range, at a fixed map scale, or with a range per robot |
 | `lpac_eval.ipynb` | self-contained Colab notebook (installs, downloads, sweeps, plots) |
 | `run_all.sh` | reruns the range sweep from scratch on Linux/WSL |
 | `farmshare_factorial.sbatch` | Slurm job for the factorial on FarmShare (Intel nodes only) |

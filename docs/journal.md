@@ -673,10 +673,67 @@ model trained on heterogeneous teams, which would need the comm maps and edge we
 one GPU run; and the question of transmission semantics (a link needing both robots in range,
 or the sender's range) which would change the graph but not the maps.
 
-## 13. Running and next (as of 14 October)
+## 13. Programme of 17-18 October (validated by Loïc, relayed by the planning session)
+
+Submitted on 17 October, 21:30-23:30. Common criterion to report for every candidate: within
+0.05 of V0 at 256 m and at the same level up to 1024 m, with no intervention at test time,
+against the seed thresholds of section 8.
+
+**Figure 20 of the paper** (one model per training range, each evaluated at its own range).
+The 100k dataset is redrawn at 512 and 1024 m with `training/redraw_ranges.py`: only the
+neighbour maps and the edge weights depend on the range (the clairvoyant trajectories, local
+maps, obstacle maps and target actions do not). Checked against 200 samples generated natively
+at 512 m: edge weights exact, maps within 1e-7 with the same nonzero cells, and the 128 m rule
+applied to the same positions does not match. Redraw of 100k samples: 50 s at 512 m, 75 s at
+1024 m (23 GB). Trainings r512 (40 epochs) and r1024 (25 epochs, since an epoch at 1024 m
+costs about five times one at 128 m; 4 h 30 limits, best-validation checkpoint), jobs 1854545
+and 1854548, then evaluations at the five ranges on both environment sets; the diagonal is
+drawn by `lpac_study/plots_fig20.py` with the existing 128 m and 256 m models.
+
+**A. V0 trained with the fixed-scale map ("V0F").** The mixed-range dataset of section 11
+with its maps redrawn at the fixed 256 m scale (robots within min(range, 256 m); the graph
+keeps the real range), plus the control on the 128 m dataset alone; `redraw_ranges.py
+--fixed-scale 256`, equal to the C3 drawing to the last bit. Trainings 1854568 (mixed, 25
+epochs) and 1854569 (128 m, 40 epochs), evaluated with the fixed-scale map at inference
+(their input convention) via the factorial level G0C3 at the five ranges, 11 and 40 envs.
+
+**B. V3 trained on the mixed-range dataset** (job 1854570, 25 epochs), evaluated like the
+other variants.
+
+**C. Heterogeneous teams, 8 draws per fraction** (section 12 had 2), both map modes, with
+four descriptors of where the long-range robots start: distance to the centre, number of
+robots within 128 m, Voronoi share of the importance field, spread. Job 1854555, CPU.
+
+**H1. Mixture of specialists at inference** (`lpac_study/mixture.py`): in the 128/1024 m
+team, each robot runs the model trained at its own range; the two models are applied layer
+by layer on the mixed inputs and each robot keeps its own model's output (CNN, each TAGConv
+layer, action MLP, de-normalization), so the messages a robot aggregates were produced by
+its neighbours' models. Modes: mixture, short specialist on everyone, long specialist on
+everyone; checked locally that the single-specialist modes reproduce the specialists.
+Hypothesis: two specialists do not share a message "language", so the mixture may be worse
+than either alone. Waits for the 1024 m model of the figure-20 chain.
+
+**H2. One model for heterogeneous teams, range as input ("V0R").** The 100k dataset redrawn
+with a range drawn per robot in {128, 256, 512, 1024} m (reception semantics: robot i hears
+the robots within r_i, edge j → i, map at the scale r_i; `redraw_ranges.py --hetero`, seed 0,
+12.9 incoming edges per robot on average), and the V0 architecture with r_i / 1024 appended
+to the 34 GNN inputs (`LPACRangeInput`, 1,807,234 parameters, +1,024). Checked locally:
+edge orientation (in-degree = robots within own range, graph directed), maps and edges equal
+to the inference-time construction of section 12, weights = exp(−d²/r_target²); training
+step and both policies run. Training queued behind B (40 epochs), then the homogeneous
+sweeps (11/40 envs) and the heterogeneous grid f ∈ {0, 1/4, 1/2, 3/4, 1}.
+
+**H3** (shared GNN, one CNN per range) is not written: it waits for H1 and H2 and for an
+explicit go. V4 (bounded edge attributes) is Loïc's.
+
+Execution order on the GPU partition (one job per user accrues queue age, so the trainings
+run one after the other in submission order): r512 → r1024 → A mixed → A 128 → B → H2.
+CPU in parallel: C now, H1 after r1024.
+
+## 14. Running and next (as of 14 October)
 
 Nothing queued on the GPU partition as of 17 October 21:30; all chains of section 11 retrieved.
-Nothing running on FarmShare as of 17 October 23:00; the heterogeneous-range results are in (section 12).
+Running on FarmShare as of 18 October 00:30: the chains of section 13.
 
 Next, in order (1 and 2 done, section 9; 4 done, section 10):
 

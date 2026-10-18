@@ -66,6 +66,52 @@ def comm_maps(positions: torch.Tensor, comm_range: float, map_size: int = MAP_SI
     return maps
 
 
+HETERO_RANGES = (128.0, 256.0, 512.0, 1024.0)
+
+
+def hetero_tensors(positions: torch.Tensor, ranges: torch.Tensor, map_size: int = MAP_SIZE):
+    """Per-robot ranges (reception semantics): dense comm maps ``(B, N, 2, S, S)`` and edge weights ``(B, N, N)``.
+
+    Robot ``i`` hears the robots within its own range ``r_i``; its map is drawn at the scale ``r_i``; the
+    weight matrix holds ``W[j, i] = exp(-d^2 / r_i^2)`` for ``d < r_i`` (source ``j``, target ``i``, the
+    orientation of ``edge_index = W.to_sparse().indices()`` in the library), zero otherwise.
+    """
+    batch, num_robots, _ = positions.shape
+    rel = positions.unsqueeze(1) - positions.unsqueeze(2)  # rel[b, i, j] = p_j - p_i
+    dist = torch.cdist(positions, positions, 2)
+    r_i = ranges.view(batch, num_robots, 1)
+    mask = dist < r_i
+    idx = torch.arange(num_robots)
+    mask[:, idx, idx] = False
+    cells = torch.round(rel * map_size / (r_i.unsqueeze(-1) * 2.0) + (map_size / 2.0 - 0.5)).long()
+    values = rel / r_i.unsqueeze(-1)
+    maps = torch.zeros((batch, num_robots, 2, map_size, map_size), dtype=torch.float32)
+    b, i, j = mask.nonzero(as_tuple=True)
+    cx, cy = cells[b, i, j, 0].clamp(0, map_size - 1), cells[b, i, j, 1].clamp(0, map_size - 1)
+    for channel in (0, 1):
+        maps[:, :, channel].index_put_((b, i, cx, cy), values[b, i, j, channel], accumulate=True)
+    weights_receiver = torch.exp(-dist.square() / r_i.square())  # indexed [b, i(receiver), j(sender)]
+    weights_receiver = weights_receiver.masked_fill(~mask, 0.0)
+    weights = weights_receiver.transpose(1, 2).contiguous()  # [b, j(source), i(target)]
+    return maps, weights
+
+
+def draw_ranges(num_samples: int, num_robots: int, seed: int = 0) -> torch.Tensor:
+    """One range per robot and sample, uniform over HETERO_RANGES, reproducible."""
+    gen = torch.Generator().manual_seed(seed)
+    choice = torch.randint(len(HETERO_RANGES), (num_samples, num_robots), generator=gen)
+    return torch.tensor(HETERO_RANGES)[choice]
+
+
+def rebuild_hetero(positions: torch.Tensor, ranges: torch.Tensor, chunk: int = 1000):
+    maps, weights = [], []
+    for start in range(0, positions.shape[0], chunk):
+        m, w = hetero_tensors(positions[start:start + chunk], ranges[start:start + chunk])
+        maps.append(m.to_sparse_coo())
+        weights.append(w.to_sparse_coo())
+    return torch.cat(maps).coalesce(), torch.cat(weights).coalesce()
+
+
 def rebuild(positions: torch.Tensor, comm_range: float, chunk: int = 1000, scale: float | None = None):
     """Sparse ``comm_maps`` and ``edge_weights`` for all samples, built chunk by chunk."""
     maps, weights = [], []
@@ -92,6 +138,27 @@ def check(folder: Path, comm_range: float) -> None:
         print(f"{name}: {positions.shape[0]} samples, max |diff| {diff.max():.2e}, "
               f"samples exact {(per_sample == 0).sum().item()}, within 1e-6 {(per_sample <= 1e-6).sum().item()}, "
               f"nonzeros stored {int((stored != 0).sum())} rebuilt {int((mine != 0).sum())}")
+
+
+def write_hetero(src: Path, dst: Path, seed: int = 0) -> None:
+    """Dataset with a range per robot drawn in HETERO_RANGES; adds ``robot_ranges.pt`` to each split."""
+    dst.mkdir(parents=True, exist_ok=True)
+    for item in src.iterdir():
+        if item.is_file():
+            link(item, dst / item.name)
+    for split_index, split in enumerate(s for s in SPLITS if (src / s).is_dir()):
+        (dst / split).mkdir(exist_ok=True)
+        positions = load(src / split / "robot_positions.pt")
+        ranges = draw_ranges(positions.shape[0], positions.shape[1], seed=1000 * seed + split_index)
+        maps, weights = rebuild_hetero(positions, ranges)
+        torch.save(maps, dst / split / "comm_maps.pt")
+        torch.save(weights, dst / split / "edge_weights.pt")
+        torch.save(ranges, dst / split / "robot_ranges.pt")
+        for item in (src / split).iterdir():
+            if item.name not in RANGE_FILES:
+                link(item, dst / split / item.name)
+        print(f"{split}: {positions.shape[0]} samples with per-robot ranges, "
+              f"{weights.values().numel() / positions.shape[0] / positions.shape[1]:.2f} incoming edges per robot")
 
 
 def write(src: Path, dst: Path, comm_range: float, scale: float | None = None) -> None:
@@ -132,11 +199,17 @@ def main() -> None:
     parser.add_argument("--src", help="source dataset root (train/val/test inside)")
     parser.add_argument("--dst", help="destination dataset root")
     parser.add_argument("--check", help="folder holding robot_positions.pt, comm_maps.pt, edge_weights.pt to compare against")
-    parser.add_argument("--range", type=float, required=True, help="communication range in metres")
+    parser.add_argument("--range", type=float, default=None, help="communication range in metres")
+    parser.add_argument("--hetero", action="store_true", help="draw a range per robot in {128, 256, 512, 1024} m instead")
+    parser.add_argument("--seed", type=int, default=0, help="seed of the per-robot range draw (--hetero)")
     parser.add_argument("--fixed-scale", type=float, default=None,
                         help="draw the maps at this fixed scale with the robots within min(range, scale); the graph keeps the range")
     args = parser.parse_args()
-    if args.check:
+    if args.hetero:
+        if not (args.src and args.dst):
+            parser.error("--src and --dst are required with --hetero")
+        write_hetero(Path(args.src), Path(args.dst), args.seed)
+    elif args.check:
         check(Path(args.check), args.range)
     else:
         if not (args.src and args.dst):

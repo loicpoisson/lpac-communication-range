@@ -43,6 +43,7 @@ from .lpac_policy import CNN_MAP_SIZE, LPACPolicy
 from .neighbourhood import relative_positions, robot_positions_double
 from .paths import resolve_data_dir
 from .simulation import load_initial_positions, make_environment, make_parameters
+from .variants import uses_range_input
 
 FIELDS = ["env", "fraction", "draw", "map", "model", "num_long", "long_range", "short_range",
           "cost_mean", "cost_final", "ratio_mean", "ratio_final", "clairvoyant_cost_mean",
@@ -91,8 +92,8 @@ def reception_edge_index(mask: torch.Tensor) -> torch.Tensor:
 class HeterogeneousPolicy(LPACPolicy):
     """The published policy with a communication range per robot (reception semantics)."""
 
-    def __init__(self, paths, device, ranges: torch.Tensor, map_mode: str = "asis", state_dict=None):
-        super().__init__(paths, device, state_dict)
+    def __init__(self, paths, device, ranges: torch.Tensor, map_mode: str = "asis", state_dict=None, variant: str = "V0"):
+        super().__init__(paths, device, state_dict, variant)
         if map_mode not in ("asis", "fixed256"):
             raise ValueError("map_mode must be 'asis' or 'fixed256'")
         self.ranges = ranges.to(torch.float64)
@@ -109,6 +110,8 @@ class HeterogeneousPolicy(LPACPolicy):
             scales = torch.full_like(self.ranges, FIXED_SCALE)
             map_mask = reception_mask(positions, torch.minimum(self.ranges, scales))
         data.x[:, COMM_CHANNELS] = comm_maps_per_robot(positions, map_mask, scales, CNN_MAP_SIZE).to(self.device)
+        if uses_range_input(self.variant):
+            data.ranges = self.ranges.to(torch.float32).to(self.device)
         return data
 
 
@@ -216,6 +219,7 @@ def main(argv=None) -> None:
     parser.add_argument("--short-range", type=float, default=128.0)
     parser.add_argument("--model", default=None, help="state dict of another LPAC-K3 checkpoint (default: published)")
     parser.add_argument("--model-tag", default="published")
+    parser.add_argument("--variant", default="V0", choices=("V0", "V0R"), help="architecture of --model")
     parser.add_argument("--num-envs", type=int, default=11)
     parser.add_argument("--env-start", type=int, default=0)
     parser.add_argument("--env-end", type=int, default=None)
@@ -246,9 +250,9 @@ def main(argv=None) -> None:
                     is_long[long_idx] = True
                     ranges = torch.full((NUM_ROBOTS,), args.short_range, dtype=torch.float64)
                     ranges[is_long] = args.long_range
-                    policy = HeterogeneousPolicy(paths, device, ranges, map_mode, args.model)
+                    policy = HeterogeneousPolicy(paths, device, ranges, map_mode, args.model, args.variant)
                     reference = HeterogeneousPolicy(paths, device, torch.full((NUM_ROBOTS,), args.short_range, dtype=torch.float64),
-                                                    map_mode, args.model) if args.probe_every else None
+                                                    map_mode, args.model, args.variant) if args.probe_every else None
                     params = make_parameters(paths.env_params, args.long_range, NUM_ROBOTS)
                     positions = load_initial_positions(paths.pos_file(env_index), NUM_ROBOTS)
                     env = make_environment(params, paths.env_file(env_index), positions)

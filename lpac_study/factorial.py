@@ -232,7 +232,7 @@ def build_parser() -> argparse.ArgumentParser:
                         help="cells G<0|1><level>, level in C0..C4 or S<metres> (map drawn at that fixed scale)")
     parser.add_argument("--model", default=None, help="state dict of another LPAC-K3 checkpoint (default: published)")
     parser.add_argument("--model-tag", default="published", help="label of the checkpoint written in the CSV")
-    parser.add_argument("--variant", default="V0", choices=("V0", "V1", "V2", "V3"), help="architecture of --model")
+    parser.add_argument("--variant", default="V0", choices=("V0", "V1", "V2", "V3", "V0R"), help="architecture of --model")
     parser.add_argument("--k", type=int, nargs="+", default=[4], help="neighbour caps for G1/C1")
     parser.add_argument("--num-envs", type=int, default=11)
     parser.add_argument("--env-start", type=int, default=0)

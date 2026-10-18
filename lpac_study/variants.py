@@ -11,6 +11,8 @@ Three models, same CNN, same action MLP, same training recipe:
   edge attribute is the relative position ``p_j - p_i`` of the sender, divided by the
   world size (the same constant that normalizes ``data.pos``), never by the range.
   Receptive field 5 hops.
+* ``V0R`` the original LPAC with one more GNN input per robot: its own communication range
+  divided by the world size (experiment H2, trained on teams with a range drawn per robot).
 * ``V3`` V1 plus one ``PointNetConv`` layer in front of the unchanged ``TAGConv`` stack.
   The layer reads, for every edge, the relative position of the neighbour divided by a
   fixed constant of 256 m (never by the range, never by the world size), and adds its
@@ -22,13 +24,15 @@ computed in ``forward`` from ``data.pos`` and ``data.edge_index``.
 from __future__ import annotations
 
 import copy
+from pathlib import Path
 
 import torch
 import torch_geometric
 from coverage_control.nn import LPAC
+from coverage_control.nn.data_loaders.loaders import CNNGNNDataset
 from torch_geometric.nn import GATv2Conv, PointNetConv
 
-VARIANTS = ("V0", "V1", "V2", "V3")
+VARIANTS = ("V0", "V1", "V2", "V3", "V0R")
 EDGE_DIM = 2
 HEADS = 4
 # V3 constants. ``data.pos`` is (p + W/2) / W with W the world size (1024 m in every dataset of
@@ -42,7 +46,59 @@ POINTNET_HIDDEN = 256
 
 def uses_comm_map(variant: str) -> bool:
     """Whether the CNN input carries the two neighbour-map channels."""
-    return variant == "V0"
+    return variant in ("V0", "V0R")
+
+
+def uses_range_input(variant: str) -> bool:
+    """Whether the GNN input carries each robot's own communication range (``data.ranges``)."""
+    return variant == "V0R"
+
+
+class LPACRangeInput(LPAC):
+    """V0R: LPAC whose GNN also reads each robot's own communication range.
+
+    The maps and the graph are those of the original model; the only change is one extra
+    input per node, ``r_i / WORLD_SIZE_M`` (0.125 for 128 m, 1 for 1024 m), concatenated to the
+    CNN latent and the position before the first TAGConv layer (35 inputs instead of 34).
+    Trained on teams where every robot draws its range in {128, 256, 512, 1024} m, the model
+    is told at which scale its own map is drawn, which the original model has to guess.
+    ``data.ranges`` (one value per node, in metres) is set by the dataset class and by the
+    policies; the TAGConv stack, the action MLP and the training recipe are unchanged.
+    """
+
+    def __init__(self, config: dict):
+        super().__init__(variant_config(config, "V0R"))
+        from coverage_control.nn.models.gnn_backbone import GNNBackBone  # the library's own stack, one input wider
+        self.gnn_backbone = GNNBackBone(self.config, self.cnn_backbone.latent_size + 3)
+
+    def forward(self, data: torch_geometric.data.Data) -> torch.Tensor:
+        x, edge_index, pos = data.x, data.edge_index, data.pos
+        ranges = (data.ranges / WORLD_SIZE_M).to(x.dtype).view(-1, 1)
+        cnn_output = self.cnn_backbone(x.view(-1, x.shape[-3], x.shape[-2], x.shape[-1]))
+        gnn_input = torch.cat([cnn_output, pos, ranges], dim=-1)
+        return self.output_linear(self.gnn_mlp(self.gnn_backbone(gnn_input, edge_index)))
+
+
+class RangeDataset(CNNGNNDataset):
+    """``CNNGNNDataset`` that also attaches ``data.ranges`` from ``robot_ranges.pt`` (metres per robot).
+
+    A dataset without that file (generated at a single range) gets the constant ``default_range``.
+    """
+
+    def __init__(self, data_dir, stage, use_comm_map, world_size, default_range: float | None = None):
+        super().__init__(data_dir, stage, use_comm_map, world_size)
+        path = Path(f"{data_dir}/{stage}/robot_ranges.pt")
+        if path.is_file():
+            self.robot_ranges = torch.load(path, weights_only=True).to(torch.float32)
+        else:
+            if default_range is None:
+                raise FileNotFoundError(f"{path} is missing and no default range was given")
+            self.robot_ranges = torch.full((len(self), self.robot_positions.shape[1]), float(default_range))
+
+    def get(self, idx):
+        data, targets = super().get(idx)
+        data.ranges = self.robot_ranges[idx]
+        return data, targets
 
 
 class LPACPointNet(LPAC):
@@ -157,6 +213,8 @@ def build_model(variant: str, config: dict) -> LPAC:
         return LPACEdgeGeometry(config)
     if variant == "V3":
         return LPACPointNet(config)
+    if variant == "V0R":
+        return LPACRangeInput(config)
     return LPAC(variant_config(config, variant))
 
 
