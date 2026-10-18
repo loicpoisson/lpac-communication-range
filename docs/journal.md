@@ -604,10 +604,79 @@ superseded merged datasets), regenerated the 22 incomplete parts (jobs 1848253-1
 (1848258-1848282). One 2,500-sample part takes 22-24 min on one Intel core pair
 (0.54 s per sample), 5.3-5.9 GB of RAM.
 
-## 12. Running and next (as of 14 October)
+## 12. Heterogeneous communication ranges at inference (17 October)
+
+Loïc's question: what if the robots of one team do not all hear as far? Inference only,
+published model, 11 release environments, 32 robots, `lpac_study/heterogeneous.py` and
+`farmshare_hetero.sbatch` (11 CPU tasks, 85 s per episode, jobs 1854506 and 1854518).
+
+Setting. A fraction f ∈ {0, 1/4, 1/2, 3/4, 1} of the robots gets the 1024 m range, the
+others 128 m; the long-range subset is drawn once per environment with a fixed seed, two
+draws per environment for the intermediate fractions (176 episodes). Reception semantics:
+robot i knows the robots within its own range r_i, so the graph has an edge j → i when
+|p_j − p_i| < r_i (directed when ranges differ) and the map of robot i is drawn with those
+robots at the scale r_i. Second map mode, the fix of section 9: the map of robot i holds the
+robots within min(r_i, 256 m) at the 256 m scale, graph unchanged. The simulator runs with
+the long range as its parameter; only the model inputs are rebuilt. Checks: f = 0 reproduces
+the 128 m sweep (1.985, max difference 1e-5), f = 1 with the fixed map reproduces the C3
+run at 1024 m exactly (1.707); f = 1 with the as-is map gives 5.30 against 5.22 in the sweep
+(one environment differs by 0.49): the edge list is built in another order than the
+library's, and in the collapsed regime the 600-step trajectories amplify the floating-point
+difference, which is itself a measure of how unstable that regime is.
+
+| Fraction of robots at 1024 m | 0 | 1/4 | 1/2 | 3/4 | 1 |
+|---|---|---|---|---|---|
+| map at each robot's own range (as published) | 1.99 ± 0.46 | 2.36 ± 0.30 | 2.77 ± 0.58 | 3.77 ± 0.67 | 5.30 ± 1.51 |
+| map at a fixed 256 m scale | 1.93 ± 0.25 | 2.01 ± 0.28 | 1.96 ± 0.39 | 1.84 ± 0.17 | 1.71 ± 0.19 |
+| probe: relative action change of the 128 m robots, as-is map | — | 0.18 | 0.29 | 0.35 | — |
+| probe: same, fixed 256 m map | — | 0.12 | 0.23 | 0.31 | — |
+| probe: relative action change of the 1024 m robots, as-is / fixed | — | 1.16 / 0.87 | 1.21 / 0.89 | 1.28 / 0.88 | — |
+
+(Cost ratio, mean ± std across environments of the per-environment mean over the two draws;
+centralized CVT 2.52. The probe compares, every 50 steps of the mixed-team episode, the
+actions of the current state with the actions the same state would get with every robot at
+128 m, as |Δa| / |a| averaged over the robots of each group.)
+
+Findings.
+
+- **Dose-response, as-is map.** The cost rises with the fraction of long-range robots at
+  every step (+0.37 ± 0.23 at f = 1/4, +0.79 at 1/2, +1.78 at 3/4 against f = 0, worse in
+  11 of 11 environments each time) and the curve is convex: it lies below the straight line
+  between f = 0 and f = 1 by 0.46 / 0.87 / 0.70 (10-11 of 11 environments at f ≤ 1/2). A
+  quarter of long-range robots costs a fifth of the full collapse, half of them a quarter.
+  So a few long-range robots do not drag the whole team down: the damage is mostly carried
+  by the robots whose own inputs are out of distribution, and it is not a contagion that
+  takes off as soon as one robot sees too far. With the map fixed at 256 m the curve is flat
+  (1.71-2.01 at every f, differences from f = 0 within ±0.1 and 5-7 of 11 environments
+  either way): the fix works for heterogeneous teams too, and a team where everyone hears
+  far is even slightly better (1.71) than one where nobody does (1.93), since the graph
+  carries more information and the map stays readable.
+- **The graph does transmit the disturbance, measurably.** The frozen-state probe shows the
+  128 m robots, whose own inputs are identical in both evaluations, changing their actions by
+  18 to 35 % (relative) when a quarter to three quarters of their teammates hear far: the
+  messages they receive through the TAGConv layers differ because their long-range neighbours'
+  embeddings differ. The long-range robots themselves change by 116-128 %, more than their
+  action magnitude. But the same probe under the fixed map still shows 12-31 % for the
+  short-range robots (the long-range robots have 30 incoming edges instead of 2, so their
+  embeddings differ even with a readable map) while the cost stays flat: a changed action is
+  not a wrong action. The graph effect exists, is of the order of a quarter of the action,
+  and is not what breaks the team; the broken map inputs of the long-range robots are.
+- **Which robots hear far matters as much as how many.** The two draws of the long-range
+  subset differ by 0.33 / 0.45 / 0.64 on average (up to 1.5) for f = 1/4, 1/2, 3/4 with the
+  as-is map, i.e. as much as the whole effect of going from f = 0 to f = 1/4. The subset is
+  drawn by robot index, and where the long-range robots stand in the formation decides how
+  much of the coverage they spoil. Two draws are enough to see this, not to characterize it.
+
+Figure `fig_hetero.png`; data `results_hetero/results_hetero.csv` (176 rows). Not done: a
+model trained on heterogeneous teams, which would need the comm maps and edge weights of the
+100k dataset rebuilt with per-robot ranges (only those two tensors depend on the range) and
+one GPU run; and the question of transmission semantics (a link needing both robots in range,
+or the sender's range) which would change the graph but not the maps.
+
+## 13. Running and next (as of 14 October)
 
 Nothing queued on the GPU partition as of 17 October 21:30; all chains of section 11 retrieved.
-Running on CPU: the heterogeneous-range experiment (section 12).
+Nothing running on FarmShare as of 17 October 23:00; the heterogeneous-range results are in (section 12).
 
 Next, in order (1 and 2 done, section 9; 4 done, section 10):
 

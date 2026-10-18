@@ -40,6 +40,10 @@ when the policy is run with a larger communication range than it was trained wit
   100 epochs): the best map-less model, 2.0 at 256 m (V0 1.74, V1 2.48) and only 2.6 at 1024 m
   (V0 4.6); still 0.5-1.1 behind the fixed-scale map beyond 512 m. An 11-epoch CPU run of it had
   collapsed (5.8 at 1024 m): under-training, not architecture.
+- Heterogeneous teams at inference (a fraction f of robots hearing to 1024 m, the others 128 m):
+  the cost grows convexly with f (2.0, 2.4, 2.8, 3.8, 5.3), a few far-hearing robots do not drag the
+  team down; the graph changes the other robots' actions by 18-35 % but the damage comes from the
+  far-hearing robots' own map; with the map fixed at 256 m the cost is flat (1.7-2.0) at every f.
 
 Details, numbers and caveats: [`docs/journal.md`](docs/journal.md). Framing document with
 figures (French): [`docs/framing.html`](docs/framing.html), also online at
@@ -58,6 +62,7 @@ figures (French): [`docs/framing.html`](docs/framing.html), also online at
 | `results_train/`, `training/` | training trial: configs, Slurm scripts, losses, timings, evaluations of retrained models |
 | `results_variants/` | variants V1/V2: merged evaluations per seed on the 11 and 40 environments, loss histories, configs |
 | `results_night2/` | capped-graph confirmation for V1/V2, mixed-range model evaluations, loss histories and dataset parameters |
+| `results_hetero/`, `farmshare_hetero.sbatch` | heterogeneous ranges at inference (`lpac_study.heterogeneous`): per-robot ranges, frozen-state probe |
 | `fig_*.png` | figures; `fig_email.png` is the self-contained summary figure; `fig_variants*.png` the variant comparison |
 | `lpac_study/` | Python package (PyTorch Geometric) used by all scripts and the notebook |
 | `lpac_study/variants.py` | model variants V1 (no neighbor map), V2 (edge geometry, GATv2) and V3 (V1 + PointNetConv front layer) as subclasses of the library model; `--variant` on `training/train_launch.py`, `lpac_study.sweep`, `lpac_study.factorial` and the Slurm scripts |
