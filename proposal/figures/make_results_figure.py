@@ -34,10 +34,10 @@ seeds = [rows(p) for p in ("results_train/results_sweep100k_gpu_epoch13.csv",
                            "results_train/results_sweep100k_seed2_best.csv")]
 r128 = [[mean_ratio(s, r, controller="lpac") for r in RANGES] for s in seeds]
 r256 = [mean_ratio(rows("results_train/results_sweep256_best.csv"), r, controller="lpac") for r in RANGES]
-v1 = [[mean_ratio(rows(f"results_variants/V1_s{i}_11.csv"), r, controller="lpac") for r in RANGES] for i in range(3)]
+a_mix = [[mean_ratio(rows(f"results_A/A_mixed{s}_11.csv"), r, repeat="0") for r in RANGES] for s in ("", "_s1", "_s2")]
 
 plt.rcParams.update({"font.size": 8, "font.family": "serif", "axes.linewidth": 0.6})
-fig, ax = plt.subplots(figsize=(3.35, 2.5))
+fig, ax = plt.subplots(figsize=(3.35, 2.4))
 ax.axhline(1.0, color="0.55", lw=0.8, ls=(0, (4, 3)))
 ax.plot(RANGES, central, color="#1baf7a", lw=1.2, label="Centralized CVT")
 r128_mean = [st.mean(c) for c in zip(*r128)]
@@ -45,7 +45,7 @@ ax.fill_between(RANGES, [min(c) for c in zip(*r128)], [max(c) for c in zip(*r128
 ax.plot(RANGES, published, color="#2a78d6", lw=1.4, marker="o", ms=3, label="LPAC published (trained 128 m)")
 ax.plot(RANGES, r128_mean, color="#008300", lw=1.2, marker="o", ms=2.5, label="LPAC retrained 128 m (3 seeds)")
 ax.plot(RANGES, r256, color="#6250d6", lw=1.2, marker="^", ms=3, label="LPAC retrained 256 m")
-ax.plot(RANGES, [st.mean(c) for c in zip(*v1)], color="#d55181", lw=1.2, ls="--", marker="s", ms=2.5, label="V1: no neighbor map (3 seeds)")
+ax.plot(RANGES, [st.mean(c) for c in zip(*a_mix)], color="#d55181", lw=1.4, ls="--", marker="s", ms=2.5, label="Fixed map in training (3 seeds)")
 ax.plot(fixed_ranges, fixed, color="#eda100", lw=2.0, marker="D", ms=3, label="Published + fixed 256 m map")
 ax.set_xticks(RANGES)
 ax.set_xlim(100, 1050)
@@ -61,4 +61,4 @@ fig.legend(*ax.get_legend_handles_labels(), fontsize=6, frameon=False, loc="lowe
 fig.savefig(Path(__file__).with_name("results.pdf"))
 print("published", [round(x, 2) for x in published])
 print("retrained128", [round(x, 2) for x in r128_mean], "| r256", [round(x, 2) for x in r256])
-print("fixed", [round(x, 2) for x in fixed], "| V1", [round(st.mean(c), 2) for c in zip(*v1)], "| central", [round(x, 2) for x in central])
+print("fixed", [round(x, 2) for x in fixed], "| A", [round(st.mean(c), 2) for c in zip(*a_mix)], "| central", [round(x, 2) for x in central])
