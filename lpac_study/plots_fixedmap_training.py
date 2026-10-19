@@ -38,10 +38,17 @@ def factorial_means(path: str, model: str | None = None, level: str = "C3") -> p
     return f.groupby("comm_range")["ratio_mean"].agg(["mean", "std"]).reset_index()
 
 
+def seed_means(frames: list[pd.DataFrame]) -> pd.DataFrame:
+    """Mean over seeds of the environment mean; the std column becomes the std across seeds."""
+    stacked = pd.concat(frames)
+    return stacked.groupby("comm_range")["mean"].agg(["mean", "std"]).fillna(0.0).reset_index()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--baseline", required=True)
-    parser.add_argument("--v0f-mixed", required=True, help="factorial CSV of V0F trained on the mixed-range set")
+    parser.add_argument("--v0f-mixed", nargs="+", required=True, help="factorial CSVs of V0F trained on the mixed-range set (one per seed)")
+    parser.add_argument("--v0f-mixed-models", nargs="*", default=["A_mixed", "A_mixed_s1", "A_mixed_s2"], help="model tags of those files")
     parser.add_argument("--v0f-128", required=True, help="factorial CSV of V0F trained on the 128 m set")
     parser.add_argument("--v0", required=True, help="sweep of V0 r128 seed 0 as is")
     parser.add_argument("--v0-fixed", required=True, help="factorial CSV with the C3 rows of V0 r128 seed 0")
@@ -55,7 +62,8 @@ def main() -> None:
     base = base[(base["sweep"] == "range") & (base["num_robots"] == 32)]
     fig, ax = plt.subplots(figsize=(8.5, 5.4), dpi=150)
     series = [
-        (factorial_means(args.v0f_mixed, "A_mixed"), "#2a78d6", "-", "s", "V0F: trained on mixed ranges with the fixed-scale map (seed 0)"),
+        (seed_means([factorial_means(f, m) for f, m in zip(args.v0f_mixed, args.v0f_mixed_models)]), "#2a78d6", "-", "s",
+         f"V0F: trained on mixed ranges with the fixed-scale map ({len(args.v0f_mixed)} seed{'s' if len(args.v0f_mixed) > 1 else ''})"),
         (factorial_means(args.v0f_128, "A_128"), "#7b3fb3", "-", "s", "V0F: trained at 128 m with the fixed-scale map (seed 0)"),
         (sweep_means(args.v0), "#9ec5f4", "--", "o", "V0 trained at 128 m, as is"),
         (factorial_means(args.v0_fixed, args.v0_fixed_model), "#184f95", "--", "o", "V0 trained at 128 m, fixed-scale map at inference only"),

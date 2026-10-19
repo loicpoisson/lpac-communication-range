@@ -803,8 +803,34 @@ that the fixed map shows at test time, and it ends 0.25-0.30 above the inference
 beyond 512 m and 0.27 above V0 at 256 m. The fixed-scale map works when the training data
 covers the range of neighbours the map can show.
 
-Figure `fig_fixedmap_training.png`; data `results_A/` (factorial rows, level G0C3), loss
-histories `results_A/train_*/`.
+**Three seeds of V0F on the mixed set** (19 October, 11:30; jobs 1857200 and 1857203, same
+recipe, best validation 0.429 and 0.427 at epoch 7). Environment mean per seed and mean ±
+std across the three seeds:
+
+| V0F mixed ranges | 128 m | 256 m | 512 m | 768 m | 1024 m |
+|---|---|---|---|---|---|
+| seed 0 / 1 / 2, 11 release envs | 2.11 / 2.11 / 2.10 | 1.86 / 1.85 / 1.87 | 1.78 / 1.90 / 1.81 | 1.76 / 1.85 / 1.82 | 1.77 / 1.85 / 1.82 |
+| mean ± std across seeds (11) | 2.11 ± 0.00 | 1.86 ± 0.01 | 1.83 ± 0.06 | 1.81 ± 0.04 | 1.82 ± 0.04 |
+| mean ± std across seeds (40 new envs) | 2.09 ± 0.05 | 1.91 ± 0.02 | 1.91 ± 0.01 | 1.91 ± 0.04 | 1.92 ± 0.03 |
+| V0 r128, mean ± std across seeds (11) | 2.15 ± 0.01 | 1.74 ± 0.02 | 2.46 ± 0.08 | 3.58 ± 0.14 | 4.61 ± 0.26 |
+
+The criterion at 256 m, three seeds on each side: per-environment costs averaged over the
+three seeds of each model, then paired across the 11 release environments, V0F − V0 =
++0.122 ± 0.156, standard error 0.047, V0F better in 2 of 11 environments; the nine
+seed-pair differences of the environment mean lie between +0.09 and +0.15 (mean +0.122,
+std 0.018). The gap is 0.12, two and a half standard errors above 0.05 and six seed
+standard deviations away from zero: the criterion "within 0.05 of V0 at 256 m" is not met,
+and the gap is a property of the recipe, not of a seed. From 512 m on, V0F (seed mean)
+against V0 with the fixed map at inference (seed mean of the three r128 seeds): +0.06 /
+−0.03 / −0.01 at 512 / 768 / 1024 m, standard errors 0.06, 5-7 of 11: equal. Against V0 as
+is, −0.62 at 512 m (10 of 11) and −2.80 at 1024 m (11 of 11). On the 40 new environments
+(three V0F seeds against the single V0 seed): +0.085 ± 0.211 at 256 m, standard error 0.033,
+19 of 40, seed differences +0.06 to +0.10; −0.61 at 512 m (34 of 40), −2.84 at 1024 m (39 of
+40); against the fixed map at inference +0.14 / +0.12 at 512 / 1024 m (standard error 0.03,
+12 of 40): on the new set V0F trails the inference-time fix by 0.1.
+
+Figure `fig_fixedmap_training.png` (V0F as the mean of three seeds); data `results_A/`
+(factorial rows, level G0C3, one file per seed), loss histories `results_A/train_*/`.
 
 **B. V3 trained on the mixed-range dataset** (job 1854570, 25 epochs), evaluated like the
 other variants.
@@ -1008,7 +1034,7 @@ CPU in parallel: C now, H1 after r1024.
 ## 14. Running and next (as of 14 October)
 
 Nothing queued on the GPU partition as of 17 October 21:30; all chains of section 11 retrieved.
-Running on FarmShare as of 18 October 00:30: the chains of section 13.
+Nothing running or queued on FarmShare as of 19 October 11:30; every chain of section 13 is retrieved.
 
 Next, in order (1 and 2 done, section 9; 4 done, section 10):
 

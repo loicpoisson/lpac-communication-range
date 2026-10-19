@@ -55,17 +55,17 @@ when the policy is run with a larger communication range than it was trained wit
   alone (−0.05 to +0.23 with specialists from independent seeds; a common training seed helps by
   0.1-0.3), never much worse, so no sign of incompatible message languages; still 0.1-0.4 behind
   the fixed-scale map on the published model.
-- V0 trained with the fixed-scale map on mixed ranges (seed 0): flat, 1.86 at 256 m and 1.76-1.78
-  from 512 m, equal to the inference-time fix on the release set and 0.1 behind it on the new one;
-  0.13 above V0 at 256 m, so the "within 0.05" criterion is missed narrowly. The same recipe on the
-  128 m data alone fails (2.0-2.1 everywhere): the training data must cover the map's content.
+- V0 trained with the fixed-scale map on mixed ranges (3 seeds): flat, 1.86 ± 0.01 at 256 m and
+  1.81-1.83 from 512 m, equal to the inference-time fix from 512 m; 0.12 ± 0.05 (standard error)
+  above V0 at 256 m with three seeds on each side, so the "within 0.05" criterion is not met and
+  the gap belongs to the recipe. The same recipe on the 128 m data alone fails (2.0-2.1
+  everywhere): the training data must cover the map's content.
 - V3 trained on mixed ranges (seed 0) fails: 2.6-2.9 at every range, above the centralized CVT and
   0.5 above V3 trained at 128 m at short range; one recipe for inputs four times apart fits neither.
 - One model with the robot's own range as a GNN input, trained on teams with a range drawn per robot
   (V0R, seed 0): no collapse (1.9-2.1 from 512 m) but equal to plain mixed-range training within
   0.1 and 0.4-0.6 worse than the 128 m model at 128-256 m; in heterogeneous teams it beats the
   published model from f = 1/2 but stays 0.2-0.4 above the published model with the fixed-scale map.
-- Running (19 October): seeds 1-2 of V0F (journal section 13).
 
 Details, numbers and caveats: [`docs/journal.md`](docs/journal.md). Framing document with
 figures (French): [`docs/framing.html`](docs/framing.html), also online at
