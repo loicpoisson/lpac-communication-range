@@ -810,6 +810,38 @@ everyone; checked locally that the single-specialist modes reproduce the special
 Hypothesis: two specialists do not share a message "language", so the mixture may be worse
 than either alone. Waits for the 1024 m model of the figure-20 chain.
 
+Result of H1 (18 October, 20:30; 440 episodes, job 1856368, specialists r128 seed 0 and the
+r1024 of the figure-20 chain, 4 draws of the long-range subset, as-is maps). Cost ratio,
+mean ± std across environments of the environment mean over draws:
+
+| Fraction at 1024 m | 0 | 1/4 | 1/2 | 3/4 | 1 |
+|---|---|---|---|---|---|
+| 128 m specialist on every robot | 2.15 ± 0.51 | 2.35 ± 0.40 | 2.73 ± 0.62 | 3.51 ± 0.74 | 4.36 ± 1.08 |
+| 1024 m specialist on every robot | 2.79 ± 0.62 | 2.55 ± 0.41 | 2.31 ± 0.27 | 2.02 ± 0.26 | 1.80 ± 0.25 |
+| mixture (each robot its own specialist) | = 128 m | **2.17 ± 0.41** | **2.24 ± 0.44** | **1.95 ± 0.19** | = 1024 m |
+| published model, as-is map (section 13, 8 draws) | 1.98 | 2.42 | 2.89 | 3.95 | 5.30 |
+| published model, map at a fixed 256 m scale | 1.93 | 2.10 | 1.98 | 1.86 | 1.71 |
+
+Paired within environments: mixture − 128 m specialist −0.17 ± 0.11 (11 of 11) at f = 1/4,
+−0.49 (10 of 11) at 1/2, −1.55 (11 of 11) at 3/4; mixture − 1024 m specialist −0.37 ± 0.21
+(11 of 11), −0.07 ± 0.39 (7 of 11), −0.07 ± 0.15 (7 of 11); mixture − best specialist of the
+two −0.16 (11 of 11), −0.01 (6 of 11), −0.07 (7 of 11); mixture − published model −0.25
+(8 of 11), −0.66 (10 of 11), −2.00 (11 of 11); mixture − fixed-scale map +0.07 (5 of 11),
++0.25 (3 of 11), +0.10 (4 of 11). The specialists out of place: the 1024 m model on an
+all-128 m team costs +0.64 (11 of 11), the 128 m model on an all-1024 m team +2.56 (11 of 11).
+
+Reading. The hypothesis is rejected: the two specialists do not need a common message
+language. The mixture is never worse than the better of the two specialists used alone,
+and at f = 1/4 it beats both by 0.16-0.37 in every environment, i.e. the embeddings
+produced by one model's TAGConv layers are usable by the other's. It tracks the best
+specialist at every fraction (within 0.07) and stays 0.1-0.25 above the fixed-scale map on
+the published model, which remains the simplest answer for a heterogeneous team (no
+second model, no range-dependent switching). The mixture also shows the symmetric cost of
+using a model out of its range in both directions: +0.64 for the long-range model among
+short-range robots, +2.56 for the short-range model among long-range ones.
+
+Figure `fig_mixture.png`; data `results_h1/results_h1.csv`.
+
 **H2. One model for heterogeneous teams, range as input ("V0R").** The 100k dataset redrawn
 with a range drawn per robot in {128, 256, 512, 1024} m (reception semantics: robot i hears
 the robots within r_i, edge j → i, map at the scale r_i; `redraw_ranges.py --hetero`, seed 0,
