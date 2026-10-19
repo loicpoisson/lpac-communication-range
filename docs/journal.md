@@ -703,6 +703,54 @@ the map scale is only doubled) and it is poor below its range (2.3-2.6 at 128-25
 the map is zoomed in and nearly empty). Provisional diagonal 2.15 / 1.76 / 1.79 at 128 / 256 /
 512 m; the 1024 m model is training (started 13:45).
 
+**Complete (18 October, 20:00).** r1024: 17 epochs in 4 h 30 (842 s per epoch, 14 times
+the 128 m cost: 30 neighbours per robot), best validation 0.512 at epoch 7 (validation
+losses are not comparable across datasets, the maps differ), then 0.575. Cost ratio of
+every model at every range (seed 0; r128 and r256 from sections 7-8), 11 release
+environments, then 40 new ones:
+
+| trained at | 128 m | 256 m | 512 m | 768 m | 1024 m |
+|---|---|---|---|---|---|
+| 128 m | **2.15** | 1.74 | 2.49 | 3.46 | 4.36 |
+| 256 m | 2.28 | **1.76** | 1.74 | 1.90 | 2.31 |
+| 512 m | 2.56 | 2.34 | **1.79** | 1.69 | 1.75 |
+| 1024 m | 2.79 | 2.71 | 2.38 | 1.92 | **1.80** |
+| 128 m (40 envs) | **2.13** | 1.82 | 2.53 | — | 4.76 |
+| 256 m (40) | 2.42 | **1.85** | 1.81 | — | 2.29 |
+| 512 m (40) | 2.57 | 2.34 | **1.85** | 1.77 | 1.92 |
+| 1024 m (40) | 2.70 | 2.66 | 2.27 | 2.04 | **1.86** |
+
+The diagonal (bold): 2.15 ± 0.51 / 1.76 ± 0.28 / 1.79 ± 0.33 / 1.80 ± 0.25 at 128 / 256 /
+512 / 1024 m on the release set, 2.13 / 1.85 / 1.85 / 1.86 on the new set; centralized CVT
+2.52 (2.33), decentralized 2.59 (2.44-2.54). Paired: the diagonal beats the centralized CVT
+at every range, by 0.37 at 128 m (11 of 11) and 0.72-0.76 from 256 m (10 of 11) [0.20 to
+0.48, 29-38 of 40]; 256 m is better than 128 m by 0.39 ± 0.38 (9 of 11) [0.28, 36 of 40];
+512 m equals 256 m (+0.03 ± 0.17, 5 of 11) [0.00, 24 of 40] and 1024 m equals 512 m
+(+0.01 ± 0.21, 4 of 11) [+0.01, 15 of 40]. At 1024 m the 1024 m model equals the 512 m one
+(+0.05, 6 of 11; −0.05, 24 of 40) and is 2.6-2.9 below the 128 m one (11 of 11, 40 of 40).
+Figures `fig_fig20.png` and `fig_fig20_new40.png`; data `results_fig20/`.
+
+Does Fig. 20 reproduce? Partly. What reproduces: a model trained at its own range beats
+both CVT baselines at every range, including 1024 m, so the collapse of sections 3-4 is a
+property of the published 128 m checkpoint used out of its range, not of the architecture
+at long range; and the improvement from 128 m to 256 m. What does not: the paper's curve
+keeps improving up to 512 m and then declines moderately; ours is flat from 256 m on, to
+within the seed noise (±0.02-0.08) and the environment noise (paired std 0.2), with
+neither the rise at 512 m nor the decline at 1024 m. The off-diagonal is the mirror of
+the collapse: every model is best near its training range, the long-range models are poor
+below it (2.7-2.8 at 128-256 m for the 1024 m model, the map zoomed in and nearly empty),
+and only the 128 m model collapses upward; the 512 m model is the most tolerant (1.7-1.8
+from 512 to 1024 m).
+
+Protocol differences that bound this comparison: one seed per range here, 11 and 40
+environments and 600-step episodes against 100 environments in the paper; the 512 and
+1024 m models were trained on the 128 m trajectories with the maps redrawn (identical to
+native generation up to float rounding, section 13) and stopped by the 4 h 30 limit at 30
+and 17 epochs with their best checkpoints at epochs 5 and 7, while the paper's number of
+epochs per range is not stated; the paper's figure reports the cost with its own
+normalization and no per-environment pairing. A difference of 0.05 on the diagonal is
+below what this protocol can resolve.
+
 **A. V0 trained with the fixed-scale map ("V0F").** The mixed-range dataset of section 11
 with its maps redrawn at the fixed 256 m scale (robots within min(range, 256 m); the graph
 keeps the real range), plus the control on the 128 m dataset alone; `redraw_ranges.py

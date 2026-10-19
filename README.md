@@ -46,8 +46,11 @@ when the policy is run with a larger communication range than it was trained wit
   from the far-hearing robots' own map; with the map fixed at 256 m the cost is flat (1.7-2.1) at
   every f. Which robots hear far changes the cost by 0.3-0.5 across draws, unpredictably from where
   they start (the collapsed regime is sensitive to any change of the initial condition).
-- Running (18 October): one V0 per training range for the paper's Fig. 20 (512, 1024 m), V0 trained
-  with the fixed-scale map, V3 on mixed ranges, 8-draw heterogeneous teams, a mixture of range
+- Fig. 20 of the paper, one model per training range evaluated at its own range (seed 0): 2.15 /
+  1.76 / 1.79 / 1.80 at 128 / 256 / 512 / 1024 m, below both CVTs everywhere (centralized 2.52): the
+  collapse is a property of the 128 m checkpoint out of its range, not of the architecture at long
+  range. The paper's rise up to 512 m and moderate decline after are not seen: flat from 256 m.
+- Running (18 October): V0 trained with the fixed-scale map, V3 on mixed ranges, a mixture of range
   specialists at inference, and a single model with the robot's range as input (journal section 13).
 
 Details, numbers and caveats: [`docs/journal.md`](docs/journal.md). Framing document with
@@ -68,6 +71,7 @@ figures (French): [`docs/framing.html`](docs/framing.html), also online at
 | `results_variants/` | variants V1/V2: merged evaluations per seed on the 11 and 40 environments, loss histories, configs |
 | `results_night2/` | capped-graph confirmation for V1/V2, mixed-range model evaluations, loss histories and dataset parameters |
 | `results_hetero/`, `farmshare_hetero.sbatch` | heterogeneous ranges at inference (`lpac_study.heterogeneous`): per-robot ranges, frozen-state probe |
+| `results_fig20/`, `fig_fig20*.png` | one model per training range (128/256/512/1024 m) evaluated at every range: the paper's Fig. 20 |
 | `fig_*.png` | figures; `fig_email.png` is the self-contained summary figure; `fig_variants*.png` the variant comparison |
 | `lpac_study/` | Python package (PyTorch Geometric) used by all scripts and the notebook |
 | `lpac_study/variants.py` | model variants V1 (no neighbor map), V2 (edge geometry, GATv2), V3 (V1 + PointNetConv front layer) and V0R (V0 + own range as GNN input) as subclasses of the library model; `--variant` on `training/train_launch.py`, `lpac_study.sweep`, `lpac_study.factorial` and the Slurm scripts |
