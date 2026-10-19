@@ -830,17 +830,49 @@ two −0.16 (11 of 11), −0.01 (6 of 11), −0.07 (7 of 11); mixture − publis
 +0.25 (3 of 11), +0.10 (4 of 11). The specialists out of place: the 1024 m model on an
 all-128 m team costs +0.64 (11 of 11), the 128 m model on an all-1024 m team +2.56 (11 of 11).
 
-Reading. The hypothesis is rejected: the two specialists do not need a common message
-language. The mixture is never worse than the better of the two specialists used alone,
-and at f = 1/4 it beats both by 0.16-0.37 in every environment, i.e. the embeddings
-produced by one model's TAGConv layers are usable by the other's. It tracks the best
-specialist at every fraction (within 0.07) and stays 0.1-0.25 above the fixed-scale map on
-the published model, which remains the simplest answer for a heterogeneous team (no
-second model, no range-dependent switching). The mixture also shows the symmetric cost of
-using a model out of its range in both directions: +0.64 for the long-range model among
-short-range robots, +2.56 for the short-range model among long-range ones.
+First reading (superseded by the control below): the mixture is never worse than the better
+specialist and beats both at f = 1/4 in every environment, so the two specialists would not
+need a common message language.
 
-Figure `fig_mixture.png`; data `results_h1/results_h1.csv`.
+**Control: specialists from different training seeds** (requested by the planning session;
+18 October, 22:00). The two specialists above share seed 0: the same initial weights and the
+same sample order (r1024 was trained on the 128 m trajectories with the maps redrawn), so
+their compatibility could come from that common origin. The grid was rerun with the 128 m
+specialist of seed 1 and of seed 2 against the same r1024 (jobs 1856566-1856567, same 4
+draws, as-is maps). Mixture, mean across environments at f = 1/4 / 1/2 / 3/4:
+
+| 128 m specialist | mixture | 128 m model alone at the same f | mixture − best specialist (n mixture better) |
+|---|---|---|---|
+| seed 0 (common with r1024) | 2.17 / 2.24 / 1.95 | 2.35 / 2.73 / 3.51 | −0.16 (11/11) / −0.01 (6/11) / −0.07 (7/11) |
+| seed 1 | 2.41 / 2.36 / 2.25 | 2.39 / 2.82 / 3.52 | +0.09 (4/11) / +0.09 (4/11) / +0.23 (2/11) |
+| seed 2 | 2.30 / 2.25 / 2.12 | 2.43 / 2.73 / 3.47 | −0.05 (8/11) / −0.01 (7/11) / +0.10 (3/11) |
+
+(1024 m model alone: 2.55 / 2.31 / 2.02.) Paired against the common-seed mixture: seed 1
++0.24 ± 0.38 / +0.12 ± 0.56 / +0.30 ± 0.32, seed 2 +0.12 ± 0.29 / +0.01 ± 0.46 / +0.17 ± 0.26.
+Against the fixed-scale map: +0.20 to +0.39 for seeds 1-2 (2-4 of 11) instead of +0.07 to
++0.25 for seed 0.
+
+Representations (`lpac_study/cka.py`, linear CKA between the two models' layer outputs on
+the same 7 states of a heterogeneous episode, environments 0 and 3, f = 1/4 and 1/2): the
+common-seed pair is no closer than the different-seed pairs. At the first TAGConv layer
+0.52 / 0.57 / 0.58 (seed 0 / 1 / 2 against r1024, env 0, f = 1/2), at the fifth 0.30 / 0.34
+/ 0.34, on the actions 0.01 / 0.01 / 0.00; for the short-range robots alone 0.68-0.79 at the
+first layers in all three cases. Reference: two 128 m seeds against each other 0.8-0.9 at
+every layer; r128 against r256 0.3-0.7. The two specialists' representations differ a lot,
+equally for a common or a different seed.
+
+Reformulated reading. The common seed does help the mixture, by 0.1-0.3 (consistent in sign
+at every fraction, at the edge of significance with 11 environments), even though linear CKA
+does not see a closer representation. With specialists from independent seeds the mixture
+is at the level of the better specialist used alone, not above it: −0.05 to +0.23, 2-8 of 11
+environments better, inside the draw and environment noise (0.2-0.4). What survives the
+control: the mixture is never much worse than the better specialist (worst case +0.23 at
+f = 3/4, where the 128 m specialist alone is 1.3 worse), so there is no sign of two
+incompatible message languages making the mixed team fail; what does not survive: the
+claim that the mixture beats both specialists. The fixed-scale map on the published model
+remains better than every mixture by 0.1-0.4, with one model and no switching.
+
+Figure `fig_mixture.png` (mixtures of the three seeds); data `results_h1/results_h1*.csv`.
 
 **H2. One model for heterogeneous teams, range as input ("V0R").** The 100k dataset redrawn
 with a range drawn per robot in {128, 256, 512, 1024} m (reception semantics: robot i hears

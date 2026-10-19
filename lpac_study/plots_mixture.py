@@ -32,6 +32,7 @@ def main() -> None:
     parser.add_argument("--results", required=True, help="results_h1.csv")
     parser.add_argument("--hetero", required=True, help="results_hetero*.csv of the published model (as-is and fixed maps)")
     parser.add_argument("--cvt", type=float, default=None)
+    parser.add_argument("--extra", nargs="*", default=[], help="label=results_h1.csv of other mixtures (dashed, mixture mode only)")
     parser.add_argument("--out", default="fig_mixture.png")
     args = parser.parse_args()
     h1 = pd.read_csv(args.results)
@@ -45,6 +46,12 @@ def main() -> None:
             r = pd.concat([r, ends]).sort_values("fraction")
         ax.errorbar(r["fraction"], r["mean"], yerr=r["std"], color=color, linestyle=style, marker=marker, label=label,
                     **{k: v for k, v in ERRORBAR_STYLE.items() if k != "marker"})
+    for color, item in zip(("#6da7ec", "#184f95", "#7b3fb3"), args.extra):
+        label, path = item.split("=", 1)
+        other = pd.read_csv(path)
+        r = env_mean(other[other["mode"] == "mixture"], ["fraction"]).sort_values("fraction")
+        ax.errorbar(r["fraction"], r["mean"], yerr=r["std"], color=color, linestyle=":", marker="s", markersize=5,
+                    linewidth=1.6, capsize=3, label=label)
     for map_mode, label, color, style in (("asis", "published model, map at each robot's own range", "#9ec5f4", "--"),
                                           ("fixed256", "published model, map at a fixed 256 m scale", "#184f95", "--")):
         r = env_mean(het[het["map"] == map_mode], ["fraction"]).sort_values("fraction")

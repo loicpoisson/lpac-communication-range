@@ -51,9 +51,10 @@ when the policy is run with a larger communication range than it was trained wit
   collapse is a property of the 128 m checkpoint out of its range, not of the architecture at long
   range. The paper's rise up to 512 m and moderate decline after are not seen: flat from 256 m.
 - Mixture of range specialists at inference (each robot of a 128/1024 m team runs the model trained
-  at its own range, layer by layer on the mixed inputs): never worse than the better specialist used
-  alone, better than both at f = 1/4; the two models' messages are mutually usable. Still 0.1-0.25
-  behind the fixed-scale map on the published model.
+  at its own range, layer by layer on the mixed inputs): at the level of the better specialist used
+  alone (−0.05 to +0.23 with specialists from independent seeds; a common training seed helps by
+  0.1-0.3), never much worse, so no sign of incompatible message languages; still 0.1-0.4 behind
+  the fixed-scale map on the published model.
 - Running (18 October): V0 trained with the fixed-scale map, V3 on mixed ranges, and a single model
   with the robot's range as input (journal section 13).
 
