@@ -758,6 +758,54 @@ keeps the real range), plus the control on the 128 m dataset alone; `redraw_rang
 epochs) and 1854569 (128 m, 40 epochs), evaluated with the fixed-scale map at inference
 (their input convention) via the factorial level G0C3 at the five ranges, 11 and 40 envs.
 
+Result of A (19 October, 00:00). Trainings: mixed set 25 epochs in 2 h 48, best validation
+0.422 at epoch 11; 128 m set 40 epochs in 1 h 16, best validation 0.439 at epoch 12. Both
+are evaluated with the fixed-scale map at inference, which is their input convention
+(training = test, no mismatch); the map is drawn exactly as the inference-time fix of
+section 9 draws it. Cost ratio (std across environments in brackets):
+
+| | 128 m | 256 m | 512 m | 768 m | 1024 m |
+|---|---|---|---|---|---|
+| V0F mixed ranges, 11 release envs | 2.11 (0.50) | 1.86 (0.35) | **1.78** (0.35) | 1.76 (0.33) | 1.77 (0.33) |
+| V0F 128 m, 11 envs | 2.06 (0.41) | 2.01 (0.41) | 2.11 (0.53) | 2.12 (0.56) | 2.14 (0.57) |
+| V0 r128 s0, as is | 2.15 | **1.74** | 2.49 | 3.46 | 4.36 |
+| V0 r128 s0, fixed map at inference only | 2.05 | = as is | 1.81 | 1.86 | 1.84 |
+| V0 mixed ranges, as-is map (3 seeds) | 2.40 | 2.08 | 1.91 | 1.97 | 1.93 |
+| V0F mixed ranges, 40 new envs | 2.14 (0.36) | 1.92 (0.38) | 1.92 (0.37) | 1.92 (0.37) | 1.92 (0.35) |
+| V0F 128 m, 40 envs | 2.07 | 1.95 | 1.99 | 2.04 | 2.04 |
+| V0 r128 s0, fixed map at inference only (40) | 2.06 | 1.82 | 1.78 | — | 1.80 |
+
+Paired, 11 release environments [40 new ones]:
+
+- V0F mixed − V0 r128 as is: +0.13 ± 0.20 at 256 m (3 of 11 better) [+0.10, 18 of 40];
+  −0.71 / −1.69 / −2.59 at 512 / 768 / 1024 m (10-11 of 11) [−0.60, —, −2.84].
+- V0F mixed − V0 r128 with the fixed map at inference: +0.06 / — / −0.02 / −0.10 / −0.07
+  (4-7 of 11) [+0.07 / +0.10 / +0.15 / — / +0.12, 10-18 of 40].
+- V0F mixed − V0 mixed ranges with the as-is map (seed 0): −0.29 / −0.20 / −0.12 / −0.21 /
+  −0.11 (8-11 of 11) [−0.34 / −0.22 / −0.12 / −0.08 / −0.07, 25-35 of 40].
+- V0F mixed − V0 trained at 256 m: +0.10 at 256 m (3 of 11), −0.54 at 1024 m (10 of 11).
+- V0F mixed − centralized CVT: −0.42 to −0.76 at every range (10-11 of 11) [−0.19 to −0.41,
+  29-35 of 40]. V0F mixed − V0F 128: −0.14 / −0.32 / −0.36 / −0.37 from 256 m (8-10 of 11).
+- V0F 128 − V0 r128 with the fixed map at inference: +0.30 / +0.26 / +0.30 at 512-1024 m
+  (2 of 11) [+0.22 / +0.24, 10 of 40]; +0.27 above V0 as is at 256 m.
+
+Reading. Training with the fixed-scale map on mixed ranges gives a flat model (1.76-1.86
+from 256 m, 1.92 on the new set) with no intervention at test time beyond its own input
+convention: it equals the inference-time fix on the release set (differences within ±0.1,
+4-7 of 11) and trails it by 0.1 on the new set, and it is the best of the trained recipes
+across ranges (0.1-0.3 below the mixed-range model with as-is maps, 0.5 below the 256 m
+model at 1024 m). Against the common criterion it misses the 256 m target: +0.13 above V0
+on the release set and +0.10 on the new one, 3 of 11 and 18 of 40 environments better,
+against a seed noise of 0.02 and a paired standard error of 0.06, so the gap is small but
+real; from 512 m it is at V0's best level. The 128 m control fails: with the maps of the
+128 m data drawn at the 256 m scale, the model never saw the robots between 128 and 256 m
+that the fixed map shows at test time, and it ends 0.25-0.30 above the inference-time fix
+beyond 512 m and 0.27 above V0 at 256 m. The fixed-scale map works when the training data
+covers the range of neighbours the map can show.
+
+Figure `fig_fixedmap_training.png`; data `results_A/` (factorial rows, level G0C3), loss
+histories `results_A/train_*/`.
+
 **B. V3 trained on the mixed-range dataset** (job 1854570, 25 epochs), evaluated like the
 other variants.
 

@@ -55,8 +55,12 @@ when the policy is run with a larger communication range than it was trained wit
   alone (−0.05 to +0.23 with specialists from independent seeds; a common training seed helps by
   0.1-0.3), never much worse, so no sign of incompatible message languages; still 0.1-0.4 behind
   the fixed-scale map on the published model.
-- Running (18 October): V0 trained with the fixed-scale map, V3 on mixed ranges, and a single model
-  with the robot's range as input (journal section 13).
+- V0 trained with the fixed-scale map on mixed ranges (seed 0): flat, 1.86 at 256 m and 1.76-1.78
+  from 512 m, equal to the inference-time fix on the release set and 0.1 behind it on the new one;
+  0.13 above V0 at 256 m, so the "within 0.05" criterion is missed narrowly. The same recipe on the
+  128 m data alone fails (2.0-2.1 everywhere): the training data must cover the map's content.
+- Running (19 October): V3 on mixed ranges, and a single model with the robot's range as input
+  (journal section 13).
 
 Details, numbers and caveats: [`docs/journal.md`](docs/journal.md). Framing document with
 figures (French): [`docs/framing.html`](docs/framing.html), also online at
@@ -78,6 +82,7 @@ figures (French): [`docs/framing.html`](docs/framing.html), also online at
 | `results_hetero/`, `farmshare_hetero.sbatch` | heterogeneous ranges at inference (`lpac_study.heterogeneous`): per-robot ranges, frozen-state probe |
 | `results_fig20/`, `fig_fig20*.png` | one model per training range (128/256/512/1024 m) evaluated at every range: the paper's Fig. 20 |
 | `results_h1/`, `farmshare_mixture.sbatch`, `fig_mixture.png` | mixture of range specialists in a heterogeneous team (`lpac_study.mixture`) |
+| `results_A/`, `fig_fixedmap_training.png` | V0 trained with the fixed-scale neighbour map (mixed ranges and 128 m control) |
 | `fig_*.png` | figures; `fig_email.png` is the self-contained summary figure; `fig_variants*.png` the variant comparison |
 | `lpac_study/` | Python package (PyTorch Geometric) used by all scripts and the notebook |
 | `lpac_study/variants.py` | model variants V1 (no neighbor map), V2 (edge geometry, GATv2), V3 (V1 + PointNetConv front layer) and V0R (V0 + own range as GNN input) as subclasses of the library model; `--variant` on `training/train_launch.py`, `lpac_study.sweep`, `lpac_study.factorial` and the Slurm scripts |
