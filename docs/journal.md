@@ -947,6 +947,57 @@ to the inference-time construction of section 12, weights = exp(−d²/r_target�
 step and both policies run. Training queued behind B (40 epochs), then the homogeneous
 sweeps (11/40 envs) and the heterogeneous grid f ∈ {0, 1/4, 1/2, 3/4, 1}.
 
+Result of H2 (19 October, 09:00). 40 epochs in 4 h 19, best validation 0.513 at epoch 9,
+then rising to 0.586 (validation set with per-robot ranges, not comparable with the others).
+Cost ratio (std across environments in brackets):
+
+| homogeneous team at | 128 m | 256 m | 512 m | 768 m | 1024 m |
+|---|---|---|---|---|---|
+| V0R, 11 release envs | 2.75 (0.71) | 2.16 (0.39) | 1.87 (0.27) | 2.05 (0.51) | 1.89 (0.27) |
+| V0R, 40 new envs | 2.61 (0.40) | 2.17 (0.37) | 1.91 (0.34) | 1.98 (0.29) | 1.91 (0.29) |
+| V0 r128, as is (11) | 2.15 | **1.74** | 2.49 | 3.46 | 4.36 |
+| V0 r128, fixed map at inference (11) | 2.05 | = | 1.81 | 1.86 | 1.84 |
+| V0F mixed, A (11) | 2.11 | 1.86 | 1.78 | 1.76 | 1.77 |
+| V0 mixed ranges, as-is map (11, seed 0) | 2.40 | 2.06 | 1.90 | 1.97 | 1.89 |
+
+| heterogeneous team, fraction at 1024 m | 0 | 1/4 | 1/2 | 3/4 | 1 |
+|---|---|---|---|---|---|
+| V0R (one model, its own convention) | 2.75 (0.71) | 2.49 (0.54) | 2.16 (0.25) | 2.08 (0.28) | 1.89 (0.27) |
+| published model, as-is map (8 draws) | 1.98 | 2.42 | 2.89 | 3.95 | 5.30 |
+| published model, fixed-scale map | 1.93 | 2.10 | 1.98 | 1.86 | 1.71 |
+| mixture of specialists (H1, seed 0) | 2.15 | 2.17 | 2.24 | 1.95 | 1.80 |
+
+Paired, 11 release environments [40 new ones]. Homogeneous: V0R − V0 as is +0.60 ± 0.45 at
+128 m (0 of 11) [+0.48, 0 of 40], +0.42 ± 0.40 at 256 m (1 of 11) [+0.35, 5 of 40], −0.6 /
+−1.4 / −2.5 at 512 / 768 / 1024 m (10-11 of 11); V0R − fixed map at inference +0.71 at
+128 m, then +0.07 / +0.19 / +0.05 (4-6 of 11) [+0.14, +0.11, 12-14 of 40]; V0R − V0F
++0.65 / +0.30 / +0.09 / +0.29 / +0.12 (0-5 of 11) [+0.48 / +0.25 / −0.01 / +0.05 / −0.01];
+V0R − V0 mixed ranges with as-is maps +0.35 / +0.10 / −0.03 / +0.07 / +0.01 (2-6 of 11)
+[+0.14 / +0.03 / −0.13 / −0.02 / −0.08]; V0R − centralized CVT +0.23 at 128 m (3 of 11),
+−0.36 to −0.65 from 256 m (8-9 of 11). Heterogeneous: V0R − published as is +0.77 at f = 0
+(0 of 11), +0.06 at 1/4, −0.73 / −1.87 / −3.41 from 1/2 (10-11 of 11); V0R − published with
+the fixed map +0.82 / +0.38 / +0.18 / +0.22 / +0.19 (0-4 of 11); V0R − mixture of
+specialists +0.60 / +0.31 / −0.07 / +0.13 / +0.09 (0-7 of 11). Frozen-state probe under V0R:
+the 128 m robots change their actions by 16 / 34 / 54 % at f = 1/4 / 1/2 / 3/4 (published
+model: 21 / 29 / 36 %).
+
+Reading. Telling the model its own range, and training it on teams where every robot has
+its own, removes the collapse (1.9-2.1 from 512 m, 1.9 at f = 1 and at 1024 m) but buys
+nothing over the plain mixed-range recipe: at every range the two are equal within ±0.1
+(2-6 of 11 environments either way, on both sets). The range input is redundant with what
+the map already shows the CNN (a map drawn at r_i looks different at each r_i). Where V0R
+loses is the short range: 2.75 at 128 m and 2.16 at 256 m against 2.15 and 1.74 for the
+128 m model, 0.4-0.6 above every other recipe, in 0-1 of 11 environments better. In its
+training set a quarter of the robot-samples are at 128 m, against all of them for r128, and
+the 128 m regime (sparse graph, nearly empty map) is the one that needs the most data. In
+heterogeneous teams it is a single model that handles any mix without switching, better than
+the published model as soon as half the team hears far, but 0.2-0.4 above the published
+model with the fixed-scale map at every fraction and 0.1-0.3 above the mixture of
+specialists except at f = 1/2. Criterion: failed at 256 m by 0.42; flat from 512 m.
+
+Figure `fig_range_input.png` (homogeneous and heterogeneous panels); data `results_H2/`
+(homogeneous sweeps on both sets, heterogeneous grid, loss history).
+
 **H3** (shared GNN, one CNN per range) is not written: it waits for H1 and H2 and for an
 explicit go. V4 (bounded edge attributes) is Loïc's.
 

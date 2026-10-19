@@ -61,8 +61,11 @@ when the policy is run with a larger communication range than it was trained wit
   128 m data alone fails (2.0-2.1 everywhere): the training data must cover the map's content.
 - V3 trained on mixed ranges (seed 0) fails: 2.6-2.9 at every range, above the centralized CVT and
   0.5 above V3 trained at 128 m at short range; one recipe for inputs four times apart fits neither.
-- Running (19 October): a single model with the robot's range as input, and seeds 1-2 of V0F
-  (journal section 13).
+- One model with the robot's own range as a GNN input, trained on teams with a range drawn per robot
+  (V0R, seed 0): no collapse (1.9-2.1 from 512 m) but equal to plain mixed-range training within
+  0.1 and 0.4-0.6 worse than the 128 m model at 128-256 m; in heterogeneous teams it beats the
+  published model from f = 1/2 but stays 0.2-0.4 above the published model with the fixed-scale map.
+- Running (19 October): seeds 1-2 of V0F (journal section 13).
 
 Details, numbers and caveats: [`docs/journal.md`](docs/journal.md). Framing document with
 figures (French): [`docs/framing.html`](docs/framing.html), also online at
@@ -86,6 +89,7 @@ figures (French): [`docs/framing.html`](docs/framing.html), also online at
 | `results_h1/`, `farmshare_mixture.sbatch`, `fig_mixture.png` | mixture of range specialists in a heterogeneous team (`lpac_study.mixture`) |
 | `results_A/`, `fig_fixedmap_training.png` | V0 trained with the fixed-scale neighbour map (mixed ranges and 128 m control) |
 | `results_B/` | V3 trained on the mixed-range dataset |
+| `results_H2/`, `fig_range_input.png` | V0R: the robot's own range as GNN input, trained on per-robot ranges; homogeneous sweeps and heterogeneous grid |
 | `fig_*.png` | figures; `fig_email.png` is the self-contained summary figure; `fig_variants*.png` the variant comparison |
 | `lpac_study/` | Python package (PyTorch Geometric) used by all scripts and the notebook |
 | `lpac_study/variants.py` | model variants V1 (no neighbor map), V2 (edge geometry, GATv2), V3 (V1 + PointNetConv front layer) and V0R (V0 + own range as GNN input) as subclasses of the library model; `--variant` on `training/train_launch.py`, `lpac_study.sweep`, `lpac_study.factorial` and the Slurm scripts |
