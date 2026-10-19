@@ -1,0 +1,16 @@
+{
+ "device": "cuda:0",
+ "variant": "V3",
+ "params": 1889636,
+ "receptive_field_hops": 16,
+ "epochs": 25,
+ "seed": 0,
+ "num_workers": 27,
+ "train_size": 70000,
+ "val_size": 20000,
+ "torch": "2.8.0+cu126",
+ "cuda": "12.6",
+ "gpu": "NVIDIA L40S",
+ "config_file": "/home/users/lpoisson/lpac/train/AB/lp_B.toml",
+ "total_s": 9251.8
+}

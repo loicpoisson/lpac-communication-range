@@ -59,7 +59,9 @@ when the policy is run with a larger communication range than it was trained wit
   from 512 m, equal to the inference-time fix on the release set and 0.1 behind it on the new one;
   0.13 above V0 at 256 m, so the "within 0.05" criterion is missed narrowly. The same recipe on the
   128 m data alone fails (2.0-2.1 everywhere): the training data must cover the map's content.
-- Running (19 October): V3 on mixed ranges, and a single model with the robot's range as input
+- V3 trained on mixed ranges (seed 0) fails: 2.6-2.9 at every range, above the centralized CVT and
+  0.5 above V3 trained at 128 m at short range; one recipe for inputs four times apart fits neither.
+- Running (19 October): a single model with the robot's range as input, and seeds 1-2 of V0F
   (journal section 13).
 
 Details, numbers and caveats: [`docs/journal.md`](docs/journal.md). Framing document with
@@ -83,6 +85,7 @@ figures (French): [`docs/framing.html`](docs/framing.html), also online at
 | `results_fig20/`, `fig_fig20*.png` | one model per training range (128/256/512/1024 m) evaluated at every range: the paper's Fig. 20 |
 | `results_h1/`, `farmshare_mixture.sbatch`, `fig_mixture.png` | mixture of range specialists in a heterogeneous team (`lpac_study.mixture`) |
 | `results_A/`, `fig_fixedmap_training.png` | V0 trained with the fixed-scale neighbour map (mixed ranges and 128 m control) |
+| `results_B/` | V3 trained on the mixed-range dataset |
 | `fig_*.png` | figures; `fig_email.png` is the self-contained summary figure; `fig_variants*.png` the variant comparison |
 | `lpac_study/` | Python package (PyTorch Geometric) used by all scripts and the notebook |
 | `lpac_study/variants.py` | model variants V1 (no neighbor map), V2 (edge geometry, GATv2), V3 (V1 + PointNetConv front layer) and V0R (V0 + own range as GNN input) as subclasses of the library model; `--variant` on `training/train_launch.py`, `lpac_study.sweep`, `lpac_study.factorial` and the Slurm scripts |

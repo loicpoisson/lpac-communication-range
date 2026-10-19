@@ -809,6 +809,21 @@ histories `results_A/train_*/`.
 **B. V3 trained on the mixed-range dataset** (job 1854570, 25 epochs), evaluated like the
 other variants.
 
+Result of B (19 October, 02:30). 25 epochs in 2 h 35, best validation 0.614 at epoch 20
+(V0 on the same mixed set: 0.531; V3 on the 128 m set: 0.443), still falling slowly. Cost
+ratio: 2.67 / 2.57 / 2.81 / 2.91 / 2.92 at 128-1024 m on the 11 release environments (std
+0.5-0.7), 2.70 / 2.63 / 2.71 / 2.76 / 2.74 on the 40 new ones. Paired: +0.48 / +0.49 at
+128 / 256 m against V3 trained at 128 m (0 of 11) and equal to it at 1024 m (+0.00);
++0.27 to +1.03 against V0 trained on the same mixed set (0-2 of 11); +0.56 to +1.15
+against V0F (0 of 11); above the centralized CVT at every range (+0.04 to +0.40, 1-4 of
+11) [40 envs: +0.30 to +0.42, 2-7 of 40]. Mixing the ranges in the training data makes V3
+worse everywhere: its PointNet layer reads relative positions in units of 256 m, so the
+1024 m samples feed it inputs four times larger than the 128 m ones, and one recipe for
+both regimes fits neither (training loss 0.54 at the best epoch against 0.38 for V3 at
+128 m). B fails the criterion by a wide margin; the fixed-scale map (A) is the recipe that
+makes mixed-range training work, and it needs the map. Data `results_B/`, figure
+`fig_mixed_range.png` (V3 mixed added).
+
 **C. Heterogeneous teams, 8 draws per fraction** (section 12 had 2), both map modes, with
 four descriptors of where the long-range robots start: distance to the centre, number of
 robots within 128 m, Voronoi share of the importance field, spread. Job 1854555, CPU.
