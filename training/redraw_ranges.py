@@ -119,7 +119,8 @@ def rebuild_hetero(positions: torch.Tensor, ranges: torch.Tensor, chunk: int = 1
 MULTISCALE = (256.0, 512.0, 1024.0)
 
 
-def infer_ranges(positions: torch.Tensor, weights: torch.Tensor, candidates=(128.0, 256.0, 512.0, 1024.0)) -> torch.Tensor:
+def infer_ranges(positions: torch.Tensor, weights: torch.Tensor, candidates=(128.0, 256.0, 512.0, 1024.0),
+                 max_mismatch: int = 4) -> torch.Tensor:
     """The range each sample was generated at, recovered from its stored edge weights.
 
     An edge weight is nonzero exactly when the distance is below the range, so the candidate
@@ -129,15 +130,18 @@ def infer_ranges(positions: torch.Tensor, weights: torch.Tensor, candidates=(128
     dist = torch.cdist(positions, positions, 2)
     nonzero = weights > 0
     idx = torch.arange(positions.shape[1])
-    out = torch.full((positions.shape[0],), float("nan"))
+    mismatches = []
     for r in candidates:
         mask = dist < r
         mask[:, idx, idx] = False
-        hit = (mask == nonzero).flatten(1).all(1)
-        out[hit] = r
-    if torch.isnan(out).any():
-        raise ValueError(f"{int(torch.isnan(out).sum())} samples match none of the candidate ranges {candidates}")
-    return out
+        mismatches.append((mask != nonzero).flatten(1).sum(1))
+    mismatches = torch.stack(mismatches, dim=1)  # (samples, candidates)
+    best = mismatches.argmin(dim=1)
+    worst = int(mismatches.gather(1, best.view(-1, 1)).max())
+    if worst > max_mismatch:
+        raise ValueError(f"a sample differs from its closest candidate range in {worst} pairs (> {max_mismatch}); candidates {candidates}")
+    # a pair at d ~ r can land on either side of the float32 threshold in the stored weights: a few are tolerated
+    return torch.tensor(candidates)[best]
 
 
 def rebuild(positions: torch.Tensor, comm_range, chunk: int = 1000, scale: float | None = None,
