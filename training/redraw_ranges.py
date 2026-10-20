@@ -29,8 +29,8 @@ SPLITS = ("train", "val", "test")
 RANGE_FILES = ("comm_maps.pt", "edge_weights.pt")
 
 
-def edge_weights(positions: torch.Tensor, comm_range: float) -> torch.Tensor:
-    """``CoverageEnvUtils.get_weights`` on a batch of float32 positions ``(B, N, 2)``."""
+def edge_weights(positions: torch.Tensor, comm_range) -> torch.Tensor:
+    """``CoverageEnvUtils.get_weights`` on a batch of float32 positions ``(B, N, 2)`` (range: scalar or ``(B, 1, 1)``)."""
     distances = torch.cdist(positions, positions, 2)
     weights = torch.exp(-distances.square() / (comm_range * comm_range))
     weights.masked_fill_(weights < 1.0 / math.exp(1.0), 0.0)
@@ -49,11 +49,15 @@ def comm_maps(positions: torch.Tensor, comm_range: float, map_size: int = MAP_SI
     within ``min(comm_range, scale)``: the fixed-scale map of the journal (level C3 when scale = 256 m).
     """
     batch, num_robots, _ = positions.shape
-    draw_range = comm_range if scale is None else min(comm_range, scale)
-    scale = comm_range if scale is None else scale
+    comm_range = torch.as_tensor(comm_range, dtype=torch.float32).reshape(-1)  # one value, or one per sample
+    draw_range = comm_range if scale is None else torch.clamp(comm_range, max=scale)
+    if scale is None:
+        if comm_range.numel() != 1:
+            raise ValueError("a per-sample range needs a fixed drawing scale (--fixed-scale or --multiscale)")
+        scale = float(comm_range)
     rel = positions.unsqueeze(1) - positions.unsqueeze(2)  # rel[b, i, j] = p_j - p_i
     dist = torch.cdist(positions, positions, 2)
-    mask = dist < draw_range
+    mask = dist < draw_range.view(-1, 1, 1)
     idx = torch.arange(num_robots)
     mask[:, idx, idx] = False
     cells = torch.round(rel * map_size / (scale * 2.0) + (map_size / 2.0 - 0.5)).long()
@@ -115,21 +119,48 @@ def rebuild_hetero(positions: torch.Tensor, ranges: torch.Tensor, chunk: int = 1
 MULTISCALE = (256.0, 512.0, 1024.0)
 
 
-def rebuild(positions: torch.Tensor, comm_range: float, chunk: int = 1000, scale: float | None = None,
-            multiscale: bool = False):
+def infer_ranges(positions: torch.Tensor, weights: torch.Tensor, candidates=(128.0, 256.0, 512.0, 1024.0)) -> torch.Tensor:
+    """The range each sample was generated at, recovered from its stored edge weights.
+
+    An edge weight is nonzero exactly when the distance is below the range, so the candidate
+    whose in-range mask equals the nonzero pattern is the sample's range (a merged dataset
+    mixing several ranges keeps no other record of it).
+    """
+    dist = torch.cdist(positions, positions, 2)
+    nonzero = weights > 0
+    idx = torch.arange(positions.shape[1])
+    out = torch.full((positions.shape[0],), float("nan"))
+    for r in candidates:
+        mask = dist < r
+        mask[:, idx, idx] = False
+        hit = (mask == nonzero).flatten(1).all(1)
+        out[hit] = r
+    if torch.isnan(out).any():
+        raise ValueError(f"{int(torch.isnan(out).sum())} samples match none of the candidate ranges {candidates}")
+    return out
+
+
+def rebuild(positions: torch.Tensor, comm_range, chunk: int = 1000, scale: float | None = None,
+            multiscale: bool = False, stored_weights: torch.Tensor | None = None):
     """Sparse ``comm_maps`` and ``edge_weights`` for all samples, built chunk by chunk.
 
-    ``multiscale``: six channels, one pair per scale of MULTISCALE (robots within min(range, scale)
-    drawn at that scale), the V5 input; the edge weights keep the range.
+    ``comm_range`` is one value or one per sample; ``multiscale``: six channels, one pair per scale
+    of MULTISCALE (robots within min(range, scale) drawn at that scale), the V5 input. The edge
+    weights keep the range (``stored_weights`` are reused unchanged when given).
     """
     maps, weights = [], []
+    ranges = torch.as_tensor(comm_range, dtype=torch.float32).reshape(-1)
     for start in range(0, positions.shape[0], chunk):
         p = positions[start:start + chunk]
+        r = ranges if ranges.numel() == 1 else ranges[start:start + chunk]
         if multiscale:
-            maps.append(torch.cat([comm_maps(p, comm_range, scale=s) for s in MULTISCALE], dim=2).to_sparse_coo())
+            maps.append(torch.cat([comm_maps(p, r, scale=s) for s in MULTISCALE], dim=2).to_sparse_coo())
         else:
-            maps.append(comm_maps(p, comm_range, scale=scale).to_sparse_coo())
-        weights.append(edge_weights(p, comm_range).to_sparse_coo())
+            maps.append(comm_maps(p, r, scale=scale).to_sparse_coo())
+        if stored_weights is None:
+            weights.append(edge_weights(p, float(r) if r.numel() == 1 else r.view(-1, 1, 1)).to_sparse_coo())
+    if stored_weights is not None:
+        return torch.cat(maps).coalesce(), stored_weights
     return torch.cat(maps).coalesce(), torch.cat(weights).coalesce()
 
 
@@ -172,7 +203,8 @@ def write_hetero(src: Path, dst: Path, seed: int = 0) -> None:
               f"{weights.values().numel() / positions.shape[0] / positions.shape[1]:.2f} incoming edges per robot")
 
 
-def write(src: Path, dst: Path, comm_range: float, scale: float | None = None, multiscale: bool = False) -> None:
+def write(src: Path, dst: Path, comm_range, scale: float | None = None, multiscale: bool = False,
+          infer_range: bool = False) -> None:
     dst.mkdir(parents=True, exist_ok=True)
     splits = [s for s in SPLITS if (src / s).is_dir()]
     if not splits:  # an unsplit part written by data_generation.py --split False
@@ -183,16 +215,24 @@ def write(src: Path, dst: Path, comm_range: float, scale: float | None = None, m
     for split in splits:
         (dst / split).mkdir(exist_ok=True)
         positions = load(src / split / "robot_positions.pt")
-        maps, weights = rebuild(positions, comm_range, scale=scale, multiscale=multiscale)
+        if infer_range:
+            stored = torch.load(src / split / "edge_weights.pt", weights_only=True)
+            comm_range = infer_ranges(positions, stored.to_dense() if stored.is_sparse else stored)
+            counts = {float(r): int((comm_range == r).sum()) for r in comm_range.unique()}
+            print(f"{split}: ranges inferred from the edge weights: {counts}")
+            maps, weights = rebuild(positions, comm_range, scale=scale, multiscale=multiscale, stored_weights=stored)
+        else:
+            maps, weights = rebuild(positions, comm_range, scale=scale, multiscale=multiscale)
         torch.save(maps, dst / split / "comm_maps.pt")
         torch.save(weights, dst / split / "edge_weights.pt")
         if split != ".":
             for item in (src / split).iterdir():
                 if item.name not in RANGE_FILES:
                     link(item, dst / split / item.name)
-        print(f"{split}: {positions.shape[0]} samples redrawn at {comm_range:.0f} m"
+        shown = f"{float(comm_range):.0f} m" if torch.as_tensor(comm_range).numel() == 1 else "their own ranges"
+        print(f"{split}: {positions.shape[0]} samples redrawn at {shown}"
               f"{'' if scale is None else f' (map scale {scale:.0f} m)'}, "
-              f"{weights.values().numel() / positions.shape[0] / positions.shape[1]:.2f} neighbours per robot, "
+              f"{(weights.values().numel() if weights.is_sparse else int((weights != 0).sum())) / positions.shape[0] / positions.shape[1]:.2f} neighbours per robot, "
               f"{maps.values().numel() / maps.shape[2] / positions.shape[0] / positions.shape[1]:.2f} robots drawn per map"
               f"{' (6 channels)' if multiscale else ''}")
 
@@ -214,6 +254,8 @@ def main() -> None:
     parser.add_argument("--range", type=float, default=None, help="communication range in metres")
     parser.add_argument("--hetero", action="store_true", help="draw a range per robot in {128, 256, 512, 1024} m instead")
     parser.add_argument("--multiscale", action="store_true", help="V5 maps: three pairs at fixed scales 256/512/1024 m")
+    parser.add_argument("--infer-range", action="store_true",
+                        help="recover each sample's range from its stored edge weights (merged mixed-range sets) and keep them")
     parser.add_argument("--seed", type=int, default=0, help="seed of the per-robot range draw (--hetero)")
     parser.add_argument("--fixed-scale", type=float, default=None,
                         help="draw the maps at this fixed scale with the robots within min(range, scale); the graph keeps the range")
@@ -227,7 +269,9 @@ def main() -> None:
     else:
         if not (args.src and args.dst):
             parser.error("--src and --dst are required unless --check is given")
-        write(Path(args.src), Path(args.dst), args.range, args.fixed_scale, args.multiscale)
+        if args.range is None and not args.infer_range:
+            parser.error("--range or --infer-range is required")
+        write(Path(args.src), Path(args.dst), args.range, args.fixed_scale, args.multiscale, args.infer_range)
 
 
 if __name__ == "__main__":
