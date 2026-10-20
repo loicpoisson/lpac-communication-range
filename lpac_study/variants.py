@@ -125,13 +125,25 @@ class MultiScaleDataset(CNNGNNDataset):
     def __init__(self, data_dir, stage, use_comm_map=True, world_size=1024):
         super().__init__(data_dir, stage, False, world_size)  # local and obstacle maps, dense
         comm = torch.load(f"{data_dir}/{stage}/comm_maps.pt", weights_only=True)
-        self.comm_maps = comm.coalesce() if comm.is_sparse else comm.to_sparse_coo().coalesce()
-        self.num_comm_channels = self.comm_maps.shape[2]
+        comm = comm.coalesce() if comm.is_sparse else comm.to_sparse_coo().coalesce()
+        self.num_comm_channels = comm.shape[2]
+        self.comm_shape = tuple(comm.shape[1:])
+        # Indexing a coalesced COO tensor by sample scans all of its indices (190 M entries for the
+        # 100k mixed set: about 0.3 s per sample, 20 min per epoch on 27 workers). The entries are
+        # sorted by sample, so they are split once into per-sample index/value slices.
+        indices, values = comm.indices(), comm.values()
+        counts = torch.bincount(indices[0], minlength=comm.shape[0]).tolist()
+        self.comm_indices = list(torch.split(indices[1:], counts, dim=1))
+        self.comm_values = list(torch.split(values, counts))
+
+    def comm_map(self, idx: int) -> torch.Tensor:
+        """Dense ``(robots, channels, S, S)`` neighbour maps of one sample."""
+        return torch.sparse_coo_tensor(self.comm_indices[idx], self.comm_values[idx], self.comm_shape).to_dense()
 
     def get(self, idx):
         from coverage_control.nn.data_loaders.data_loader_utils import DataLoaderUtils
         base = self.maps[idx]  # (robots, 2, S, S): local map, obstacle map
-        comm = self.comm_maps[idx].to_dense()  # (robots, 6, S, S)
+        comm = self.comm_map(idx)  # (robots, 6, S, S)
         maps = torch.cat([base[:, :1], comm, base[:, 1:2]], dim=1)
         data = DataLoaderUtils.to_torch_geometric_data(maps, self.edge_weights[idx], self.robot_positions[idx])
         targets = self.targets[idx]

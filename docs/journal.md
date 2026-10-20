@@ -1072,10 +1072,92 @@ cost against range next to the published model, V0F (A) and V3; (a) within 0.05 
 0.02-0.05 at 256 m)? and the final training loss against V0 / V3 to separate underfitting
 from transfer failure.
 
+**Incidents.** The first dataset build failed on five of the 100,000 merged samples whose
+range could not be inferred exactly (a pair at d close to the range whose stored float32
+weight falls on the other side of the 1/e threshold); the inference now takes the closest
+candidate when at most four pairs differ. The Slurm chain started V4 mixed seed 1 before
+the trials; the run is valid (same data as the others) and was kept. The three V5 mixed
+runs hit the 4 h 30 limit after 8-9 of 25 epochs: 1,640 s per epoch instead of the ~400 s
+of V0F on the same data, because indexing a coalesced sparse tensor by sample scans all of
+its 190 M entries (0.3 s per sample, 20 min per epoch across 27 workers); the loader now
+splits the entries per sample once at load time (`MultiScaleDataset.comm_map`, same maps,
+0.1 ms per sample on the small set; timing on the real set in `training/time_loader.py`).
+Their evaluations below are labelled partial and no V5-mixed conclusion is drawn.
+
+**Results (20 October, 16:00).** Training (epochs, best validation and its epoch, training
+loss at the best epoch, final training loss): V4 mixed 25 / 0.351-0.356 at 21-25 / 0.29 /
+0.28-0.29 (three seeds; V0 on the same mixed set 0.531 and V0F 0.422 at their best, V3 mixed
+0.614); V4 at 128 m 100 / 0.408 at 24 / 0.37 / 0.212 (V0 0.449 and 0.21, V3 0.443 and 0.20);
+V5 at 128 m 40 / 0.440 at 11 / 0.41 / 0.298; V5 mixed, partial, 8-9 / 0.465-0.470 at 4-6 /
+0.36-0.42 / 0.30-0.32. V4 is not under-fitted anywhere: on the mixed set its validation loss
+is the lowest of every mixed-range model by a wide margin (0.35 against 0.42 for V0F), so
+whatever it does at test time is transfer, not training.
+
+Cost ratio, environment mean, mean ± std across seeds where there are three:
+
+| | 128 m | 256 m | 512 m | 768 m | 1024 m |
+|---|---|---|---|---|---|
+| V4 mixed ranges, 3 seeds, 11 release envs | 2.21 ± 0.01 | 1.88 ± 0.05 | 1.77 ± 0.08 | 1.76 ± 0.06 | **1.76 ± 0.06** |
+| V4 mixed ranges, 3 seeds, 40 new envs | 2.14 ± 0.04 | 1.87 ± 0.03 | 1.81 ± 0.02 | 1.81 ± 0.01 | 1.82 ± 0.02 |
+| V4 at 128 m, seed 0 (11 / 40) | 2.15 / 2.09 | 1.85 / 1.88 | 1.91 / 1.91 | 1.93 / 1.92 | 1.92 / 1.93 |
+| V5 at 128 m, seed 0 (11 / 40) | 1.99 / 2.09 | **1.77** / 1.88 | 1.87 / 2.05 | 2.03 / 2.05 | 1.97 / 2.16 |
+| V5 mixed, partial 8-9 epochs, 3 seeds (11) | 2.13 ± 0.03 | 1.90 ± 0.05 | 1.83 ± 0.06 | 1.85 ± 0.07 | 1.86 ± 0.08 |
+| V0 r128, 3 seeds (section 10) | 2.15 ± 0.01 | **1.74 ± 0.02** | 2.46 ± 0.08 | 3.58 ± 0.14 | 4.61 ± 0.26 |
+| V3 at 128 m, 3 seeds (section 11) | 2.24 ± 0.06 | 2.01 ± 0.06 | 2.31 ± 0.16 | 2.49 ± 0.22 | 2.58 ± 0.29 |
+| V0F mixed, 3 seeds (section 13) | 2.11 ± 0.00 | 1.86 ± 0.01 | 1.83 ± 0.06 | 1.81 ± 0.04 | 1.82 ± 0.04 |
+| published (section 3) | 1.98 | 1.69 | 2.77 | 4.52 | 5.22 |
+
+Question (a), within 0.05 of V0 at 256 m (per-environment costs averaged over seeds, paired
+against the three V0 seeds, 11 release envs [40 new ones against the single V0 seed]):
+V4 mixed +0.139 ± 0.136, standard error 0.041, 2 of 11 better: no [+0.052, SE 0.031, 18 of
+40: just outside]; V4 at 128 m +0.111, SE 0.074, 3 of 11: no [+0.063, 20 of 40]; V5 at 128 m
++0.032 ± 0.152, SE 0.046, 5 of 11: **yes** [+0.060, SE 0.043, 15 of 40: borderline]; V5
+mixed partial +0.158: no.
+
+Question (b), cost at 1024 m minus cost at 256 m, paired per environment: V4 mixed
+−0.122 ± 0.097, SE 0.029, 10 of 11 environments lower at 1024 m [−0.055, SE 0.016, 27 of
+40]: **yes, significantly lower**, the first model of this study whose cost keeps falling
+beyond 256 m. V0F for reference −0.045, SE 0.035, 9 of 11 (not significant) [+0.012]; V5
+mixed partial −0.040, SE 0.032 (not significant); V4 at 128 m +0.072 and V5 at 128 m
++0.200 (worse at 1024 m).
+
+Paired comparisons, seed 0, 11 release envs [40 new ones]:
+
+- V4 mixed − V3 at 128 m: +0.04 at 128 m, −0.14 at 256 m (8 of 11), −0.64 / −0.91 / −1.09 at
+  512 / 768 / 1024 m (9-11 of 11) [−0.23 to −1.00 from 256 m, 34-39 of 40].
+- V4 mixed − V0F mixed: +0.12 / +0.07 / +0.07 / +0.07 / +0.06 (2-5 of 11) [−0.02 / −0.03 /
+  −0.10 / −0.09 / −0.08, 20-28 of 40]: equal on the release set, 0.1 better on the new set.
+- V4 mixed − V0 mixed with as-is maps: −0.18 / −0.13 / −0.04 / −0.14 / −0.06 (6-9 of 11)
+  [−0.36 / −0.25 / −0.22 / −0.17 / −0.15, 30-37 of 40].
+- V4 mixed − centralized CVT: −0.30 / −0.59 / −0.67 / −0.69 / −0.69 (7-11 of 11).
+- V4 at 128 m − V3 at 128 m: −0.04 / −0.22 / −0.59 / −0.81 / −1.00 (7-10 of 11) [−0.03 /
+  −0.23 / −0.62 / −0.84 / −0.91, 23-40 of 40]: V4 beats V3 by far more than the seed noise
+  of V3 (0.06-0.29), so seeds 1 and 2 of V4 at 128 m were launched under the agreed rule.
+- V4 at 128 m − V0 r128: −0.00 / +0.11 / −0.58 / −1.53 / −2.44: trained at 128 m only, V4 does
+  not collapse at all (1.9 at every range from 512 m).
+- V5 at 128 m − V0 r128: −0.16 / +0.04 / −0.62 / −1.43 / −2.39 (5-11 of 11); V5 at 128 m −
+  V0F mixed: −0.11 / −0.09 / +0.09 / +0.27 / +0.20.
+
+Reading. V4 answers the open question in part. The bounded edge encoding does what V3's
+raw relative position could not: trained on mixed ranges, V4 fits the data far better than
+any other mixed-range model (validation 0.35), stays below the centralized CVT everywhere,
+equals V0F on the release set and beats it by 0.1 on the new set, and its cost keeps
+decreasing from 256 to 1024 m (−0.12, 10 of 11 environments), which no other model does.
+It still pays 0.14 at 256 m against the 128 m model, like every mixed-range recipe, so
+(a) is not met. Trained at 128 m alone, V4 does not collapse either (1.9 at every range),
+which V3 only avoided after 100 epochs and only down to 2.6: the edge encoding, not the
+training range, is what makes the geometry transferable. V5 at 128 m is the one model that
+meets (a): three fixed-scale map pairs give the 256 m optimum of V0 (1.77) and no collapse
+(1.97 at 1024 m) from the 128 m data alone, but it does not improve with the range (+0.20).
+V5 on mixed ranges is unresolved (8-9 epochs); what it shows so far is V0F-like.
+
+Figures `fig_v4v5.png` (11 release environments) and `fig_v4v5_new40.png`; data
+`results_V45/` (merged sweeps per seed and set, loss histories, run info).
+
 ## 15. Running and next (as of 14 October)
 
 Nothing queued on the GPU partition as of 17 October 21:30; all chains of section 11 retrieved.
-Running on FarmShare as of 19 October 14:30: the V4 / V5 chains of section 14.
+Running on FarmShare as of 20 October 16:30: V4 at 128 m seeds 1-2 (section 14); V5 mixed awaits a decision.
 
 Next, in order (1 and 2 done, section 9; 4 done, section 10):
 

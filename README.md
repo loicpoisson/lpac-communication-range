@@ -62,9 +62,13 @@ when the policy is run with a larger communication range than it was trained wit
   everywhere): the training data must cover the map's content.
 - V3 trained on mixed ranges (seed 0) fails: 2.6-2.9 at every range, above the centralized CVT and
   0.5 above V3 trained at 128 m at short range; one recipe for inputs four times apart fits neither.
-- Running (19 October): V4 (V3 with bounded, range-invariant edge features) and V5 (three pairs of
-  neighbour-map channels at fixed scales 256/512/1024 m), trained on mixed ranges and at 128 m
-  (journal section 14).
+- V4 (V3 with bounded edge features [(p_j − p_i)/d, tanh(d/256 m)]) trained on mixed ranges (3 seeds):
+  1.88 at 256 m, 1.76 at 1024 m, the first model whose cost keeps falling beyond 256 m (−0.12 paired,
+  10 of 11 environments), equal to the fixed-map recipe and below the centralized CVT everywhere;
+  trained at 128 m alone it does not collapse (1.9 at every range). Still 0.14 above V0 at 256 m.
+- V5 (three fixed-scale map pairs, 256/512/1024 m) trained at 128 m alone meets the 256 m criterion
+  (1.77, +0.03 vs V0) with no collapse (1.97 at 1024 m) but does not improve with range; its
+  mixed-range runs are partial (8-9 epochs, slow loader since fixed) and inconclusive.
 - One model with the robot's own range as a GNN input, trained on teams with a range drawn per robot
   (V0R, seed 0): no collapse (1.9-2.1 from 512 m) but equal to plain mixed-range training within
   0.1 and 0.4-0.6 worse than the 128 m model at 128-256 m; in heterogeneous teams it beats the
@@ -99,6 +103,7 @@ figures (French): [`docs/framing.html`](docs/framing.html), also online at
 | `lpac_study/heterogeneous.py`, `lpac_study/mixture.py` | heterogeneous teams at inference (range per robot, frozen-state probe, start-position descriptors) and the mixture of range specialists |
 | `training/redraw_ranges.py` | rebuilds the range-dependent tensors of a dataset at another range, at a fixed map scale, at three fixed scales (V5), or with a range per robot |
 | `tests/` | unit tests of the V4 edge features and the V5 maps |
+| `results_V45/`, `fig_v4v5*.png` | V4 and V5 evaluations per seed on both environment sets, loss histories |
 | `lpac_eval.ipynb` | self-contained Colab notebook (installs, downloads, sweeps, plots) |
 | `run_all.sh` | reruns the range sweep from scratch on Linux/WSL |
 | `farmshare_factorial.sbatch` | Slurm job for the factorial on FarmShare (Intel nodes only) |
