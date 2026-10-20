@@ -26,8 +26,8 @@ from coverage_control import IOUtils
 from coverage_control.nn import LPAC, CNNGNNDataset, TrainModel
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))  # lpac_study, next to training/
-from lpac_study.variants import (RangeDataset, build_model, parameter_count, receptive_field_hops,  # noqa: E402
-                                 uses_comm_map, uses_range_input)
+from lpac_study.variants import (MultiScaleDataset, RangeDataset, build_model, parameter_count,  # noqa: E402
+                                 receptive_field_hops, uses_comm_map, uses_multiscale_maps, uses_range_input)
 
 
 def set_seeds(seed: int) -> None:
@@ -50,7 +50,7 @@ def build(config: dict, world_size: int, device: torch.device, num_workers: int,
     training = config["LPACTraining"]
     use_comm_map = config["ModelConfig"]["UseCommMaps"] and uses_comm_map(variant)
     model = build_model(variant, config).to(device)
-    dataset_class = RangeDataset if uses_range_input(variant) else CNNGNNDataset
+    dataset_class = RangeDataset if uses_range_input(variant) else (MultiScaleDataset if uses_multiscale_maps(variant) else CNNGNNDataset)
     train_dataset = dataset_class(data_dir, "train", use_comm_map, world_size)
     val_dataset = dataset_class(data_dir, "val", use_comm_map, world_size)
     model.actions_mean = train_dataset.targets_mean.to(device)
@@ -70,9 +70,10 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--device", default="auto")
     parser.add_argument("--num-workers", type=int, default=None, help="override NumWorkers")
-    parser.add_argument("--variant", default="V0", choices=("V0", "V1", "V2", "V3", "V0R"),
+    parser.add_argument("--variant", default="V0", choices=("V0", "V1", "V2", "V3", "V0R", "V4", "V5"),
                         help="V0 original LPAC, V1 without neighbour map, V2 edge-geometry GNN, "
-                             "V3 V1 + PointNetConv front layer, V0R V0 + own range as GNN input (lpac_study.variants)")
+                             "V3 V1 + PointNetConv front layer, V0R V0 + own range as GNN input, "
+                             "V4 V3 with bounded edge features, V5 V0 with multi-scale fixed maps (lpac_study.variants)")
     args = parser.parse_args()
 
     set_seeds(args.seed)

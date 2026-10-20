@@ -16,12 +16,25 @@ from coverage_control import CoverageEnvUtils, CoverageSystem, IOUtils, PointVec
 from torch_geometric.data import Data
 
 from .paths import DataPaths
-from .variants import build_model, uses_comm_map, uses_range_input
+from .neighbourhood import comm_maps_from_positions, in_range_mask, robot_positions_double
+from .variants import MULTISCALE_SCALES_M, build_model, uses_comm_map, uses_multiscale_maps, uses_range_input
 
 # Controller options of the authors' eval.toml ([[Controllers]] lpac entry).
 USE_CNN = True
 USE_COMM_MAP = True
 CNN_MAP_SIZE = 32
+
+
+def multiscale_channels(x: torch.Tensor, positions: torch.Tensor, comm_range: float,
+                        scales=MULTISCALE_SCALES_M) -> torch.Tensor:
+    """V5 input: local map, one pair of neighbour channels per fixed scale, obstacle map.
+
+    ``x`` is the library's 4-channel input (local map, two neighbour channels at the range,
+    obstacle map); pair k holds the robots within min(comm_range, scale_k) at scale_k.
+    """
+    pairs = [comm_maps_from_positions(positions, in_range_mask(positions, min(comm_range, s)), s, CNN_MAP_SIZE).to(x.device)
+             for s in scales]
+    return torch.cat([x[:, :1], *pairs, x[:, 3:4]], dim=1)
 
 
 class LPACPolicy:
@@ -72,6 +85,8 @@ class LPACPolicy:
         ).to(self.device)
         if uses_range_input(self.variant):  # homogeneous team: every robot has the test range
             data.ranges = torch.full((data.x.shape[0],), float(params.pCommunicationRange), device=self.device)
+        if uses_multiscale_maps(self.variant):
+            data.x = multiscale_channels(data.x, robot_positions_double(env), float(params.pCommunicationRange)).to(self.device)
         return data
 
     @torch.no_grad()

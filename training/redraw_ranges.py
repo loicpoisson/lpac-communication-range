@@ -112,12 +112,23 @@ def rebuild_hetero(positions: torch.Tensor, ranges: torch.Tensor, chunk: int = 1
     return torch.cat(maps).coalesce(), torch.cat(weights).coalesce()
 
 
-def rebuild(positions: torch.Tensor, comm_range: float, chunk: int = 1000, scale: float | None = None):
-    """Sparse ``comm_maps`` and ``edge_weights`` for all samples, built chunk by chunk."""
+MULTISCALE = (256.0, 512.0, 1024.0)
+
+
+def rebuild(positions: torch.Tensor, comm_range: float, chunk: int = 1000, scale: float | None = None,
+            multiscale: bool = False):
+    """Sparse ``comm_maps`` and ``edge_weights`` for all samples, built chunk by chunk.
+
+    ``multiscale``: six channels, one pair per scale of MULTISCALE (robots within min(range, scale)
+    drawn at that scale), the V5 input; the edge weights keep the range.
+    """
     maps, weights = [], []
     for start in range(0, positions.shape[0], chunk):
         p = positions[start:start + chunk]
-        maps.append(comm_maps(p, comm_range, scale=scale).to_sparse_coo())
+        if multiscale:
+            maps.append(torch.cat([comm_maps(p, comm_range, scale=s) for s in MULTISCALE], dim=2).to_sparse_coo())
+        else:
+            maps.append(comm_maps(p, comm_range, scale=scale).to_sparse_coo())
         weights.append(edge_weights(p, comm_range).to_sparse_coo())
     return torch.cat(maps).coalesce(), torch.cat(weights).coalesce()
 
@@ -161,7 +172,7 @@ def write_hetero(src: Path, dst: Path, seed: int = 0) -> None:
               f"{weights.values().numel() / positions.shape[0] / positions.shape[1]:.2f} incoming edges per robot")
 
 
-def write(src: Path, dst: Path, comm_range: float, scale: float | None = None) -> None:
+def write(src: Path, dst: Path, comm_range: float, scale: float | None = None, multiscale: bool = False) -> None:
     dst.mkdir(parents=True, exist_ok=True)
     splits = [s for s in SPLITS if (src / s).is_dir()]
     if not splits:  # an unsplit part written by data_generation.py --split False
@@ -172,7 +183,7 @@ def write(src: Path, dst: Path, comm_range: float, scale: float | None = None) -
     for split in splits:
         (dst / split).mkdir(exist_ok=True)
         positions = load(src / split / "robot_positions.pt")
-        maps, weights = rebuild(positions, comm_range, scale=scale)
+        maps, weights = rebuild(positions, comm_range, scale=scale, multiscale=multiscale)
         torch.save(maps, dst / split / "comm_maps.pt")
         torch.save(weights, dst / split / "edge_weights.pt")
         if split != ".":
@@ -182,7 +193,8 @@ def write(src: Path, dst: Path, comm_range: float, scale: float | None = None) -
         print(f"{split}: {positions.shape[0]} samples redrawn at {comm_range:.0f} m"
               f"{'' if scale is None else f' (map scale {scale:.0f} m)'}, "
               f"{weights.values().numel() / positions.shape[0] / positions.shape[1]:.2f} neighbours per robot, "
-              f"{maps.values().numel() / 2 / positions.shape[0] / positions.shape[1]:.2f} robots drawn per map")
+              f"{maps.values().numel() / maps.shape[2] / positions.shape[0] / positions.shape[1]:.2f} robots drawn per map"
+              f"{' (6 channels)' if multiscale else ''}")
 
 
 def link(src: Path, dst: Path) -> None:
@@ -201,6 +213,7 @@ def main() -> None:
     parser.add_argument("--check", help="folder holding robot_positions.pt, comm_maps.pt, edge_weights.pt to compare against")
     parser.add_argument("--range", type=float, default=None, help="communication range in metres")
     parser.add_argument("--hetero", action="store_true", help="draw a range per robot in {128, 256, 512, 1024} m instead")
+    parser.add_argument("--multiscale", action="store_true", help="V5 maps: three pairs at fixed scales 256/512/1024 m")
     parser.add_argument("--seed", type=int, default=0, help="seed of the per-robot range draw (--hetero)")
     parser.add_argument("--fixed-scale", type=float, default=None,
                         help="draw the maps at this fixed scale with the robots within min(range, scale); the graph keeps the range")
@@ -214,7 +227,7 @@ def main() -> None:
     else:
         if not (args.src and args.dst):
             parser.error("--src and --dst are required unless --check is given")
-        write(Path(args.src), Path(args.dst), args.range, args.fixed_scale)
+        write(Path(args.src), Path(args.dst), args.range, args.fixed_scale, args.multiscale)
 
 
 if __name__ == "__main__":

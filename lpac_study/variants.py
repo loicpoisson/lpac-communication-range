@@ -14,6 +14,10 @@ Three models, same CNN, same action MLP, same training recipe:
 * ``V0R`` the original LPAC with one more GNN input per robot: its own communication range
   divided by the world size (experiment H2, trained on teams with a range drawn per robot).
 * ``V3`` V1 plus one ``PointNetConv`` layer in front of the unchanged ``TAGConv`` stack.
+* ``V4`` V3 with bounded, range-invariant edge features: the unit vector towards the neighbour
+  and ``tanh(d / 256 m)`` instead of the raw relative position.
+* ``V5`` the original LPAC with three pairs of neighbour-map channels drawn at fixed scales
+  (256, 512, 1024 m) instead of one pair drawn at the communication range: 8 CNN channels.
   The layer reads, for every edge, the relative position of the neighbour divided by a
   fixed constant of 256 m (never by the range, never by the world size), and adds its
   output to the TAGConv input (residual connection). Receptive field 16 hops.
@@ -32,7 +36,8 @@ from coverage_control.nn import LPAC
 from coverage_control.nn.data_loaders.loaders import CNNGNNDataset
 from torch_geometric.nn import GATv2Conv, PointNetConv
 
-VARIANTS = ("V0", "V1", "V2", "V3", "V0R")
+VARIANTS = ("V0", "V1", "V2", "V3", "V0R", "V4", "V5")
+MULTISCALE_SCALES_M = (256.0, 512.0, 1024.0)  # V5: one pair of map channels per scale
 EDGE_DIM = 2
 HEADS = 4
 # V3 constants. ``data.pos`` is (p + W/2) / W with W the world size (1024 m in every dataset of
@@ -45,8 +50,13 @@ POINTNET_HIDDEN = 256
 
 
 def uses_comm_map(variant: str) -> bool:
-    """Whether the CNN input carries the two neighbour-map channels."""
-    return variant in ("V0", "V0R")
+    """Whether the CNN input carries neighbour-map channels (two for V0/V0R, six for V5)."""
+    return variant in ("V0", "V0R", "V5")
+
+
+def uses_multiscale_maps(variant: str) -> bool:
+    """Whether the neighbour maps are the three fixed-scale pairs of V5."""
+    return variant == "V5"
 
 
 def uses_range_input(variant: str) -> bool:
@@ -98,6 +108,35 @@ class RangeDataset(CNNGNNDataset):
     def get(self, idx):
         data, targets = super().get(idx)
         data.ranges = self.robot_ranges[idx]
+        return data, targets
+
+
+class MultiScaleDataset(CNNGNNDataset):
+    """Dataset for V5 that keeps the six neighbour-map channels sparse until a sample is requested.
+
+    The library's loader densifies ``comm_maps.pt`` at load time; with six channels that is
+    100,000 x 32 x 6 x 32 x 32 floats, 78 GB, which does not fit next to the other tensors.
+    The maps hold at most a few tens of nonzero cells per robot, so they are kept as the
+    sparse COO tensor written by ``redraw_ranges.py --multiscale`` and densified per sample in
+    ``get``; the resulting input is identical to what ``DataLoaderUtils.load_maps`` would build
+    (local map, six neighbour channels, obstacle map).
+    """
+
+    def __init__(self, data_dir, stage, use_comm_map=True, world_size=1024):
+        super().__init__(data_dir, stage, False, world_size)  # local and obstacle maps, dense
+        comm = torch.load(f"{data_dir}/{stage}/comm_maps.pt", weights_only=True)
+        self.comm_maps = comm.coalesce() if comm.is_sparse else comm.to_sparse_coo().coalesce()
+        self.num_comm_channels = self.comm_maps.shape[2]
+
+    def get(self, idx):
+        from coverage_control.nn.data_loaders.data_loader_utils import DataLoaderUtils
+        base = self.maps[idx]  # (robots, 2, S, S): local map, obstacle map
+        comm = self.comm_maps[idx].to_dense()  # (robots, 6, S, S)
+        maps = torch.cat([base[:, :1], comm, base[:, 1:2]], dim=1)
+        data = DataLoaderUtils.to_torch_geometric_data(maps, self.edge_weights[idx], self.robot_positions[idx])
+        targets = self.targets[idx]
+        if targets.dim == 3:
+            targets = targets.view(-1, targets.shape[-1])
         return data, targets
 
 
@@ -157,6 +196,8 @@ def variant_config(config: dict, variant: str) -> dict:
     if not uses_comm_map(variant):
         config["CNNBackBone"]["InputDim"] = 2
         config["ModelConfig"]["UseCommMaps"] = False
+    if uses_multiscale_maps(variant):
+        config["CNNBackBone"]["InputDim"] = 2 + 2 * len(MULTISCALE_SCALES_M)
     return config
 
 
@@ -205,6 +246,92 @@ class LPACEdgeGeometry(LPAC):
         return self.output_linear(self.gnn_mlp(gnn_output))
 
 
+class BoundedGeometryConv(torch_geometric.nn.MessagePassing):
+    """PointNet-style layer whose edge input is bounded and does not scale with the range (V4).
+
+    For every edge j -> i the message is ``local_nn([x_j, e_ij])`` with
+    ``e_ij = [(p_j - p_i) / d, tanh(d / scale)]`` (unit direction and a squashed distance, three
+    numbers in [-1, 1]); messages are max-aggregated over the neighbours of i (self-loop with
+    ``e = 0`` included, so an isolated robot still gets one message) and mapped through
+    ``global_nn``. The same structure as ``PointNetConv`` (Qi et al., 2017), with the raw
+    relative position replaced by its bounded encoding.
+    """
+
+    def __init__(self, local_nn: torch.nn.Module, global_nn: torch.nn.Module):
+        super().__init__(aggr="max")
+        self.local_nn = local_nn
+        self.global_nn = global_nn
+
+    def forward(self, x: torch.Tensor, edge_index: torch.Tensor, edge_attr: torch.Tensor) -> torch.Tensor:
+        loops = torch.arange(x.shape[0], device=x.device)
+        edge_index = torch.cat([edge_index, torch.stack([loops, loops])], dim=1)
+        edge_attr = torch.cat([edge_attr, torch.zeros(x.shape[0], edge_attr.shape[1], device=x.device, dtype=edge_attr.dtype)])
+        out = self.propagate(edge_index, x=x, edge_attr=edge_attr)
+        return self.global_nn(out)
+
+    def message(self, x_j: torch.Tensor, edge_attr: torch.Tensor) -> torch.Tensor:
+        return self.local_nn(torch.cat([x_j, edge_attr], dim=-1))
+
+
+class LPACBoundedGeometry(LPAC):
+    """V4: V3 with bounded, range-invariant edge features.
+
+    V3 reads ``(p_j - p_i) / 256 m`` on every edge: at 1024 m those inputs are four times larger
+    than at training, and section 13 shows that one recipe for both regimes fits neither. V4
+    keeps everything of V3 (no neighbour map, the same five TAGConv layers, the same residual
+    front layer, the same hidden width) and only changes what the front layer reads:
+    ``e_ij = [(p_j - p_i) / d, tanh(d / 256 m)]``, the unit direction towards the neighbour and
+    a squashed distance. Every component lies in [-1, 1] whatever the range; scaling all
+    positions by a factor leaves the direction unchanged and only moves the tanh, so a long
+    range changes the *number* of edges the layer sees, not the range of its inputs. V3 against
+    V4 therefore isolates the edge encoding.
+    """
+
+    def __init__(self, config: dict):
+        super().__init__(variant_config(config, "V4"))
+        width = self.cnn_backbone.latent_size + 2  # 34, what the first TAGConv layer expects
+        self.geometry = BoundedGeometryConv(
+            local_nn=torch.nn.Sequential(torch.nn.Linear(width + 3, POINTNET_HIDDEN), torch.nn.ReLU(),
+                                         torch.nn.Linear(POINTNET_HIDDEN, POINTNET_HIDDEN)),
+            global_nn=torch.nn.Sequential(torch.nn.ReLU(), torch.nn.Linear(POINTNET_HIDDEN, width)))
+
+    @staticmethod
+    def edge_features(pos: torch.Tensor, edge_index: torch.Tensor, scale_m: float = POINTNET_SCALE_M) -> torch.Tensor:
+        """``[(p_j - p_i) / d, tanh(d / scale)]`` per edge j -> i, from the world-normalized ``data.pos``."""
+        sender, receiver = edge_index[0], edge_index[1]
+        rel = (pos[sender] - pos[receiver]) * WORLD_SIZE_M  # metres
+        dist = rel.norm(dim=-1, keepdim=True)
+        direction = rel / dist.clamp_min(1e-6)
+        return torch.cat([direction, torch.tanh(dist / scale_m)], dim=-1)
+
+    def forward(self, data: torch_geometric.data.Data) -> torch.Tensor:
+        x, edge_index, pos = data.x, data.edge_index, data.pos
+        cnn_output = self.cnn_backbone(x.view(-1, x.shape[-3], x.shape[-2], x.shape[-1]))
+        gnn_input = torch.cat([cnn_output, pos], dim=-1)
+        geometry = torch.relu(self.geometry(gnn_input, edge_index, self.edge_features(pos, edge_index)))
+        gnn_output = self.gnn_backbone(gnn_input + geometry, edge_index)
+        return self.output_linear(self.gnn_mlp(gnn_output))
+
+
+class LPACMultiScale(LPAC):
+    """V5: LPAC whose neighbour maps are three pairs of channels at fixed scales (256, 512, 1024 m).
+
+    The original model draws one pair of channels at the communication range, so the drawing
+    scale moves with the range and the CNN reads an image it was not trained on (section 4).
+    The inference-time fix draws one pair at a fixed 256 m scale (section 9) and loses the
+    neighbours beyond 256 m. V5 gives the CNN all three: pair k holds the robots within
+    min(range, scale_k) drawn at scale_k with the library's value convention (p_j - p_i) /
+    scale_k, so at 128 m the three pairs show the same (few) neighbours at three zooms, and at
+    1024 m the 256 m pair is the fixed-scale map of section 9 while the 1024 m pair is the
+    original map. CNN input 8 channels (local map, six neighbour channels, obstacle map);
+    nothing else changes. The datasets are redrawn from the stored positions
+    (``training/redraw_ranges.py --multiscale``).
+    """
+
+    def __init__(self, config: dict):
+        super().__init__(variant_config(config, "V5"))
+
+
 def build_model(variant: str, config: dict) -> LPAC:
     """The model of a variant from the release ``learning_params`` dictionary."""
     if variant not in VARIANTS:
@@ -215,6 +342,10 @@ def build_model(variant: str, config: dict) -> LPAC:
         return LPACPointNet(config)
     if variant == "V0R":
         return LPACRangeInput(config)
+    if variant == "V4":
+        return LPACBoundedGeometry(config)
+    if variant == "V5":
+        return LPACMultiScale(config)
     return LPAC(variant_config(config, variant))
 
 
@@ -227,4 +358,4 @@ def receptive_field_hops(variant: str, config: dict) -> int:
     layers = config["GNNBackBone"]["NumLayers"]
     if variant == "V2":
         return layers
-    return layers * config["GNNBackBone"]["NumHops"] + (1 if variant == "V3" else 0)
+    return layers * config["GNNBackBone"]["NumHops"] + (1 if variant in ("V3", "V4") else 0)

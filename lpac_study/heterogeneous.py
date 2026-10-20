@@ -43,7 +43,7 @@ from .lpac_policy import CNN_MAP_SIZE, LPACPolicy
 from .neighbourhood import relative_positions, robot_positions_double
 from .paths import resolve_data_dir
 from .simulation import load_initial_positions, make_environment, make_parameters
-from .variants import uses_range_input
+from .variants import MULTISCALE_SCALES_M, uses_comm_map, uses_multiscale_maps, uses_range_input
 
 FIELDS = ["env", "fraction", "draw", "map", "model", "num_long", "long_range", "short_range",
           "cost_mean", "cost_final", "ratio_mean", "ratio_final", "clairvoyant_cost_mean",
@@ -109,7 +109,12 @@ class HeterogeneousPolicy(LPACPolicy):
         else:
             scales = torch.full_like(self.ranges, FIXED_SCALE)
             map_mask = reception_mask(positions, torch.minimum(self.ranges, scales))
-        data.x[:, COMM_CHANNELS] = comm_maps_per_robot(positions, map_mask, scales, CNN_MAP_SIZE).to(self.device)
+        if uses_multiscale_maps(self.variant):  # pair k: robots within min(r_i, scale_k) at scale_k, per robot
+            pairs = [comm_maps_per_robot(positions, reception_mask(positions, torch.minimum(self.ranges, torch.full_like(self.ranges, s))),
+                                         torch.full_like(self.ranges, s), CNN_MAP_SIZE).to(self.device) for s in MULTISCALE_SCALES_M]
+            data.x = torch.cat([data.x[:, :1], *pairs, data.x[:, 3:4]], dim=1)
+        elif uses_comm_map(self.variant):  # map-less variants (V1-V4) only see the graph
+            data.x[:, COMM_CHANNELS] = comm_maps_per_robot(positions, map_mask, scales, CNN_MAP_SIZE).to(self.device)
         if uses_range_input(self.variant):
             data.ranges = self.ranges.to(torch.float32).to(self.device)
         return data
@@ -219,7 +224,7 @@ def main(argv=None) -> None:
     parser.add_argument("--short-range", type=float, default=128.0)
     parser.add_argument("--model", default=None, help="state dict of another LPAC-K3 checkpoint (default: published)")
     parser.add_argument("--model-tag", default="published")
-    parser.add_argument("--variant", default="V0", choices=("V0", "V0R"), help="architecture of --model")
+    parser.add_argument("--variant", default="V0", choices=("V0", "V0R", "V4", "V5"), help="architecture of --model")
     parser.add_argument("--num-envs", type=int, default=11)
     parser.add_argument("--env-start", type=int, default=0)
     parser.add_argument("--env-end", type=int, default=None)
