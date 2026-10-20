@@ -1081,8 +1081,12 @@ runs hit the 4 h 30 limit after 8-9 of 25 epochs: 1,640 s per epoch instead of t
 of V0F on the same data, because indexing a coalesced sparse tensor by sample scans all of
 its 190 M entries (0.3 s per sample, 20 min per epoch across 27 workers); the loader now
 splits the entries per sample once at load time (`MultiScaleDataset.comm_map`, same maps,
-0.1 ms per sample on the small set; timing on the real set in `training/time_loader.py`).
-Their evaluations below are labelled partial and no V5-mixed conclusion is drawn.
+0.1 ms per sample on the small set). Measured on the real mixed training set (70,000
+samples, 117 M nonzero entries, `training/time_loader.py`, job 1861155): 180 ms per sample
+with whole-tensor indexing against 0.5 ms with the per-sample split, identical maps; the
+split itself takes 267 s once at load time. Their evaluations below are labelled partial and
+superseded: the three seeds were restarted from scratch with the fixed loader on 20 October
+(approved by Loïc, about 9.5 GPU-hours), behind the V4 128 m seeds.
 
 **Results (20 October, 16:00).** Training (epochs, best validation and its epoch, training
 loss at the best epoch, final training loss): V4 mixed 25 / 0.351-0.356 at 21-25 / 0.29 /
