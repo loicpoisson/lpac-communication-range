@@ -1031,10 +1031,51 @@ Execution order on the GPU partition (one job per user accrues queue age, so the
 run one after the other in submission order): r512 → r1024 → A mixed → A 128 → B → H2.
 CPU in parallel: C now, H1 after r1024.
 
-## 14. Running and next (as of 14 October)
+## 14. V4 and V5: towards a model that improves with the range (19 October, launched 14:30)
+
+Approved by Loïc, relayed by the planning session. The open question after section 13: every
+recipe so far is at best flat beyond 256 m; is there one that gets *better* with the range,
+as the paper's Fig. 20 suggests?
+
+**V4, V3 with bounded edge features.** Same as V3 (no neighbour map, residual PointNet-style
+front layer, unchanged TAGConv stack, same widths), but the edge input is no longer
+(p_j − p_i) / 256 m, which grows with the range and is why V3 fails on mixed ranges
+(section 13, B): per edge j → i with d = |p_j − p_i|, e_ij = [(p_j − p_i) / d, tanh(d / 256 m)],
+three numbers in [−1, 1]; self-loop e = 0. `BoundedGeometryConv` (a small MessagePassing
+layer: message = local_nn([x_j, e_ij]), max aggregation, global_nn, self-loops) and
+`LPACBoundedGeometry` in `lpac_study/variants.py`; 1,889,892 parameters (V3 + 256), 16 hops.
+V3 against V4 isolates the edge encoding.
+
+**V5, multi-scale fixed neighbour maps.** The original LPAC with three pairs of neighbour
+channels drawn at fixed scales 256, 512 and 1024 m (16 / 32 / 64 m per cell on the same
+32 × 32 grid, value (p_j − p_i) / scale), each pair holding the robots within min(range,
+scale): CNN input 8 channels, nothing else changes; 1,807,362 parameters. At 128 m the three
+pairs show the same neighbours at three zooms; at 1024 m the 256 m pair is the fixed-scale
+map of section 9 and the 1024 m pair is the original map. Datasets redrawn from the stored
+positions (`redraw_ranges.py --multiscale`, with `--infer-range` recovering each sample's
+range of the merged mixed set from its edge weights); the six channels are kept sparse until
+a sample is requested (`MultiScaleDataset`), 78 GB dense otherwise.
+
+Unit tests (`tests/test_variants_v4v5.py`, 6 passing locally and on FarmShare): V4 features
+bounded and invariant to a scaling of the positions except through the tanh; at 128 m every
+V5 pair is the drawing of exactly the in-range neighbours; at 1024 m the 256 m pair equals
+the C3 map bit for bit; the dataset and inference builders agree.
+
+Runs (one L40S each, best-validation checkpoint, evaluations at 128-1024 m on the 11 release
+and the 40 new environments): trials of 3 epochs on 2,500 samples (jobs 1858441-1858442),
+then in priority order V5 on mixed ranges (3 seeds, 25 epochs, jobs 1858443-1858449), V4 on
+mixed ranges (3 seeds, 25 epochs, 1858452-1858458), V4 at 128 m (seed 0, 100 epochs,
+1858461), V5 at 128 m (seed 0, 40 epochs, sanity check, 1858464). Estimated 22 GPU-hours;
+V4 at 128 m seeds 1-2 (4-5 more) wait for an explicit go. To report per variant and seed:
+cost against range next to the published model, V0F (A) and V3; (a) within 0.05 of V0 at
+256 m? (b) is the cost at 1024 m significantly lower than at 256 m (paired, seed noise
+0.02-0.05 at 256 m)? and the final training loss against V0 / V3 to separate underfitting
+from transfer failure.
+
+## 15. Running and next (as of 14 October)
 
 Nothing queued on the GPU partition as of 17 October 21:30; all chains of section 11 retrieved.
-Nothing running or queued on FarmShare as of 19 October 11:30; every chain of section 13 is retrieved.
+Running on FarmShare as of 19 October 14:30: the V4 / V5 chains of section 14.
 
 Next, in order (1 and 2 done, section 9; 4 done, section 10):
 
