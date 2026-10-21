@@ -1236,6 +1236,39 @@ on it is unaffected. The same caveat applies to every "within 0.05" statement of
 13-14 made with three seeds: the relevant noise at 256 m on the release set is about 0.08
 per run, so a 0.05 margin is not resolvable without 6-10 runs.
 
+**Heterogeneous teams with V4 mixed (21 October, 16:30; job 1864176, seed 0, 11 release
+environments, f ∈ {0, 1/4, 1/2, 3/4, 1}, 4 draws of the long-range subset, no map to draw).**
+Cost ratio, mean ± std across environments:
+
+| Fraction at 1024 m | 0 | 1/4 | 1/2 | 3/4 | 1 |
+|---|---|---|---|---|---|
+| V4 mixed, one model for everyone | 2.22 ± 0.35 | 2.20 ± 0.33 | 2.07 ± 0.27 | 1.96 ± 0.29 | **1.83** ± 0.29 |
+| published model, as-is map (8 draws) | 1.98 | 2.42 | 2.89 | 3.95 | 5.30 |
+| published model, fixed 256 m map | 1.93 | 2.10 | 1.98 | 1.86 | 1.71 |
+| V0R, own range as input (section 13) | 2.75 | 2.49 | 2.16 | 2.08 | 1.89 |
+| mixture of the two specialists (H1) | 2.15 | 2.17 | 2.24 | 1.95 | 1.80 |
+
+Paired: V4 mixed − published as is +0.24 at f = 0 (3 of 11), −0.23 at 1/4 (9 of 11), −0.83 /
+−1.99 / −3.47 from 1/2 (10-11 of 11); V4 mixed − published with the fixed map +0.30 at f = 0
+(2 of 11), then +0.09 / +0.08 / +0.10 / +0.12 (2-6 of 11); V4 mixed − V0R −0.53 / −0.29 /
+−0.10 / −0.12 / −0.06 (7-11 of 11); V4 mixed − mixture of specialists +0.07 / +0.02 / −0.17 /
++0.01 / +0.03 (3-8 of 11). From f = 0 to f = 1 the cost falls by 0.39 ± 0.20 (11 of 11), and
+it falls at every step (2.22 → 2.20 → 2.07 → 1.96 → 1.83). Frozen-state probe: the 128 m
+robots change their actions by 19 / 34 / 43 % at f = 1/4 / 1/2 / 3/4 (published model 21 /
+29 / 36 %), the 1024 m robots by 150 / 113 / 110 %.
+
+Reading. V4 mixed is the first model for which every robot that hears farther helps the
+team: the cost decreases monotonically with the fraction of long-range robots, in every
+environment, which neither the published model (which collapses), nor the fixed-scale map
+(flat, with a dip at f = 1/4), nor V0R (which starts far too high), nor the mixture (not
+monotone) does. It beats V0R at every fraction, equals the mixture of specialists with a
+single model and no switching, and loses only to the inference-time fix on the published
+model, by 0.1 at every fraction above zero and by 0.3 at f = 0, where its own weakness at
+128 m (2.2 against 2.0) shows. In a heterogeneous team it is the best single trained model
+of this study.
+
+Figure `fig_hetero_candidates.png`; data `results_V45/results_hetero_V4mixed.csv`.
+
 Figures `fig_v4v5.png` (11 release environments) and `fig_v4v5_new40.png`, all seeds; data
 `results_V45/` (merged sweeps per seed and set, `*_v2_*` for the restarted V5 mixed runs,
 loss histories of both launches, the first under `train_V5mixed_s*_partial/`).
@@ -1243,7 +1276,7 @@ loss histories of both launches, the first under `train_V5mixed_s*_partial/`).
 ## 15. Running and next (as of 14 October)
 
 Nothing queued on the GPU partition as of 17 October 21:30; all chains of section 11 retrieved.
-Running on FarmShare as of 21 October 15:00: the heterogeneous-team evaluation of V4 mixed (section 14).
+Nothing running or queued on FarmShare as of 21 October 17:00; every chain of section 14 is retrieved.
 
 Next, in order (1 and 2 done, section 9; 4 done, section 10):
 

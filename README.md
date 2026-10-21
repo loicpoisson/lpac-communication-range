@@ -67,6 +67,10 @@ when the policy is run with a larger communication range than it was trained wit
   10 of 11 environments), equal to the fixed-map recipe and below the centralized CVT everywhere;
   trained at 128 m alone (3 seeds) it does not collapse (1.9-2.0 at every range) and beats V3 at
   every range. Still 0.14 above V0 at 256 m.
+- In heterogeneous 128/1024 m teams, V4 mixed is the first model whose cost falls monotonically with
+  the fraction of far-hearing robots (2.22 to 1.83, 11 of 11 environments), beating V0R everywhere and
+  matching the mixture of specialists with one model; it trails the fixed-scale map on the published
+  model by 0.1.
 - V5 (three fixed-scale map pairs, 256/512/1024 m) trained on mixed ranges: 1.84 ± 0.08 at 256 m over
   six runs (two launches of three seeds, which differ by up to 0.15 at a fixed seed: GPU training is
   not deterministic), 0.10 above V0, flat 1.82-1.84 up to 1024 m, equal to the single fixed-scale map
@@ -107,7 +111,7 @@ figures (French): [`docs/framing.html`](docs/framing.html), also online at
 | `lpac_study/heterogeneous.py`, `lpac_study/mixture.py` | heterogeneous teams at inference (range per robot, frozen-state probe, start-position descriptors) and the mixture of range specialists |
 | `training/redraw_ranges.py` | rebuilds the range-dependent tensors of a dataset at another range, at a fixed map scale, at three fixed scales (V5), or with a range per robot |
 | `tests/` | unit tests of the V4 edge features and the V5 maps |
-| `results_V45/`, `fig_v4v5*.png` | V4 and V5 evaluations per seed on both environment sets, loss histories |
+| `results_V45/`, `fig_v4v5*.png`, `fig_hetero_candidates.png` | V4 and V5 evaluations per seed on both environment sets, loss histories, V4 mixed in heterogeneous teams |
 | `lpac_eval.ipynb` | self-contained Colab notebook (installs, downloads, sweeps, plots) |
 | `run_all.sh` | reruns the range sweep from scratch on Linux/WSL |
 | `farmshare_factorial.sbatch` | Slurm job for the factorial on FarmShare (Intel nodes only) |
