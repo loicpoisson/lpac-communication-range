@@ -36,7 +36,7 @@ VARIANT_LABELS = {"V0": "V0: as published (neighbour map + TAGConv)",
                   "V4": "V4: no map, bounded edge features [(p_j-p_i)/d, tanh(d/256 m)], trained at 128 m",
                   "V4mixed": "V4 trained on mixed ranges",
                   "V5": "V5: three fixed-scale map pairs (256/512/1024 m), trained at 128 m",
-                  "V5mixed": "V5 trained on mixed ranges (partial: 8-9 epochs)"}
+                  "V5mixed": "V5 trained on mixed ranges"}
 
 
 def env_means(path: str, controller: str = "lpac") -> pd.Series:

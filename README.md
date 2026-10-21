@@ -65,10 +65,13 @@ when the policy is run with a larger communication range than it was trained wit
 - V4 (V3 with bounded edge features [(p_j − p_i)/d, tanh(d/256 m)]) trained on mixed ranges (3 seeds):
   1.88 at 256 m, 1.76 at 1024 m, the first model whose cost keeps falling beyond 256 m (−0.12 paired,
   10 of 11 environments), equal to the fixed-map recipe and below the centralized CVT everywhere;
-  trained at 128 m alone it does not collapse (1.9 at every range). Still 0.14 above V0 at 256 m.
-- V5 (three fixed-scale map pairs, 256/512/1024 m) trained at 128 m alone meets the 256 m criterion
-  (1.77, +0.03 vs V0) with no collapse (1.97 at 1024 m) but does not improve with range; its
-  mixed-range runs are partial (8-9 epochs, slow loader since fixed) and inconclusive.
+  trained at 128 m alone (3 seeds) it does not collapse (1.9-2.0 at every range) and beats V3 at
+  every range. Still 0.14 above V0 at 256 m.
+- V5 (three fixed-scale map pairs, 256/512/1024 m) trained on mixed ranges (3 seeds): 1.78 at 256 m,
+  within 0.04 of V0, flat 1.80-1.82 up to 1024 m, 0.08 better than the single fixed-scale map at
+  256 m: the first trained recipe that keeps the 256 m optimum without intervention at test time;
+  it does not improve with range (+0.05). Trained at 128 m alone it also meets the 256 m criterion
+  (1.77) with no collapse (1.97 at 1024 m).
 - One model with the robot's own range as a GNN input, trained on teams with a range drawn per robot
   (V0R, seed 0): no collapse (1.9-2.1 from 512 m) but equal to plain mixed-range training within
   0.1 and 0.4-0.6 worse than the 128 m model at 128-256 m; in heterogeneous teams it beats the

@@ -1155,13 +1155,64 @@ meets (a): three fixed-scale map pairs give the 256 m optimum of V0 (1.77) and n
 (1.97 at 1024 m) from the 128 m data alone, but it does not improve with the range (+0.20).
 V5 on mixed ranges is unresolved (8-9 epochs); what it shows so far is V0F-like.
 
-Figures `fig_v4v5.png` (11 release environments) and `fig_v4v5_new40.png`; data
-`results_V45/` (merged sweeps per seed and set, loss histories, run info).
+**Completed seeds (21 October).** V4 at 128 m seeds 1-2 (100 epochs, best validation 0.411 and
+0.415 at epochs 26 and 20, final training loss 0.22 and 0.21) and V5 on mixed ranges restarted
+from scratch with the fixed loader (25 epochs in 2 h 30 each, 315 s per epoch; best validation
+0.460 / 0.468 / 0.454 at epochs 5 / 4 / 5, final training loss 0.19 / 0.20 / 0.18; the partial
+runs above are superseded).
+
+| | 128 m | 256 m | 512 m | 768 m | 1024 m |
+|---|---|---|---|---|---|
+| V4 at 128 m, 3 seeds, 11 release envs | 2.10 ± 0.04 | 1.88 ± 0.08 | 1.91 ± 0.02 | 1.96 ± 0.08 | 1.98 ± 0.08 |
+| V4 at 128 m, 3 seeds, 40 new envs | 2.05 ± 0.03 | 1.87 ± 0.02 | 1.90 ± 0.01 | 1.90 ± 0.02 | 1.90 ± 0.02 |
+| V5 mixed ranges, 3 seeds, 11 release envs | 2.12 ± 0.03 | **1.78 ± 0.04** | 1.80 ± 0.05 | 1.82 ± 0.02 | 1.82 ± 0.03 |
+| V5 mixed ranges, 3 seeds, 40 new envs | 2.07 ± 0.01 | 1.88 ± 0.02 | 1.89 ± 0.03 | 1.90 ± 0.03 | 1.90 ± 0.03 |
+| V4 mixed ranges, 3 seeds (above), 11 / 40 | 2.21 / 2.14 | 1.88 / 1.87 | 1.77 / 1.81 | 1.76 / 1.81 | **1.76** / 1.82 |
+
+Question (a) at 256 m, seed-averaged and paired, 11 release envs [40 new ones]: V4 at 128 m
++0.140 ± 0.182, SE 0.055, 3 of 11: no [+0.045, SE 0.033, 19 of 40: yes]; V5 mixed
++0.037 ± 0.114, SE 0.034, 4 of 11: **yes** [+0.054, SE 0.033, 17 of 40: just outside]; V4
+mixed +0.139: no [+0.052]. Question (b), 1024 m minus 256 m: V4 at 128 m +0.100 (SE 0.054,
+3 of 11 lower at 1024 m) [+0.035]: no; V5 mixed +0.045 (SE 0.059, 6 of 11) [+0.027]: flat,
+no; V4 mixed −0.122 (SE 0.029, 10 of 11) [−0.055, SE 0.016, 27 of 40]: yes, still the only one.
+
+Paired, seed-averaged, 11 release envs [40 new ones]:
+
+- V5 mixed − V4 mixed: −0.09 at 128 m (8 of 11), −0.10 ± 0.11 at 256 m (SE 0.03, 10 of 11),
+  +0.03 / +0.06 / +0.07 at 512-1024 m (5-8 of 11) [−0.07, 0.00, +0.08 / +0.08 / +0.08,
+  14-16 of 40]: V5 is the better model at 256 m, V4 at 768-1024 m, by 0.1 either way.
+- V5 mixed − V0F: +0.01 / −0.08 (8 of 11) / −0.03 / +0.01 / +0.01 [−0.02 to −0.03, 22-27 of
+  40]: the three fixed-scale pairs improve on the single fixed-scale map by 0.08 at 256 m
+  and are equal elsewhere.
+- V5 mixed − V0 r128: −0.03 / +0.04 / −0.65 / −1.76 / −2.79 (7-11 of 11); V5 mixed −
+  centralized CVT −0.40 to −0.75 (10-11 of 11).
+- V4 at 128 m − V3 at 128 m: −0.14 / −0.13 / −0.40 / −0.53 / −0.60 (10-11 of 11) [−0.07 to
+  −0.53, 27-40 of 40]: the bounded encoding beats V3 at every range by 2-6 standard errors.
+- V4 at 128 m − V4 mixed: −0.11 at 128 m (10 of 11), 0.00 at 256 m, +0.13 / +0.20 / +0.22
+  at 512-1024 m (0-1 of 11): training on mixed ranges buys V4 0.2 at long range and costs
+  0.1 at 128 m.
+
+Reading. Two different answers to the two questions. V5 on mixed ranges is the model that
+keeps the 256 m optimum: 1.78, within 0.04 of V0, with a flat 1.80-1.82 up to 1024 m, below
+the centralized CVT everywhere and 0.08 better than V0F at 256 m; it is the first trained
+recipe that meets criterion (a) on the release set (just outside on the new set, +0.054),
+and it does so with the original architecture plus four map channels. V4 on mixed ranges is
+the model that improves with the range: 1.88 at 256 m but 1.76 at 1024 m (−0.12, 10 of 11
+environments), 0.07 below V5 there. Neither does both. V4 at 128 m alone, with three seeds,
+confirms that the bounded edge encoding removes the collapse by itself (1.9-2.0 at every
+range) and beats V3 at every range, but it does not improve with the range (+0.10) and sits
+0.14 above V0 at 256 m. By the agreed order, (b) first and (a) second, V4 mixed is the
+candidate taken to the heterogeneous-team evaluation (jobs below); V5 mixed is the better
+candidate if the 256 m level is what matters.
+
+Figures `fig_v4v5.png` (11 release environments) and `fig_v4v5_new40.png`, all seeds; data
+`results_V45/` (merged sweeps per seed and set, `*_v2_*` for the restarted V5 mixed runs,
+loss histories including the superseded partial runs under `train_V5mixed_s*_partial/`).
 
 ## 15. Running and next (as of 14 October)
 
 Nothing queued on the GPU partition as of 17 October 21:30; all chains of section 11 retrieved.
-Running on FarmShare as of 20 October 16:30: V4 at 128 m seeds 1-2 (section 14); V5 mixed awaits a decision.
+Running on FarmShare as of 21 October 15:00: the heterogeneous-team evaluation of V4 mixed (section 14).
 
 Next, in order (1 and 2 done, section 9; 4 done, section 10):
 
