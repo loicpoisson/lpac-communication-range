@@ -1205,9 +1205,40 @@ range) and beats V3 at every range, but it does not improve with the range (+0.1
 candidate taken to the heterogeneous-team evaluation (jobs below); V5 mixed is the better
 candidate if the 256 m level is what matters.
 
+**Check requested by the planning session: why do the partial and the full V5-mixed runs
+differ at 256 m (1.90 ± 0.05 against 1.78 ± 0.04) when their selected checkpoints are equally
+early?** (1) Both sets of evaluations used `model_best_state_dict.pt`. (2) Training is not
+deterministic at a fixed seed: `train_launch.py` seeds torch and CUDA, but the GPU
+scatter operations of TAGConv and the 27 loader workers are not bit-reproducible, and the
+weights of the two launches of the same seed already differ by 18 % (relative norm) after
+the first epoch and by 40 % at the selected checkpoint; the validation curves are close but
+not identical (seed 0: 0.465 at epoch 6 against 0.460 at epoch 5). The partial runs are
+therefore not "under-trained" in the sense that matters: every V5-mixed run reaches its best
+validation at epoch 4-6 and overfits afterwards (training loss 0.19 at epoch 25, validation
+up to 0.54), so "25 epochs" is early stopping at epoch 5, and the partial launch stopped at
+8-9 epochs selected the same kind of checkpoint. The two launches are six legitimate runs of
+the recipe. (3) At the same seed the two launches differ at 256 m by 0.08 / 0.15 / 0.13
+(release set), more than the seed-to-seed spread within a launch (0.05 and 0.04): the
+three-seed standard deviations quoted throughout this journal underestimate the run-to-run
+noise of a recipe, at least on the 11 release environments (on the 40 new ones the same
+pairs differ by 0.05 / 0.04 / 0.01, and the seed spread is 0.02-0.04).
+
+Pooling the six runs: V5 mixed 2.13 ± 0.03 / 1.84 ± 0.08 / 1.82 ± 0.05 / 1.83 ± 0.05 /
+1.84 ± 0.06 at 128-1024 m on the release set, 2.09 / 1.89 / 1.89 / 1.90 / 1.90 on the new
+one. Criterion (a) with the six-run average, paired against V0: +0.097 ± 0.134, standard
+error 0.040 (0.032 across runs), 2 of 11 [+0.068, SE 0.033, 18 of 40]. **The (a) claim for V5
+mixed is withdrawn**: with the honest noise it is 0.10 above V0 at 256 m, like V0F
+(+0.12) and V4 mixed (+0.14); the three full runs were a favourable draw. Criterion (b) is
+unchanged (flat: +0.003, SE 0.038). What stands: V5 mixed is flat from 256 m at 1.82-1.84,
+0.02-0.08 below V0F at 256 m (within the run noise), below the centralized CVT everywhere;
+V4 mixed remains the only model whose cost falls with the range, and the hetero evaluation
+on it is unaffected. The same caveat applies to every "within 0.05" statement of sections
+13-14 made with three seeds: the relevant noise at 256 m on the release set is about 0.08
+per run, so a 0.05 margin is not resolvable without 6-10 runs.
+
 Figures `fig_v4v5.png` (11 release environments) and `fig_v4v5_new40.png`, all seeds; data
 `results_V45/` (merged sweeps per seed and set, `*_v2_*` for the restarted V5 mixed runs,
-loss histories including the superseded partial runs under `train_V5mixed_s*_partial/`).
+loss histories of both launches, the first under `train_V5mixed_s*_partial/`).
 
 ## 15. Running and next (as of 14 October)
 

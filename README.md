@@ -67,11 +67,12 @@ when the policy is run with a larger communication range than it was trained wit
   10 of 11 environments), equal to the fixed-map recipe and below the centralized CVT everywhere;
   trained at 128 m alone (3 seeds) it does not collapse (1.9-2.0 at every range) and beats V3 at
   every range. Still 0.14 above V0 at 256 m.
-- V5 (three fixed-scale map pairs, 256/512/1024 m) trained on mixed ranges (3 seeds): 1.78 at 256 m,
-  within 0.04 of V0, flat 1.80-1.82 up to 1024 m, 0.08 better than the single fixed-scale map at
-  256 m: the first trained recipe that keeps the 256 m optimum without intervention at test time;
-  it does not improve with range (+0.05). Trained at 128 m alone it also meets the 256 m criterion
-  (1.77) with no collapse (1.97 at 1024 m).
+- V5 (three fixed-scale map pairs, 256/512/1024 m) trained on mixed ranges: 1.84 ± 0.08 at 256 m over
+  six runs (two launches of three seeds, which differ by up to 0.15 at a fixed seed: GPU training is
+  not deterministic), 0.10 above V0, flat 1.82-1.84 up to 1024 m, equal to the single fixed-scale map
+  within the run noise; it does not improve with range. Trained at 128 m alone (one run) it reaches
+  1.77 at 256 m with no collapse (1.97 at 1024 m). The "within 0.05 of V0" margin is below the
+  run-to-run noise of this protocol (about 0.08 at 256 m on the 11 release environments).
 - One model with the robot's own range as a GNN input, trained on teams with a range drawn per robot
   (V0R, seed 0): no collapse (1.9-2.1 from 512 m) but equal to plain mixed-range training within
   0.1 and 0.4-0.6 worse than the 128 m model at 128-256 m; in heterogeneous teams it beats the
