@@ -1269,9 +1269,33 @@ of this study.
 
 Figure `fig_hetero_candidates.png`; data `results_V45/results_hetero_V4mixed.csv`.
 
-**Follow-ups approved on 21 October (launched 22:30).** (i) The heterogeneous evaluation of
-V4 mixed seeds 1 and 2 (jobs 1865568-1865569, same protocol), to see whether the 0.1 gaps to
-the fixed-scale map and to the mixture survive three seeds. (ii) V6 = V5 + V4
+**Heterogeneous teams, three seeds of V4 mixed (22 October, 00:30; jobs 1865568-1865569).**
+Per seed, mean across environments at f = 0 / 1/4 / 1/2 / 3/4 / 1: seed 0 2.22 / 2.20 / 2.07 /
+1.96 / 1.83 (drop from f = 0 to 1 −0.39 ± 0.20, 11 of 11); seed 1 2.21 / 2.20 / 2.14 / 1.98 /
+1.72 (−0.49 ± 0.26, 11 of 11); seed 2 2.20 / 2.10 / 2.01 / 1.85 / 1.72 (−0.48 ± 0.34, 10 of 11).
+Mean ± std across seeds 2.21 ± 0.01 / 2.17 ± 0.06 / 2.07 ± 0.07 / 1.93 ± 0.07 / 1.76 ± 0.06; the
+environment means decrease at every step for every seed (within environments the sequence is
+monotone in 3 / 5 / 6 of 11, the rest showing one reversal inside the draw noise). Pooled over
+the three seeds, the drop from f = 0 to 1 is −0.45 ± 0.25, standard error 0.08, 11 of 11.
+
+Paired against the published model with the fixed-scale map, pooled: +0.28 ± 0.30 (SE 0.09,
+2 of 11) at f = 0, then +0.06 / +0.09 / +0.07 / +0.05 (SE 0.07-0.08, 4-7 of 11); per seed at
+f = 1/4-3/4: seed 0 +0.08 to +0.10, seed 1 +0.10 to +0.16, seed 2 −0.01 to +0.03. Against the
+mixture of specialists: +0.06 / −0.01 / −0.16 / −0.02 / −0.04 (SE 0.04-0.10, 3-7 of 11).
+Against the published model as is: +0.22 at f = 0, −0.26 / −0.82 / −2.02 / −3.54 from f = 1/4
+(8-11 of 11).
+
+So with three seeds: the monotone decrease and the 0.4-0.5 drop from f = 0 to f = 1 are
+robust (every seed, 11 of 11 environments pooled); the 0.1 gap to the fixed-scale map at
+f ≥ 1/4 does **not** survive as a difference, it is +0.05 to +0.09 with standard errors of
+0.08 and one seed at zero, i.e. V4 mixed equals the inference-time fix within the noise in
+heterogeneous teams, except at f = 0 where it stays 0.28 behind (its 128 m weakness, 2 of 11);
+the comparison with the mixture is a tie or a small advantage for V4 (−0.16 at f = 1/2).
+
+Data `results_V45/results_hetero_V4mixed_s{1,2}.csv`; figure `fig_hetero_candidates.png`
+now drawn with the three seeds.
+
+**Follow-ups approved on 21 October (launched 22:30).** (i) Done above. (ii) V6 = V5 + V4
 (`LPACMultiScaleGeometry`: V5's multi-scale maps into the CNN, V4's bounded-edge front layer
 ahead of the unchanged TAGConv stack, the V4 class reused; 1,891,620 parameters = V5 +
 84,258; unit test: with V5's weights and a zeroed layer output V6 computes exactly V5), a
