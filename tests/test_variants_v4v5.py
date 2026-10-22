@@ -20,7 +20,8 @@ sys.path.insert(0, str(ROOT))
 
 from lpac_study.lpac_policy import multiscale_channels  # noqa: E402
 from lpac_study.neighbourhood import comm_maps_from_positions, in_range_mask  # noqa: E402
-from lpac_study.variants import MULTISCALE_SCALES_M, POINTNET_SCALE_M, WORLD_SIZE_M, LPACBoundedGeometry  # noqa: E402
+from lpac_study.variants import (MULTISCALE_SCALES_M, POINTNET_SCALE_M, WORLD_SIZE_M, LPACBoundedGeometry,  # noqa: E402
+                                 LPACMultiScaleGeometry, build_model, parameter_count, uses_multiscale_maps, variant_config)
 from training.redraw_ranges import comm_maps, edge_weights  # noqa: E402
 
 torch.manual_seed(0)
@@ -119,6 +120,42 @@ def test_edge_weights_unchanged_by_map_options():
     assert (w >= 0).all() and (w <= 1).all()
     assert bool(((w > 0) == (torch.cdist(p, p) < 512.0).logical_and(~torch.eye(NUM_ROBOTS, dtype=torch.bool))).all())
     assert math.isclose(float(w.diagonal(dim1=1, dim2=2).abs().sum()), 0.0)
+
+
+def _release_config():
+    import os
+    from coverage_control import IOUtils
+    for candidate in (os.environ.get("LPAC_LEARNING_PARAMS", ""), os.path.expanduser("~/lpac/data/lpac/params/learning_params.toml"),
+                      os.path.expanduser("~/lpac/train/small/params/learning_params.toml")):
+        if candidate and os.path.isfile(candidate):
+            return IOUtils.load_toml(candidate)
+    return None
+
+
+def test_v6_is_v5_plus_the_v4_layer():
+    cfg = _release_config()
+    if cfg is None:
+        print("skip (no learning_params.toml)"); return
+    v4, v5, v6, v1 = (build_model(v, cfg) for v in ("V4", "V5", "V6", "V1"))
+    assert isinstance(v6, LPACMultiScaleGeometry) and isinstance(v6, LPACBoundedGeometry)
+    layer_params = parameter_count(v4) - parameter_count(v1)  # V4 = V1 + the layer
+    assert parameter_count(v6) == parameter_count(v5) + layer_params, (parameter_count(v6), parameter_count(v5), layer_params)
+    # map part: same CNN input as V5, same config
+    assert uses_multiscale_maps("V6") and variant_config(cfg, "V6")["CNNBackBone"]["InputDim"] == variant_config(cfg, "V5")["CNNBackBone"]["InputDim"] == 8
+    assert v6.cnn_backbone.conv0.in_channels == v5.cnn_backbone.conv0.in_channels == 8
+    # edge part: the same feature function and the same layer shapes as V4
+    assert v6.edge_features is LPACBoundedGeometry.edge_features
+    assert [tuple(p.shape) for p in v6.geometry.parameters()] == [tuple(p.shape) for p in v4.geometry.parameters()]
+    # with V5's weights copied in and the geometry output zeroed, V6 computes exactly V5
+    v6.load_state_dict(v5.state_dict(), strict=False)
+    torch.nn.init.zeros_(v6.geometry.global_nn[1].weight); torch.nn.init.zeros_(v6.geometry.global_nn[1].bias)
+    v5.eval(); v6.eval()
+    p = random_positions(1)[0]
+    from torch_geometric.data import Data
+    ei = edge_index_within(p, 512.0)
+    data = Data(x=torch.rand(NUM_ROBOTS, 8, 32, 32), edge_index=ei, pos=(p + WORLD_SIZE_M / 2) / WORLD_SIZE_M)
+    with torch.no_grad():
+        assert torch.allclose(v6(data), v5(data), atol=1e-6)
 
 
 if __name__ == "__main__":

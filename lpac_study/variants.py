@@ -18,6 +18,8 @@ Three models, same CNN, same action MLP, same training recipe:
   and ``tanh(d / 256 m)`` instead of the raw relative position.
 * ``V5`` the original LPAC with three pairs of neighbour-map channels drawn at fixed scales
   (256, 512, 1024 m) instead of one pair drawn at the communication range: 8 CNN channels.
+* ``V6`` V5 plus V4's bounded-edge layer: the multi-scale maps feed the CNN and the bounded
+  edge features feed a residual front layer ahead of the unchanged TAGConv stack.
   The layer reads, for every edge, the relative position of the neighbour divided by a
   fixed constant of 256 m (never by the range, never by the world size), and adds its
   output to the TAGConv input (residual connection). Receptive field 16 hops.
@@ -36,7 +38,7 @@ from coverage_control.nn import LPAC
 from coverage_control.nn.data_loaders.loaders import CNNGNNDataset
 from torch_geometric.nn import GATv2Conv, PointNetConv
 
-VARIANTS = ("V0", "V1", "V2", "V3", "V0R", "V4", "V5")
+VARIANTS = ("V0", "V1", "V2", "V3", "V0R", "V4", "V5", "V6")
 MULTISCALE_SCALES_M = (256.0, 512.0, 1024.0)  # V5: one pair of map channels per scale
 EDGE_DIM = 2
 HEADS = 4
@@ -50,13 +52,13 @@ POINTNET_HIDDEN = 256
 
 
 def uses_comm_map(variant: str) -> bool:
-    """Whether the CNN input carries neighbour-map channels (two for V0/V0R, six for V5)."""
-    return variant in ("V0", "V0R", "V5")
+    """Whether the CNN input carries neighbour-map channels (two for V0/V0R, six for V5/V6)."""
+    return variant in ("V0", "V0R", "V5", "V6")
 
 
 def uses_multiscale_maps(variant: str) -> bool:
-    """Whether the neighbour maps are the three fixed-scale pairs of V5."""
-    return variant == "V5"
+    """Whether the neighbour maps are the three fixed-scale pairs of V5 (also V6)."""
+    return variant in ("V5", "V6")
 
 
 def uses_range_input(variant: str) -> bool:
@@ -285,6 +287,14 @@ class BoundedGeometryConv(torch_geometric.nn.MessagePassing):
         return self.local_nn(torch.cat([x_j, edge_attr], dim=-1))
 
 
+def bounded_geometry_layer(width: int) -> "BoundedGeometryConv":
+    """The front layer of V4 (and V6): ``local_nn`` on ``[x_j, e_ij]`` (width + 3 inputs), ``global_nn`` back to ``width``."""
+    return BoundedGeometryConv(
+        local_nn=torch.nn.Sequential(torch.nn.Linear(width + 3, POINTNET_HIDDEN), torch.nn.ReLU(),
+                                     torch.nn.Linear(POINTNET_HIDDEN, POINTNET_HIDDEN)),
+        global_nn=torch.nn.Sequential(torch.nn.ReLU(), torch.nn.Linear(POINTNET_HIDDEN, width)))
+
+
 class LPACBoundedGeometry(LPAC):
     """V4: V3 with bounded, range-invariant edge features.
 
@@ -299,13 +309,10 @@ class LPACBoundedGeometry(LPAC):
     V4 therefore isolates the edge encoding.
     """
 
-    def __init__(self, config: dict):
-        super().__init__(variant_config(config, "V4"))
+    def __init__(self, config: dict, variant: str = "V4"):
+        super().__init__(variant_config(config, variant))
         width = self.cnn_backbone.latent_size + 2  # 34, what the first TAGConv layer expects
-        self.geometry = BoundedGeometryConv(
-            local_nn=torch.nn.Sequential(torch.nn.Linear(width + 3, POINTNET_HIDDEN), torch.nn.ReLU(),
-                                         torch.nn.Linear(POINTNET_HIDDEN, POINTNET_HIDDEN)),
-            global_nn=torch.nn.Sequential(torch.nn.ReLU(), torch.nn.Linear(POINTNET_HIDDEN, width)))
+        self.geometry = bounded_geometry_layer(width)
 
     @staticmethod
     def edge_features(pos: torch.Tensor, edge_index: torch.Tensor, scale_m: float = POINTNET_SCALE_M) -> torch.Tensor:
@@ -323,6 +330,22 @@ class LPACBoundedGeometry(LPAC):
         geometry = torch.relu(self.geometry(gnn_input, edge_index, self.edge_features(pos, edge_index)))
         gnn_output = self.gnn_backbone(gnn_input + geometry, edge_index)
         return self.output_linear(self.gnn_mlp(gnn_output))
+
+
+class LPACMultiScaleGeometry(LPACBoundedGeometry):
+    """V6: V5's multi-scale maps and V4's bounded edge layer in one model.
+
+    Motivation (section 14 of the journal): V5, whose CNN reads three pairs of neighbour maps at
+    fixed scales, holds the 256 m level across ranges but does not improve beyond it; V4, whose
+    front layer reads bounded edge features, is the one model whose cost keeps falling with the
+    range but it pays 0.14 at 256 m, where it has no map. V6 gives the CNN the V5 input (8
+    channels, built exactly as for V5) and the GNN the V4 front layer (same class, same width,
+    residual, self-loops), with the TAGConv stack unchanged, to test whether the two gains add.
+    Parameters: V5 plus the V4 layer.
+    """
+
+    def __init__(self, config: dict):
+        super().__init__(config, variant="V6")
 
 
 class LPACMultiScale(LPAC):
@@ -358,6 +381,8 @@ def build_model(variant: str, config: dict) -> LPAC:
         return LPACBoundedGeometry(config)
     if variant == "V5":
         return LPACMultiScale(config)
+    if variant == "V6":
+        return LPACMultiScaleGeometry(config)
     return LPAC(variant_config(config, variant))
 
 
@@ -370,4 +395,4 @@ def receptive_field_hops(variant: str, config: dict) -> int:
     layers = config["GNNBackBone"]["NumLayers"]
     if variant == "V2":
         return layers
-    return layers * config["GNNBackBone"]["NumHops"] + (1 if variant in ("V3", "V4") else 0)
+    return layers * config["GNNBackBone"]["NumHops"] + (1 if variant in ("V3", "V4", "V6") else 0)

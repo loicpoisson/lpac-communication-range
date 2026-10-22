@@ -224,7 +224,7 @@ def main(argv=None) -> None:
     parser.add_argument("--short-range", type=float, default=128.0)
     parser.add_argument("--model", default=None, help="state dict of another LPAC-K3 checkpoint (default: published)")
     parser.add_argument("--model-tag", default="published")
-    parser.add_argument("--variant", default="V0", choices=("V0", "V0R", "V4", "V5"), help="architecture of --model")
+    parser.add_argument("--variant", default="V0", choices=("V0", "V0R", "V4", "V5", "V6"), help="architecture of --model")
     parser.add_argument("--num-envs", type=int, default=11)
     parser.add_argument("--env-start", type=int, default=0)
     parser.add_argument("--env-end", type=int, default=None)
