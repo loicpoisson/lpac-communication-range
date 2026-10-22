@@ -1269,6 +1269,17 @@ of this study.
 
 Figure `fig_hetero_candidates.png`; data `results_V45/results_hetero_V4mixed.csv`.
 
+**Follow-ups approved on 21 October (launched 22:30).** (i) The heterogeneous evaluation of
+V4 mixed seeds 1 and 2 (jobs 1865568-1865569, same protocol), to see whether the 0.1 gaps to
+the fixed-scale map and to the mixture survive three seeds. (ii) V6 = V5 + V4
+(`LPACMultiScaleGeometry`: V5's multi-scale maps into the CNN, V4's bounded-edge front layer
+ahead of the unchanged TAGConv stack, the V4 class reused; 1,891,620 parameters = V5 +
+84,258; unit test: with V5's weights and a zeroed layer output V6 computes exactly V5), a
+3-epoch trial (1865590) then three seeds on mixed ranges in parallel (1865591, 1865594,
+1865597; 25 epochs, best checkpoint, 11 and 40 environments), about 8-10 GPU-hours. The
+(a)/(b) analysis will use the honest noise (the six V5-mixed runs) and the 40 new
+environments as the primary set.
+
 Figures `fig_v4v5.png` (11 release environments) and `fig_v4v5_new40.png`, all seeds; data
 `results_V45/` (merged sweeps per seed and set, `*_v2_*` for the restarted V5 mixed runs,
 loss histories of both launches, the first under `train_V5mixed_s*_partial/`).
@@ -1276,7 +1287,7 @@ loss histories of both launches, the first under `train_V5mixed_s*_partial/`).
 ## 15. Running and next (as of 14 October)
 
 Nothing queued on the GPU partition as of 17 October 21:30; all chains of section 11 retrieved.
-Nothing running or queued on FarmShare as of 21 October 17:00; every chain of section 14 is retrieved.
+Running on FarmShare as of 21 October 22:30: the V4-mixed heterogeneous seeds and the V6 chain (section 14).
 
 Next, in order (1 and 2 done, section 9; 4 done, section 10):
 
