@@ -27,7 +27,7 @@ from .plots import COLORS, ERRORBAR_STYLE, TEXT, style_axis
 
 Y_LABEL = "Coverage cost / clairvoyant cost\n(episode average)"
 VARIANT_COLORS = {"V0": "#2a78d6", "V1": "#eb6834", "V2": "#1baf7a", "V3": "#eda100", "mixed": "#7b3fb3",
-                  "V4": "#d95926", "V4mixed": "#8c2d04", "V5": "#1baf7a", "V5mixed": "#0b6e4f"}
+                  "V4": "#d95926", "V4mixed": "#8c2d04", "V5": "#1baf7a", "V5mixed": "#0b6e4f", "V6mixed": "#e87ba4"}
 VARIANT_LABELS = {"V0": "V0: as published (neighbour map + TAGConv)",
                   "V1": "V1: no neighbour map (TAGConv)",
                   "V2": "V2: no map, relative positions on edges (GATv2)",
@@ -36,7 +36,8 @@ VARIANT_LABELS = {"V0": "V0: as published (neighbour map + TAGConv)",
                   "V4": "V4: no map, bounded edge features [(p_j-p_i)/d, tanh(d/256 m)], trained at 128 m",
                   "V4mixed": "V4 trained on mixed ranges",
                   "V5": "V5: three fixed-scale map pairs (256/512/1024 m), trained at 128 m",
-                  "V5mixed": "V5 trained on mixed ranges"}
+                  "V5mixed": "V5 trained on mixed ranges",
+                  "V6mixed": "V6: V5 maps + V4 edge layer, trained on mixed ranges"}
 
 
 def env_means(path: str, controller: str = "lpac") -> pd.Series:
@@ -73,6 +74,7 @@ def main() -> None:
     parser.add_argument("--mixed", nargs="*", default=[], help="sweep files of the V0 seeds trained at mixed ranges")
     parser.add_argument("--v4", nargs="*", default=[]); parser.add_argument("--v4mixed", nargs="*", default=[])
     parser.add_argument("--v5", nargs="*", default=[]); parser.add_argument("--v5mixed", nargs="*", default=[])
+    parser.add_argument("--v6mixed", nargs="*", default=[])
     parser.add_argument("--fixed-map", help="results_2x2.csv holding C3 rows of the V0 seeds (map at 256 m scale)")
     parser.add_argument("--r256", help="sweep file of the model trained at 256 m")
     parser.add_argument("--extra", nargs="*", default=[], help="label=path sweeps drawn as extra dashed curves (1 seed)")
@@ -86,7 +88,8 @@ def main() -> None:
     fig, ax = plt.subplots(figsize=(8.5, 5.4), dpi=150)
     tables = {}
     for variant, paths in (("V0", args.v0), ("V1", args.v1), ("V2", args.v2), ("V3", args.v3), ("mixed", args.mixed),
-                           ("V4", args.v4), ("V4mixed", args.v4mixed), ("V5", args.v5), ("V5mixed", args.v5mixed)):
+                           ("V4", args.v4), ("V4mixed", args.v4mixed), ("V5", args.v5), ("V5mixed", args.v5mixed),
+                           ("V6mixed", args.v6mixed)):
         if paths:
             tables[variant] = seed_table(paths)
             draw_variant(ax, tables[variant], VARIANT_COLORS[variant], VARIANT_LABELS[variant])

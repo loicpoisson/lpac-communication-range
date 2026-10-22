@@ -1304,6 +1304,43 @@ ahead of the unchanged TAGConv stack, the V4 class reused; 1,891,620 parameters 
 (a)/(b) analysis will use the honest noise (the six V5-mixed runs) and the 40 new
 environments as the primary set.
 
+**Result of V6 (22 October, 10:30).** Three seeds, 25 epochs in 2 h 40 each (324 s per epoch);
+best validation 0.465 / 0.460 / 0.462 at epochs 5 / 4 / 6 with the training loss at 0.36-0.42
+there, then rising validation (0.52-0.54 at epoch 25) while the training loss falls to 0.19.
+V6 overfits early, exactly like V5 (best at epochs 4-5) and unlike V4 (best at epochs 21-25,
+validation 0.35): the map pathway sets the early validation minimum and the run is stopped
+before the edge layer is trained as far as it is in V4.
+
+| | 128 m | 256 m | 512 m | 768 m | 1024 m |
+|---|---|---|---|---|---|
+| V6 mixed, per seed, 40 new envs | 2.20 / 2.08 / 2.08 | 2.00 / 1.86 / 1.86 | 1.96 / 1.82 / 1.83 | 2.01 / 1.79 / 1.84 | 2.00 / 1.79 / 1.87 |
+| V6 mixed, mean ± std, 40 new envs | 2.12 ± 0.07 | 1.91 ± 0.08 | 1.87 ± 0.08 | 1.88 ± 0.12 | 1.89 ± 0.11 |
+| V6 mixed, mean ± std, 11 release envs | 2.12 ± 0.07 | 1.85 ± 0.05 | 1.83 ± 0.06 | 1.84 ± 0.10 | 1.85 ± 0.08 |
+| V4 mixed (40 / 11) | 2.14 / 2.21 | 1.87 / 1.88 | 1.81 / 1.77 | 1.81 / 1.76 | 1.82 / 1.76 |
+| V5 mixed, 6 runs (40 / 11) | 2.09 / 2.13 | 1.89 / 1.84 | 1.89 / 1.82 | 1.90 / 1.83 | 1.90 / 1.84 |
+
+On the 40 new environments (primary): (a) V6 − V0 at 256 m +0.087 ± 0.228, SE 0.036, 15 of 40,
+per-run gaps +0.18 / +0.04 / +0.04: no. (b) 1024 m − 256 m −0.021, SE 0.020, 24 of 40, per seed
+0.00 / −0.07 / +0.01: flat, not significantly lower (V4 mixed −0.055, SE 0.016; V5 pool
++0.009). Paired, seed-averaged: V6 − V4 mixed −0.02 at 128 m (26 of 40), +0.04 at 256 m, +0.06 /
++0.06 / +0.07 at 512-1024 m (SE 0.02, 11-16 of 40); V6 − V5 mixed (six-run pool) +0.03 / +0.02 /
+−0.02 / −0.02 / −0.01 (SE 0.01-0.02, 17-21 of 40); V6 − V0F +0.03 / 0.00 / −0.04 / −0.03 / −0.03;
+V6 − centralized CVT −0.21 to −0.46 (32-38 of 40). On the 11 release environments: (a) +0.109,
+SE 0.054, 2 of 11: no; (b) −0.002, SE 0.033: flat; V6 − V4 mixed −0.09 / −0.03 / +0.06 / +0.08 /
++0.09 (SE 0.04-0.06); V6 − V5 pool 0.00 to +0.02 (SE 0.02-0.04).
+
+Reading. The gains do not add. V6 is V5: equal to the six-run V5 pool within 0.03 at every
+range on both sets, flat beyond 256 m, 0.06-0.09 behind V4 mixed at 512-1024 m, and 0.09-0.11
+above V0 at 256 m. With the multi-scale maps in the CNN, the model trains like V5 (validation
+minimum at epoch 4-6, then overfitting), and the edge layer, which in V4 keeps improving the
+fit until epoch 25, is cut off at a point where it has not yet contributed. By the agreed
+order, (b) first, V4 mixed stays the best candidate; V6 is not evaluated in heterogeneous
+teams. A V6 trained with early stopping on a different signal, or with the map pathway
+regularized, might behave differently; that is a new recipe, not this one.
+
+Data `results_V45/V6mixed_s{0,1,2}_{11,40}.csv`, loss histories `results_V45/train_V6mixed_s*/`;
+figures `fig_v4v5.png` and `fig_v4v5_new40.png` (V6 added).
+
 Figures `fig_v4v5.png` (11 release environments) and `fig_v4v5_new40.png`, all seeds; data
 `results_V45/` (merged sweeps per seed and set, `*_v2_*` for the restarted V5 mixed runs,
 loss histories of both launches, the first under `train_V5mixed_s*_partial/`).
@@ -1311,7 +1348,7 @@ loss histories of both launches, the first under `train_V5mixed_s*_partial/`).
 ## 15. Running and next (as of 14 October)
 
 Nothing queued on the GPU partition as of 17 October 21:30; all chains of section 11 retrieved.
-Running on FarmShare as of 21 October 22:30: the V4-mixed heterogeneous seeds and the V6 chain (section 14).
+Nothing running or queued on FarmShare as of 22 October 11:00; every chain of section 14 is retrieved.
 
 Next, in order (1 and 2 done, section 9; 4 done, section 10):
 

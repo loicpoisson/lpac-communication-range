@@ -67,6 +67,9 @@ when the policy is run with a larger communication range than it was trained wit
   10 of 11 environments), equal to the fixed-map recipe and below the centralized CVT everywhere;
   trained at 128 m alone (3 seeds) it does not collapse (1.9-2.0 at every range) and beats V3 at
   every range. Still 0.14 above V0 at 256 m.
+- V6 = V5's maps + V4's edge layer (3 seeds, mixed ranges) does not add the two gains: it trains and
+  behaves like V5 (early overfitting, flat 1.87-1.91 beyond 256 m, equal to V5 within 0.03, 0.06-0.09
+  behind V4 mixed at long range); V4 mixed remains the only model that improves with the range.
 - In heterogeneous 128/1024 m teams, V4 mixed (3 seeds) is the first model whose cost falls
   monotonically with the fraction of far-hearing robots (2.21 to 1.76, −0.45 ± 0.08, every seed),
   beating V0R everywhere and matching both the mixture of specialists and the fixed-scale map on the
