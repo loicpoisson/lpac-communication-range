@@ -1345,6 +1345,35 @@ Figures `fig_v4v5.png` (11 release environments) and `fig_v4v5_new40.png`, all s
 `results_V45/` (merged sweeps per seed and set, `*_v2_*` for the restarted V5 mixed runs,
 loss histories of both launches, the first under `train_V5mixed_s*_partial/`).
 
+### 14.x Checkpoint selection: epoch 25 instead of best validation (22-25 October)
+
+Question: best-validation selection stops V5 and V6 mixed at epoch 4-6, before V6's bounded-edge
+layer has trained as long as in V4 (best at 21-25). Does a late checkpoint let V6 improve with the
+range? Evaluated `model_epoch025` for V5 mixed (full runs) and V6 mixed, and `model_epoch012` for V6,
+same protocol (`lpac_study/checkpoint_epochs.py`). Cost / clairvoyant, mean of 3 seeds, 40 new envs
+(primary) at 128 / 256 / 512 / 768 / 1024 m; b = paired 1024 - 256 m.
+
+| Run | 128 | 256 | 512 | 768 | 1024 | b (SE, envs better) |
+|---|---|---|---|---|---|---|
+| V4 mixed (best val, ep. 21-25) | 2.14 | 1.87 | 1.81 | 1.81 | 1.82 | -0.055 (0.016, 27/40) |
+| V5 mixed, best val (ep. 4-5) | 2.07 | 1.88 | 1.89 | 1.90 | 1.90 | +0.027 (0.023, 18/40) |
+| V5 mixed, epoch 25 | 2.07 | 1.87 | 1.86 | 1.88 | 1.88 | +0.008 (0.027, 17/40) |
+| V6 mixed, best val (ep. 4-6) | 2.12 | 1.91 | 1.87 | 1.88 | 1.89 | -0.021 (0.020, 24/40) |
+| V6 mixed, epoch 12 | 2.10 | 1.89 | 1.90 | 1.89 | 1.89 | +0.004 (0.020, 23/40) |
+| V6 mixed, epoch 25 | 2.10 | 1.87 | 1.85 | 1.87 | 1.90 | +0.023 (0.023, 19/40) |
+
+Paired on 40 envs: V6@25 - V6@best within +-0.04 (SE 0.02-0.03) at every range; V5@25 - V5@best
+within +-0.03; V6@25 - V4 mixed -0.04 / 0.00 / +0.05 / +0.06 / +0.08 (V4 better beyond 512 m);
+V6@25 - V5@25 within +-0.03. On the 11 released envs V6@25 reads 2.10 / 1.79 / 1.75 / 1.75 / 1.80
+(b = +0.011, SE 0.044, 4/11), again flat.
+
+Answer: no. The checkpoint does not matter: from epoch 5 to 25 the validation MSE rises from 0.46
+to 0.54 while the coverage cost does not move, so validation MSE carries no information about the
+cost for these runs. V6 does not improve with the range at any checkpoint, and the V4 and V5 gains
+do not add up: V6 = V5. V4 mixed remains the only trained model whose cost falls with the range.
+Checkpoint rule used elsewhere: best validation loss for every run (V0, V0F, V4, V5, V6), as in the
+authors' `train_launch`.
+
 ## 15. Running and next (as of 14 October)
 
 Nothing queued on the GPU partition as of 17 October 21:30; all chains of section 11 retrieved.
