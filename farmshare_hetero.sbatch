@@ -24,5 +24,6 @@ cd "$PROJECT_DIR"
   --baseline "${BASELINE:-$PROJECT_DIR/results/results.csv}" \
   --out-dir "${OUT_ROOT:-$PROJECT_DIR/results_hetero}/env_$ENV_INDEX" \
   --fractions ${FRACTIONS:-0 0.25 0.5 0.75 1} --draws ${DRAWS:-0 1} --maps ${MAPS:-asis fixed256} \
+  --semantics ${SEMANTICS:-reception} \
   --long-range "${LONG:-1024}" --short-range "${SHORT:-128}" --probe-every "${PROBE_EVERY:-50}" \
   --env-start "$ENV_INDEX" --env-end "$((ENV_INDEX + 1))" --num-envs "${NUM_ENVS:-11}" ${EXTRA_ARGS:-}

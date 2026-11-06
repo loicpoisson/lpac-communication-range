@@ -14,6 +14,9 @@ Factor MAP (what the CNN sees through the two communication-map channels):
   C2  only robots within min(128 m, test range), drawn with the 128 m normalization and resolution;
   C3  only robots within min(256 m, test range), drawn with the 256 m normalization and resolution;
   C4  empty map: both neighbour channels set to zero (the library's value for "no neighbour");
+  K<m> every robot within the test range drawn at the <m> metre scale, those farther than <m>
+       projected onto the <m> circle (border cell, value of norm 1) instead of dropped: the
+       "clamp" answer to the TA's question, against S<m>/C3 which drop them;
   S<m> map of the robots within min(<m>, test range) metres, drawn with the <m> m normalization
        and resolution (C2 = S128, C3 = S256); only robots within radio range are ever drawn.
 ``--model`` evaluates another LPAC-K3 checkpoint (same architecture); ``--model-tag`` labels it.
@@ -79,7 +82,8 @@ class FactorialPolicy(LPACPolicy):
             data.x[:, COMM_CHANNELS] = 0.0
         elif self.comm_map != "C0":
             map_range = map_scale(self.comm_map) or test_range
-            data.x[:, COMM_CHANNELS] = comm_maps_from_positions(positions, map_mask, map_range, CNN_MAP_SIZE)
+            data.x[:, COMM_CHANNELS] = comm_maps_from_positions(positions, map_mask, map_range, CNN_MAP_SIZE,
+                                                                clamp=clamps_far_robots(self.comm_map))
         self.map_neighbour_counts.append(float(map_mask.sum(1).float().mean()))
         return data
 
@@ -88,6 +92,9 @@ class FactorialPolicy(LPACPolicy):
         if self.comm_map == "C1":
             return capped
         scale = map_scale(self.comm_map)
+        if clamps_far_robots(self.comm_map):
+            # K<m>: every robot the radio reaches is drawn, the far ones on the border cell.
+            return in_range_mask(positions, test_range)
         if scale is not None:
             # A robot can only draw neighbours it can hear: within the test range, and within
             # the drawing scale so that they fit on the map (corrected on 14 October; before,
@@ -99,12 +106,17 @@ class FactorialPolicy(LPACPolicy):
 
 
 def map_scale(level: str):
-    """Fixed drawing scale (metres) of a MAP level: C2 = 128, C3 = 256, S<metres> = any value, else None."""
+    """Fixed drawing scale (metres) of a MAP level: C2 = 128, C3 = 256, S<m>/K<m> = any value, else None."""
     if level in MAP_SCALE_LEVELS:
         return MAP_SCALE_LEVELS[level]
-    if level.startswith("S") and level[1:].isdigit():
+    if level[:1] in ("S", "K") and level[1:].isdigit():
         return float(level[1:])
     return None
+
+
+def clamps_far_robots(level: str) -> bool:
+    """Whether a MAP level keeps the robots beyond its scale by projecting them on the border (K<m>)."""
+    return level.startswith("K") and level[1:].isdigit()
 
 
 def graph_scale(level: str):
@@ -116,9 +128,9 @@ def graph_scale(level: str):
 
 def parse_cell(cell: str):
     """Split a cell name such as G0C3, G1S192 or R256C0 into its GRAPH and MAP levels."""
-    match = re.fullmatch(r"(G[01]|R\d+)([CS]\d+)", cell)
+    match = re.fullmatch(r"(G[01]|R\d+)([CSK]\d+)", cell)
     if match is None:
-        raise ValueError("bad cell name %r: expected G<0|1> or R<metres>, followed by C<0-4> or S<metres>" % cell)
+        raise ValueError("bad cell name %r: expected G<0|1> or R<metres>, followed by C<0-4>, S<metres> or K<metres>" % cell)
     return match.group(1), match.group(2)
 
 

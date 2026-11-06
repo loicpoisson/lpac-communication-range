@@ -72,7 +72,8 @@ def mask_to_edge_index(mask: torch.Tensor) -> torch.Tensor:
 
 
 def comm_maps_from_positions(
-    positions: torch.Tensor, neighbour_mask: torch.Tensor, comm_range: float, map_size: int
+    positions: torch.Tensor, neighbour_mask: torch.Tensor, comm_range: float, map_size: int,
+    clamp: bool = False,
 ) -> torch.Tensor:
     """Communication maps ``(N, 2, map_size, map_size)`` for the neighbours of ``neighbour_mask``.
 
@@ -81,15 +82,26 @@ def comm_maps_from_positions(
         neighbour_mask: ``(N, N)`` boolean, row ``i`` = robots drawn on robot ``i``'s map.
         comm_range: range used for the grid resolution and the value normalization.
         map_size: side of the square map (32 for the published model).
+        clamp: project a neighbour farther than ``comm_range`` onto the circle of that radius
+            instead of refusing it (same direction, distance ``comm_range``), so it lands on the
+            outermost cell of the map in its direction with a value of norm 1. With ``clamp``
+            false a neighbour outside the map is an error, which is what every other level of
+            the factorial relies on.
     """
     num_robots = positions.shape[0]
     rel = relative_positions(positions).to(torch.float32)  # the library works on float32 relative positions
+    if clamp:
+        norm = rel.norm(dim=-1, keepdim=True).clamp_min(1e-9)
+        rel = rel * torch.clamp(comm_range / norm, max=1.0)
     scaled = torch.round(rel * map_size / (comm_range * 2.0) + (map_size / 2.0 - 0.5)).long()
     values = rel / comm_range
     maps = torch.zeros((num_robots, 2, map_size, map_size), dtype=torch.float32)
     robot, neighbour = neighbour_mask.nonzero(as_tuple=True)
     cell_x, cell_y = scaled[robot, neighbour, 0], scaled[robot, neighbour, 1]
-    if len(robot) and (cell_x.min() < 0 or cell_y.min() < 0 or cell_x.max() >= map_size or cell_y.max() >= map_size):
+    if clamp:  # rounding of a clamped neighbour can land one cell past the border
+        cell_x = cell_x.clamp(0, map_size - 1)
+        cell_y = cell_y.clamp(0, map_size - 1)
+    elif len(robot) and (cell_x.min() < 0 or cell_y.min() < 0 or cell_x.max() >= map_size or cell_y.max() >= map_size):
         raise ValueError("a neighbour falls outside the communication map")
     for channel in (0, 1):
         maps[:, channel].index_put_((robot, cell_x, cell_y), values[robot, neighbour, channel], accumulate=True)

@@ -45,7 +45,7 @@ from .paths import resolve_data_dir
 from .simulation import load_initial_positions, make_environment, make_parameters
 from .variants import MULTISCALE_SCALES_M, uses_comm_map, uses_multiscale_maps, uses_range_input
 
-FIELDS = ["env", "fraction", "draw", "map", "model", "num_long", "long_range", "short_range",
+FIELDS = ["env", "fraction", "draw", "map", "semantics", "model", "num_long", "long_range", "short_range",
           "cost_mean", "cost_final", "ratio_mean", "ratio_final", "clairvoyant_cost_mean",
           "degree_mean", "degree_std", "probe_short", "probe_long", "probe_short_abs", "probe_count",
           "long_center_dist", "long_degree128", "long_idf_share", "long_spread",
@@ -83,6 +83,34 @@ def reception_mask(positions: torch.Tensor, ranges: torch.Tensor) -> torch.Tenso
     return mask
 
 
+SEMANTICS = ("reception", "transmission", "sym_min", "sym_max")
+
+
+def graph_mask(positions: torch.Tensor, ranges: torch.Tensor, semantics: str = "reception") -> torch.Tensor:
+    """``mask[i, j]`` true when robot ``i`` gets a message from robot ``j``, for one link rule.
+
+    * ``reception`` (the default of sections 12-14): ``i`` hears everything within its own range,
+      ``|p_j - p_i| < r_i``; a long-range robot listens to far neighbours that cannot hear it back;
+    * ``transmission``: a link exists when the *sender* reaches, ``|p_j - p_i| < r_j``, so a
+      long-range robot broadcasts to short-range ones (the TA's suggestion), the transpose of
+      ``reception``;
+    * ``sym_min``: undirected, both must reach, ``|p_j - p_i| < min(r_i, r_j)`` (reception AND
+      transmission);
+    * ``sym_max``: undirected, either reaches, ``< max(r_i, r_j)`` (reception OR transmission).
+
+    The four rules coincide when every robot has the same range, which the tests check.
+    """
+    if semantics not in SEMANTICS:
+        raise ValueError(f"unknown semantics {semantics!r}, expected one of {SEMANTICS}")
+    received = reception_mask(positions, ranges)          # mask[i, j] = d_ij < r_i
+    if semantics == "reception":
+        return received
+    transmitted = received.T                              # mask[i, j] = d_ij < r_j
+    if semantics == "transmission":
+        return transmitted
+    return received & transmitted if semantics == "sym_min" else received | transmitted
+
+
 def reception_edge_index(mask: torch.Tensor) -> torch.Tensor:
     """Directed PyG ``edge_index`` with one edge ``j -> i`` (source ``j``, target ``i``) per true ``mask[i, j]``."""
     receiver, sender = mask.nonzero(as_tuple=True)
@@ -92,8 +120,10 @@ def reception_edge_index(mask: torch.Tensor) -> torch.Tensor:
 class HeterogeneousPolicy(LPACPolicy):
     """The published policy with a communication range per robot (reception semantics)."""
 
-    def __init__(self, paths, device, ranges: torch.Tensor, map_mode: str = "asis", state_dict=None, variant: str = "V0"):
+    def __init__(self, paths, device, ranges: torch.Tensor, map_mode: str = "asis", state_dict=None, variant: str = "V0",
+                 semantics: str = "reception"):
         super().__init__(paths, device, state_dict, variant)
+        self.semantics = semantics
         if map_mode not in ("asis", "fixed256"):
             raise ValueError("map_mode must be 'asis' or 'fixed256'")
         self.ranges = ranges.to(torch.float64)
@@ -102,8 +132,8 @@ class HeterogeneousPolicy(LPACPolicy):
     def build_graph(self, env, params) -> Data:
         data = super().build_graph(env, params)  # local and obstacle maps; the rest is rebuilt below
         positions = robot_positions_double(env)
-        heard = reception_mask(positions, self.ranges)
-        data.edge_index = reception_edge_index(heard).to(self.device)
+        heard = reception_mask(positions, self.ranges)  # what robot i receives: its maps are drawn from this
+        data.edge_index = reception_edge_index(graph_mask(positions, self.ranges, self.semantics)).to(self.device)
         if self.map_mode == "asis":
             map_mask, scales = heard, self.ranges
         else:
@@ -209,7 +239,8 @@ def done_keys(path: Path) -> set[tuple]:
     if not path.is_file():
         return set()
     with path.open(newline="") as handle:
-        return {(int(r["env"]), float(r["fraction"]), int(r["draw"]), r["map"]) for r in csv.DictReader(handle)}
+        return {(int(r["env"]), float(r["fraction"]), int(r["draw"]), r["map"], r.get("semantics") or "reception")
+                for r in csv.DictReader(handle)}
 
 
 def main(argv=None) -> None:
@@ -220,6 +251,8 @@ def main(argv=None) -> None:
     parser.add_argument("--fractions", type=float, nargs="+", default=[0.0, 0.25, 0.5, 0.75, 1.0])
     parser.add_argument("--draws", type=int, nargs="+", default=[0], help="draw indices of the long-range subset")
     parser.add_argument("--maps", nargs="+", default=["asis", "fixed256"], choices=["asis", "fixed256"])
+    parser.add_argument("--semantics", nargs="+", default=["reception"], choices=list(SEMANTICS),
+                        help="link rule of the communication graph (the maps always follow reception)")
     parser.add_argument("--long-range", type=float, default=1024.0)
     parser.add_argument("--short-range", type=float, default=128.0)
     parser.add_argument("--model", default=None, help="state dict of another LPAC-K3 checkpoint (default: published)")
@@ -246,8 +279,8 @@ def main(argv=None) -> None:
             for draw in args.draws:
                 if fraction in (0.0, 1.0) and draw != args.draws[0]:
                     continue  # no subset to draw
-                for map_mode in args.maps:
-                    key = (env_index, float(fraction), draw, map_mode)
+                for map_mode, semantics in [(m, g) for m in args.maps for g in args.semantics]:
+                    key = (env_index, float(fraction), draw, map_mode, semantics)
                     if key in done:
                         continue
                     long_idx = long_range_robots(env_index, draw, fraction)
@@ -255,9 +288,9 @@ def main(argv=None) -> None:
                     is_long[long_idx] = True
                     ranges = torch.full((NUM_ROBOTS,), args.short_range, dtype=torch.float64)
                     ranges[is_long] = args.long_range
-                    policy = HeterogeneousPolicy(paths, device, ranges, map_mode, args.model, args.variant)
+                    policy = HeterogeneousPolicy(paths, device, ranges, map_mode, args.model, args.variant, semantics)
                     reference = HeterogeneousPolicy(paths, device, torch.full((NUM_ROBOTS,), args.short_range, dtype=torch.float64),
-                                                    map_mode, args.model, args.variant) if args.probe_every else None
+                                                    map_mode, args.model, args.variant, semantics) if args.probe_every else None
                     params = make_parameters(paths.env_params, args.long_range, NUM_ROBOTS)
                     positions = load_initial_positions(paths.pos_file(env_index), NUM_ROBOTS)
                     env = make_environment(params, paths.env_file(env_index), positions)
@@ -266,7 +299,8 @@ def main(argv=None) -> None:
                     features = subset_features(env, positions, is_long, params.pWorldMapSize)
                     rec = run_episode(policy, reference, params, env, args.num_steps, args.probe_every, is_long)
                     rec.update(features)
-                    row = {"env": env_index, "fraction": fraction, "draw": draw, "map": map_mode, "model": args.model_tag,
+                    row = {"env": env_index, "fraction": fraction, "draw": draw, "map": map_mode, "semantics": semantics,
+                           "model": args.model_tag,
                            "num_long": int(is_long.sum()), "long_range": args.long_range, "short_range": args.short_range,
                            "ratio_mean": rec["cost_mean"] / clair_mean, "ratio_final": rec["cost_final"] / clair_final,
                            "clairvoyant_cost_mean": clair_mean, "wall_s": round(time.time() - tic, 1), **rec}
@@ -277,7 +311,7 @@ def main(argv=None) -> None:
                             writer.writeheader()
                         writer.writerow({k: row.get(k) for k in FIELDS})
                     done.add(key)
-                    print(f"[{time.time() - started:6.0f}s] env={env_index:2d} f={fraction:.2f} draw={draw} {map_mode:8s} "
+                    print(f"[{time.time() - started:6.0f}s] env={env_index:2d} f={fraction:.2f} draw={draw} {map_mode:8s} {semantics:12s} "
                           f"n_long={row['num_long']:2d} ratio={row['ratio_mean']:.3f} deg={row['degree_mean']:5.2f} "
                           f"probe_short={row['probe_short']:.3f} probe_long={row['probe_long']:.3f} "
                           f"idf_share={row['long_idf_share']:.2f} centre={row['long_center_dist']:.2f} ({row['wall_s']:.0f}s)",
