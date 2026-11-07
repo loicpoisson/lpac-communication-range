@@ -86,13 +86,20 @@ when the policy is run with a larger communication range than it was trained wit
   published model from f = 1/2 but stays 0.2-0.4 above the published model with the fixed-scale map.
 
 - Keeping the far robots in the fixed-scale map, projected onto the 256 m circle, is worse than
-  dropping them: on the 11 release environments the published model reads 2.03 / 2.55 / 2.64 at
-  512 / 768 / 1024 m against 1.78 / 1.76 / 1.71 when they are dropped (paired +0.25 to +0.94, better
-  in at most 2 of 11 environments), though both beat the published map (2.77 / 4.52 / 5.22). The
-  projection piles up to 30 robots onto the border ring, with cell values up to 4.29 against 1.10,
-  so what breaks the policy at long range is the distortion of the map, not the loss of the far
-  robots: dropping them costs +0.02 at 1024 m against the model's own 256 m optimum (SE 0.05, within
-  the seed noise of 0.26), while distorting them costs +0.94 (SE 0.19).
+  dropping them: on the 40 new environments the published model reads 2.08 / 2.43 / 2.65 at
+  512 / 768 / 1024 m against 1.71 / 1.73 / 1.77 when they are dropped (paired +0.37 to +0.88, SE
+  0.06-0.08, better in at most 5 of 40 environments), though both beat the published map
+  (2.87 at 512 m, 6.15 at 1024 m); the 11 release environments agree. The projection piles up to 30
+  robots onto the border ring, with cell values up to 4.29 against 1.10, so what breaks the policy
+  at long range is the distortion of the map, not the loss of the far robots: dropping them costs
+  +0.06 at 1024 m against the model's own 256 m optimum (SE 0.04), while distorting them costs
+  +0.88 (SE 0.08).
+- In a team mixing 128 m and 1024 m robots, the definition of a link matters as much as the model.
+  Wiring an edge whenever *either* robot can reach the other, instead of only when the receiver can,
+  gains 0.17 to 0.26 for V4 in 11 environments out of 11, because it lets the short-range robots
+  consume what the long-range ones broadcast; requiring both to reach changes nothing. For the
+  published model with its own neighbour map the ordering reverses (transmission costs +0.4 to
+  +0.8), since the extra edges are not reflected in the map the CNN reads.
 
 Details, numbers and caveats: [`docs/journal.md`](docs/journal.md). Framing document with
 figures (French): [`docs/framing.html`](docs/framing.html), also online at
@@ -116,6 +123,7 @@ figures (French): [`docs/framing.html`](docs/framing.html), also online at
 | `results_h1/`, `farmshare_mixture.sbatch`, `fig_mixture.png` | mixture of range specialists in a heterogeneous team (`lpac_study.mixture`) |
 | `results_A/`, `fig_fixedmap_training.png` | V0 trained with the fixed-scale neighbour map (mixed ranges and 128 m control) |
 | `results_B/` | V3 trained on the mixed-range dataset |
+| `results_sem/`, `plots_ta.py`, `fig_ta_q1q2.png` | question Q2 of the teaching assistant: the four definitions of a communication link in a heterogeneous team (`--semantics` of `lpac_study.heterogeneous`), and the figure of Q1 and Q2 |
 | `results_clamp/` | question Q1 of the teaching assistant: the fixed-scale map that keeps the far robots on the border circle (`K256`) against the one that drops them (`C3`) |
 | `results_H2/`, `fig_range_input.png` | V0R: the robot's own range as GNN input, trained on per-robot ranges; homogeneous sweeps and heterogeneous grid |
 | `fig_*.png` | figures; `fig_email.png` is the self-contained summary figure; `fig_variants*.png` the variant comparison |
@@ -123,7 +131,7 @@ figures (French): [`docs/framing.html`](docs/framing.html), also online at
 | `lpac_study/variants.py` | model variants V1 (no neighbor map), V2 (edge geometry, GATv2), V3 (V1 + PointNetConv front layer), V0R (V0 + own range as GNN input), V4 (V3 with bounded edge features) and V5 (multi-scale fixed maps) as subclasses of the library model; `--variant` on `training/train_launch.py`, `lpac_study.sweep`, `lpac_study.factorial` and the Slurm scripts |
 | `lpac_study/heterogeneous.py`, `lpac_study/mixture.py` | heterogeneous teams at inference (range per robot, frozen-state probe, start-position descriptors) and the mixture of range specialists |
 | `training/redraw_ranges.py` | rebuilds the range-dependent tensors of a dataset at another range, at a fixed map scale, at three fixed scales (V5), or with a range per robot |
-| `tests/` | unit tests of the V4 edge features and the V5 maps |
+| `tests/` | unit tests of the V4 edge features, the V5 maps, the clamped map (`K<m>`) and the four link semantics |
 | `results_V45/`, `fig_v4v5*.png`, `fig_hetero_candidates.png` | V4 and V5 evaluations per seed on both environment sets, loss histories, V4 mixed in heterogeneous teams |
 | `lpac_eval.ipynb` | self-contained Colab notebook (installs, downloads, sweeps, plots) |
 | `run_all.sh` | reruns the range sweep from scratch on Linux/WSL |

@@ -1409,7 +1409,21 @@ value is clipped to norm 1 (`comm_maps_from_positions(..., clamp=True)` in
 `lpac_study/neighbourhood.py`, tested in `tests/test_clamp_and_semantics.py`). Within 256 m the two
 levels are bit-identical, which the test asserts; only the far robots differ.
 
-Published model, 11 released environments, cost ratio averaged over the episode:
+Published model, **40 new environments** (the primary set), cost ratio averaged over the episode:
+
+| map at inference | 512 m | 768 m | 1024 m |
+| --- | --- | --- | --- |
+| drop the far robots (`C3`) | 1.71 | 1.73 | 1.77 |
+| project them on the circle (`K256`) | 2.08 | 2.43 | 2.65 |
+| map as published (`C0`) | 2.87 | not run | 6.15 |
+| robots drawn per map, drop / project | 4.3 / 13.9 | 4.3 / 23.0 | 4.3 / 29.7 |
+
+Paired per environment, project minus drop: +0.365 (SE 0.058, better in 5/40), +0.699 (SE 0.063,
+1/40), +0.877 (SE 0.075, 1/40). Project minus as published: -0.796 (SE 0.081, 38/40) at 512 m and
+-3.507 (SE 0.227, 40/40) at 1024 m. Centralized CVT 2.33. Cost of dropping, against the model's own
+256 m optimum (1.70 on this set): +0.007 (SE 0.035), +0.029 (SE 0.029), +0.064 (SE 0.035).
+
+Same model and same levels on the 11 released environments, which agree:
 
 | map at inference | 512 m | 768 m | 1024 m |
 | --- | --- | --- | --- |
@@ -1424,7 +1438,8 @@ Paired per environment, project minus drop: +0.25 (SE 0.08, better in 2/11), +0.
 
 How much does dropping them cost? Paired per environment against the 256 m optimum of the same
 model, `C3` at 512 / 768 / 1024 m reads +0.088 (SE 0.064, lower in 2/11), +0.066 (SE 0.063, 3/11)
-and +0.018 (SE 0.049, 4/11). At 1024 m the loss is therefore within the noise of the protocol (the
+and +0.018 (SE 0.049, 4/11) on the 11 environments, and +0.007, +0.029, +0.064 (SE 0.029-0.035) on
+the 40. At 1024 m the loss is therefore within the noise of the protocol (the
 seed spread of the 11-environment mean is 0.26 at that range, the episode noise about 0.35), while
 the distortion costs +0.936 (SE 0.190) at the same range, a factor of fifty. Dropping the far robots
 is close to free; drawing them wrong is not. Note that `C3` at 256 m *is* the published map at 256 m,
@@ -1440,4 +1455,67 @@ nonzero cells 9.9 against 49.4. Projection piles up to 30 robots onto one ring o
 times outside the distribution the CNN was trained on, so the policy pays more for the distortion
 than it gains from the extra neighbors. Information loss is therefore not what breaks the policy at
 long range; distribution shift of the map is, and the comparison above makes that quantitative:
-losing the far robots costs 0.02 at 1024 m, distorting them 0.94.
+losing the far robots costs 0.06 at 1024 m on the 40 environments (0.02 on the 11),
+distorting them 0.88 (0.94). The loss is one order of magnitude below the distortion on both sets,
+and at most 1.8 standard errors from zero.
+
+![Q1 and Q2](../fig_ta_q1q2.png)
+
+### 16.2 Q2. What is a communication link when the robots do not share a range
+
+Until now a heterogeneous team used one rule: robot i sees j when the distance is below i's own
+range (`reception`). Three others are now available in `lpac_study/heterogeneous.py`, selected with
+`--semantics`: `transmission` (j reaches i when the distance is below *j*'s range, the transpose of
+reception), `sym_min` (both must reach, the AND) and `sym_max` (either reaches, the OR). Only
+`edge_index` changes: the neighbour map still follows reception within min(r_i, 256 m) in every
+semantics, so what is measured is the effect of the graph alone. V4 carries no map at all, which is
+why it is the primary model here. Teams mix 128 m and 1024 m robots, f is the fraction at 1024 m,
+11 environments, 4 draws of the subset, 3 seeds.
+
+Control first: at f = 0 and f = 1 the team is homogeneous, so the four rules must coincide. They do,
+to the last digit, max |difference| = 0.0000 per environment at both ends.
+
+V4 trained on mixed ranges, cost ratio, mean ± spread over the 3 seeds:
+
+| link rule | f = 0 | 1/4 | 1/2 | 3/4 | 1 |
+| --- | --- | --- | --- | --- | --- |
+| reception (current) | 2.21 ± 0.01 | 2.17 ± 0.06 | 2.07 ± 0.07 | 1.93 ± 0.07 | 1.76 ± 0.06 |
+| transmission | 2.21 | 2.00 ± 0.01 | 1.85 ± 0.08 | 1.81 ± 0.06 | 1.76 |
+| both must reach (AND) | 2.21 | 2.16 ± 0.04 | 2.02 ± 0.04 | 1.92 ± 0.05 | 1.76 |
+| either reaches (OR) | 2.21 | 1.95 ± 0.02 | 1.82 ± 0.07 | 1.76 ± 0.06 | 1.76 |
+
+Paired per environment against reception, at f = 1/4, 1/2, 3/4: transmission -0.17, -0.23, -0.12
+(SE 0.03-0.04, better in 11/11 at each); OR -0.22, -0.26, -0.17 (SE 0.03-0.04, 11/11); AND -0.01,
+-0.05, -0.01 (SE 0.02-0.03, 7-8 of 11).
+
+The published model, for comparison, with its own map and with the fixed-scale map:
+
+| model and map | rule | f = 1/4 | 1/2 | 3/4 |
+| --- | --- | --- | --- | --- |
+| published, map as published | reception | 2.42 | 2.83 | 3.96 |
+| | transmission | +0.74 | +0.78 | +0.43 |
+| | AND | +0.05 | +0.16 | +0.04 |
+| | OR | +0.08 | +0.31 | +0.20 |
+| published, fixed 256 m map | reception | 2.06 | 1.94 | 1.87 |
+| | transmission | +0.05 | -0.01 | -0.03 |
+| | AND | -0.13 | -0.10 | -0.09 |
+| | OR | -0.07 | -0.08 | -0.07 |
+
+(the rule rows are paired differences against reception, SE 0.05-0.18.)
+
+Answer: yes, the definition of a link changes the result, and it changes it in opposite directions
+depending on whether the model reads the geometry. For V4, which has no map and reads
+(p_j - p_i)/d and tanh(d/256 m) on its edges, the best rule is "either robot can reach" and it gains
+0.17 to 0.26 against the current rule in 11 environments out of 11; transmission gains almost as
+much. Both rules add exactly the same edges, those where r_j > d > r_i, that is a short-range robot
+hearing a long-range one, so the gain comes from letting the 128 m robots consume what the 1024 m
+robots broadcast. The AND rule, which removes those edges instead, is indistinguishable from the
+current one. For the published model with its own map the ordering reverses: transmission costs
++0.4 to +0.8 because the extra edges are not reflected in the neighbour map the CNN reads, and the
+mismatch between what the graph carries and what the map shows is worse than the missing edges.
+With the fixed-scale map that penalty disappears and the symmetric rules become mildly favourable.
+
+Practical consequence for the report: a heterogeneous fleet should be wired with the OR rule, and
+the gain is only available to a model that reads the geometry on its edges. This is also a second,
+independent demonstration of the main thesis, that the policy is limited by what its input makes
+representable rather than by the information available to it.
