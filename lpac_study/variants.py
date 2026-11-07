@@ -41,7 +41,7 @@ from coverage_control.nn import LPAC
 from coverage_control.nn.data_loaders.loaders import CNNGNNDataset
 from torch_geometric.nn import GATv2Conv, PointNetConv
 
-VARIANTS = ("V0", "V1", "V2", "V3", "V0R", "V4", "V5", "V6", "V2R", "V2RL")
+VARIANTS = ("V0", "V1", "V2", "V3", "V0R", "V4", "V5", "V6", "V2R", "V2RL", "V2B")
 MULTISCALE_SCALES_M = (256.0, 512.0, 1024.0)  # V5: one pair of map channels per scale
 EDGE_DIM = 2
 HEADS = 4
@@ -226,7 +226,8 @@ def variant_config(config: dict, variant: str) -> dict:
 class EdgeGeometryGNN(torch.nn.Module):
     """Five GATv2 layers reading the relative position of the sender on every edge."""
 
-    def __init__(self, input_dim: int, latent_size: int, num_layers: int, heads: int = HEADS):
+    def __init__(self, input_dim: int, latent_size: int, num_layers: int, heads: int = HEADS,
+                 edge_dim: int = EDGE_DIM):
         super().__init__()
         assert latent_size % heads == 0, "latent size must split evenly across heads"
         per_head = latent_size // heads
@@ -234,7 +235,7 @@ class EdgeGeometryGNN(torch.nn.Module):
         self.layers = torch.nn.ModuleList()
         in_dim = input_dim
         for _ in range(num_layers):
-            self.layers.append(GATv2Conv(in_dim, per_head, heads=heads, edge_dim=EDGE_DIM, concat=True))
+            self.layers.append(GATv2Conv(in_dim, per_head, heads=heads, edge_dim=edge_dim, concat=True))
             in_dim = latent_size
 
     def forward(self, x: torch.Tensor, edge_index: torch.Tensor, edge_attr: torch.Tensor) -> torch.Tensor:
@@ -326,6 +327,31 @@ class LPACEdgeGeometry(LPAC):
         gnn_input = torch.cat([cnn_output, pos], dim=-1)
         gnn_output = self.gnn_backbone(gnn_input, edge_index, self.edge_attributes(pos, edge_index))
         return self.output_linear(self.gnn_mlp(gnn_output))
+
+
+class LPACBoundedEdgeGATv2(LPACEdgeGeometry):
+    """V2B: exactly V2, with the bounded edge features of V4 and nothing else changed.
+
+    The single-cause ablation of question Q3. V2res changes three things at once (pre-norm
+    residual blocks, LayerNorm, and the edge input), so it identifies a bundle. This variant
+    changes only the edge input, from V2's ``(p_j - p_i) / W``, which spans +-0.125 at the 128 m
+    training range, to V4's ``[(p_j - p_i) / d, tanh(d / 256 m)]``. The attention stack stays
+    plain: ``relu(GATv2(x))``, no residual, no normalization. If the training loss drops most of
+    the way from 0.676 towards 0.432, the edge encoding carries the bundle; if it does not, the
+    residual blocks do.
+    """
+
+    def __init__(self, config: dict):
+        LPAC.__init__(self, variant_config(config, "V2"))
+        self.gnn_backbone = EdgeGeometryGNN(self.cnn_backbone.latent_size + 2, self.latent_size,
+                                            self.num_layers, edge_dim=3)
+
+    def forward(self, data: torch_geometric.data.Data) -> torch.Tensor:
+        x, edge_index, pos = data.x, data.edge_index, data.pos
+        cnn_output = self.cnn_backbone(x.view(-1, x.shape[-3], x.shape[-2], x.shape[-1]))
+        gnn_input = torch.cat([cnn_output, pos], dim=-1)
+        edge_attr = LPACBoundedGeometry.edge_features(pos, edge_index)
+        return self.output_linear(self.gnn_mlp(self.gnn_backbone(gnn_input, edge_index, edge_attr)))
 
 
 class BoundedGeometryConv(torch_geometric.nn.MessagePassing):
@@ -453,6 +479,8 @@ def build_model(variant: str, config: dict) -> LPAC:
         return LPACMultiScaleGeometry(config)
     if variant in ("V2R", "V2RL"):
         return LPACResidualEdgeGeometry(config, variant)
+    if variant == "V2B":
+        return LPACBoundedEdgeGATv2(config)
     return LPAC(variant_config(config, variant))
 
 
@@ -463,6 +491,6 @@ def parameter_count(model: torch.nn.Module) -> int:
 def receptive_field_hops(variant: str, config: dict) -> int:
     """Graph hops seen by a node: layers x K for TAGConv, layers for GATv2, plus one for V3's front layer."""
     layers = config["GNNBackBone"]["NumLayers"]
-    if variant in ("V2", "V2R", "V2RL"):
+    if variant in ("V2", "V2R", "V2RL", "V2B"):
         return layers
     return layers * config["GNNBackBone"]["NumHops"] + (1 if variant in ("V3", "V4", "V6") else 0)

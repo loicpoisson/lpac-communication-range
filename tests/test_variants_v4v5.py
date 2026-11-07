@@ -158,6 +158,27 @@ def test_v6_is_v5_plus_the_v4_layer():
         assert torch.allclose(v6(data), v5(data), atol=1e-6)
 
 
+def test_v2b_is_v2_with_the_bounded_edge_features():
+    """V2B keeps V2's plain attention stack and changes only the edge input (3 numbers instead of 2)."""
+    cfg = _release_config()
+    if cfg is None:
+        print("skip (no learning_params.toml)"); return
+    v2, v2b = build_model("V2", cfg), build_model("V2B", cfg)
+    assert type(v2b.gnn_backbone) is type(v2.gnn_backbone), "no residual blocks: the same backbone class as V2"
+    assert len(v2b.gnn_backbone.layers) == len(v2.gnn_backbone.layers)
+    assert v2.gnn_backbone.layers[0].edge_dim == 2 and v2b.gnn_backbone.layers[0].edge_dim == 3
+    assert v2b.edge_features is LPACBoundedGeometry.edge_features if hasattr(v2b, "edge_features") else True
+    from torch_geometric.data import Data
+    p = random_positions(1)[0]
+    channels = v2b.cnn_backbone.conv0.in_channels  # 2: V2 carries no neighbour map
+    data = Data(x=torch.rand(NUM_ROBOTS, channels, 32, 32), edge_index=edge_index_within(p, 512.0),
+                pos=(p + WORLD_SIZE_M / 2) / WORLD_SIZE_M)
+    v2b.eval()
+    with torch.no_grad():
+        out = v2b(data)
+    assert out.shape == (NUM_ROBOTS, 2) and bool(torch.isfinite(out).all())
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):
