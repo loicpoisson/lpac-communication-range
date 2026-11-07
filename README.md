@@ -144,8 +144,8 @@ figures (French): [`docs/framing.html`](docs/framing.html), also online at
 | `lpac_study/` | Python package (PyTorch Geometric) used by all scripts and the notebook |
 | `lpac_study/variants.py` | model variants V1 (no neighbor map), V2 (edge geometry, GATv2), V3 (V1 + PointNetConv front layer), V0R (V0 + own range as GNN input), V4 (V3 with bounded edge features), V5 (multi-scale fixed maps) and V2R/V2RL (residual GATv2 with LayerNorm and bounded edges, with or without a log-degree feature) as subclasses of the library model; `--variant` on `training/train_launch.py`, `lpac_study.sweep`, `lpac_study.factorial` and the Slurm scripts |
 | `lpac_study/heterogeneous.py`, `lpac_study/mixture.py` | heterogeneous teams at inference (range per robot, frozen-state probe, start-position descriptors) and the mixture of range specialists |
-| `training/redraw_ranges.py` | rebuilds the range-dependent tensors of a dataset at another range, at a fixed map scale, at three fixed scales (V5), or with a range per robot |
-| `tests/` | unit tests of the V4 edge features, the V5 maps, the clamped map (`K<m>`) and the four link semantics |
+| `training/redraw_ranges.py` | rebuilds the range-dependent tensors of a dataset at another range, at a fixed map scale, at three fixed scales (V5), with a range per robot, or (`--hetero-fraction`) with a heterogeneous team drawn per sample under one of the four link rules |
+| `tests/` | unit tests of the V4 edge features, the V5 maps, the clamped map (`K<m>`), the four link semantics, and the identity between the training graph and the evaluation graph of the heterogeneous dataset |
 | `results_V45/`, `fig_v4v5*.png`, `fig_hetero_candidates.png` | V4 and V5 evaluations per seed on both environment sets, loss histories, V4 mixed in heterogeneous teams |
 | `lpac_eval.ipynb` | self-contained Colab notebook (installs, downloads, sweeps, plots) |
 | `run_all.sh` | reruns the range sweep from scratch on Linux/WSL |

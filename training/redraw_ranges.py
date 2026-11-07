@@ -100,6 +100,94 @@ def hetero_tensors(positions: torch.Tensor, ranges: torch.Tensor, map_size: int 
     return maps, weights
 
 
+HETERO_FRACTIONS = (0.0, 0.25, 0.5, 0.75, 1.0)
+SHORT_RANGE, LONG_RANGE = 128.0, 1024.0
+
+
+def draw_fraction_ranges(num_samples: int, num_robots: int, seed: int = 0, short: float = SHORT_RANGE,
+                         long: float = LONG_RANGE, fractions=HETERO_FRACTIONS) -> torch.Tensor:
+    """One range per robot, built as the evaluation protocol builds it: a fraction ``f`` hears far.
+
+    Per sample, ``f`` is drawn uniformly from ``fractions`` (the five values of the heterogeneous
+    evaluation, not a continuous range), then ``round(f * N)`` robots chosen uniformly without
+    replacement get ``long`` and the others ``short``. Reproducible from ``seed`` alone.
+    """
+    gen = torch.Generator().manual_seed(seed)
+    chosen = torch.tensor(fractions)[torch.randint(len(fractions), (num_samples,), generator=gen)]
+    counts = torch.round(chosen * num_robots).long().view(-1, 1)
+    rank = torch.argsort(torch.argsort(torch.rand(num_samples, num_robots, generator=gen), dim=1), dim=1)
+    return torch.where(rank < counts, torch.tensor(long), torch.tensor(short))
+
+
+def batched_graph_mask(positions: torch.Tensor, ranges: torch.Tensor, semantics: str = "transmission") -> torch.Tensor:
+    """``mask[b, i, j]``: robot ``i`` of sample ``b`` gets a message from ``j``, under one link rule.
+
+    The batched twin of ``lpac_study.heterogeneous.graph_mask``, which the evaluation uses; the unit
+    test asserts the two agree sample by sample, so a model is trained on the graph it is tested on.
+    """
+    if semantics not in ("reception", "transmission", "sym_min", "sym_max"):
+        raise ValueError(f"unknown semantics {semantics!r}")
+    distances = torch.cdist(positions, positions, 2)
+    received = distances < ranges.to(positions.dtype).unsqueeze(-1)  # d_ij < r_i
+    idx = torch.arange(positions.shape[1])
+    received[:, idx, idx] = False
+    if semantics == "reception":
+        return received
+    transmitted = received.transpose(1, 2)  # d_ij < r_j
+    if semantics == "transmission":
+        return transmitted
+    return received & transmitted if semantics == "sym_min" else received | transmitted
+
+
+def fraction_edge_weights(positions: torch.Tensor, ranges: torch.Tensor, semantics: str = "transmission") -> torch.Tensor:
+    """``W[b, j, i] = exp(-d^2 / r^2)`` on the links of ``semantics``, zero elsewhere (library orientation).
+
+    ``r`` is the range that justifies the link: the receiver's under ``reception``, the sender's under
+    ``transmission``, the smaller or larger one under the symmetric rules. Only the sparsity pattern
+    reaches the model, which uses a binary adjacency, but the magnitude is kept in the same form as
+    the authors' ``get_weights`` so the file stays interchangeable with theirs.
+    """
+    mask = batched_graph_mask(positions, ranges, semantics)
+    distances = torch.cdist(positions, positions, 2)
+    r_i = ranges.to(positions.dtype).unsqueeze(-1)   # [b, i, 1] receiver
+    r_j = ranges.to(positions.dtype).unsqueeze(-2)   # [b, 1, j] sender
+    scale = {"reception": r_i, "transmission": r_j}.get(semantics)
+    if scale is None:
+        scale = torch.minimum(r_i, r_j) if semantics == "sym_min" else torch.maximum(r_i, r_j)
+    weights = torch.exp(-distances.square() / scale.square()).masked_fill(~mask, 0.0)
+    return weights.transpose(1, 2).contiguous()  # [b, j(source), i(target)]
+
+
+def write_hetero_fraction(src: Path, dst: Path, seed: int = 0, semantics: str = "transmission",
+                          short: float = SHORT_RANGE, long: float = LONG_RANGE) -> None:
+    """Dataset whose graph is a heterogeneous team drawn per sample, for training V4 (item 2).
+
+    Only ``edge_weights.pt`` is rebuilt. ``comm_maps.pt`` is linked unchanged because the variants
+    this dataset is meant for (V1 to V4) carry no neighbour map; a map-reading variant must not be
+    trained on it. ``robot_ranges.pt`` records the draw so the training graph can be reproduced.
+    """
+    dst.mkdir(parents=True, exist_ok=True)
+    for item in src.iterdir():
+        if item.is_file():
+            link(item, dst / item.name)
+    for split_index, split in enumerate(s for s in SPLITS if (src / s).is_dir()):
+        (dst / split).mkdir(exist_ok=True)
+        positions = load(src / split / "robot_positions.pt")
+        ranges = draw_fraction_ranges(positions.shape[0], positions.shape[1], seed=1000 * seed + split_index,
+                                      short=short, long=long)
+        chunks = []
+        for start in range(0, positions.shape[0], 1000):
+            stop = start + 1000
+            chunks.append(fraction_edge_weights(positions[start:stop], ranges[start:stop], semantics).to_sparse_coo())
+        torch.save(torch.cat(chunks).coalesce(), dst / split / "edge_weights.pt")
+        torch.save(ranges, dst / split / "robot_ranges.pt")
+        for item in (src / split).iterdir():
+            if item.name != "edge_weights.pt":
+                link(item, dst / split / item.name)
+        far = (ranges == long).float().mean().item()
+        print(f"{split}: {positions.shape[0]} samples, {semantics} graph, {100 * far:.1f}% of robots at {long:.0f} m")
+
+
 def draw_ranges(num_samples: int, num_robots: int, seed: int = 0) -> torch.Tensor:
     """One range per robot and sample, uniform over HETERO_RANGES, reproducible."""
     gen = torch.Generator().manual_seed(seed)
@@ -261,10 +349,23 @@ def main() -> None:
     parser.add_argument("--infer-range", action="store_true",
                         help="recover each sample's range from its stored edge weights (merged mixed-range sets) and keep them")
     parser.add_argument("--seed", type=int, default=0, help="seed of the per-robot range draw (--hetero)")
+    parser.add_argument("--hetero-fraction", action="store_true",
+                        help="heterogeneous teams drawn per sample: f in {0, 1/4, 1/2, 3/4, 1} of the robots at "
+                             "--long-range, the rest at --short-range; rebuilds only the graph (maps are linked)")
+    parser.add_argument("--semantics", default="transmission",
+                        choices=("reception", "transmission", "sym_min", "sym_max"),
+                        help="link rule of --hetero-fraction (see lpac_study.heterogeneous)")
+    parser.add_argument("--short-range", type=float, default=SHORT_RANGE)
+    parser.add_argument("--long-range", type=float, default=LONG_RANGE)
     parser.add_argument("--fixed-scale", type=float, default=None,
                         help="draw the maps at this fixed scale with the robots within min(range, scale); the graph keeps the range")
     args = parser.parse_args()
-    if args.hetero:
+    if args.hetero_fraction:
+        if not (args.src and args.dst):
+            parser.error("--src and --dst are required with --hetero-fraction")
+        write_hetero_fraction(Path(args.src), Path(args.dst), args.seed, args.semantics,
+                              args.short_range, args.long_range)
+    elif args.hetero:
         if not (args.src and args.dst):
             parser.error("--src and --dst are required with --hetero")
         write_hetero(Path(args.src), Path(args.dst), args.seed)
