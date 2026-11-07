@@ -99,6 +99,23 @@ def test_sample_range_mixture_follows_the_weights():
         assert 0.23 < float((uniform == r).float().mean()) < 0.27
 
 
+def test_per_sample_range_draws_each_map_at_its_own_scale():
+    """A mixed-range batch must give, sample by sample, what a single-range build gives."""
+    from training.redraw_ranges import comm_maps, edge_weights
+    p = torch.rand(6, 16, 2, dtype=torch.float32) * 1000.0 + 12.0
+    ranges = torch.tensor([128.0, 256.0, 512.0, 1024.0, 128.0, 1024.0])
+    batched = comm_maps(p, ranges)
+    for b in range(p.shape[0]):
+        one = comm_maps(p[b : b + 1], float(ranges[b]))
+        assert torch.allclose(batched[b : b + 1], one, atol=1e-6), f"sample {b} at {float(ranges[b]):.0f} m"
+    weights = edge_weights(p, ranges.view(-1, 1, 1))
+    for b in range(p.shape[0]):
+        assert torch.allclose(weights[b : b + 1], edge_weights(p[b : b + 1], float(ranges[b])), atol=1e-6)
+    # a fixed scale still clamps the neighbours drawn, unchanged behaviour
+    fixed = comm_maps(p, ranges, scale=256.0)
+    assert torch.allclose(fixed[0], comm_maps(p[:1], 128.0, scale=256.0)[0], atol=1e-6)
+
+
 def test_transmission_gives_short_robots_more_neighbours_than_reception():
     p = positions()
     ranges = draw_fraction_ranges(BATCH, NUM_ROBOTS, seed=7)

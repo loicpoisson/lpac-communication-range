@@ -45,23 +45,27 @@ def comm_maps(positions: torch.Tensor, comm_range: float, map_size: int = MAP_SI
 
     Neighbours are the robots strictly within ``comm_range``; cell = round(rel * S / (2 scale) + S/2 - 1/2),
     value = rel / scale, summed per cell (sparse_coo_tensor semantics of the library). ``scale`` is the
-    drawing scale (default: the range itself). With a fixed ``scale`` the neighbours drawn are those
-    within ``min(comm_range, scale)``: the fixed-scale map of the journal (level C3 when scale = 256 m).
+    drawing scale (default: the range itself, per sample when ``comm_range`` holds one value per
+    sample). With a fixed ``scale`` the neighbours drawn are those within ``min(comm_range, scale)``:
+    the fixed-scale map of the journal (level C3 when scale = 256 m).
     """
     batch, num_robots, _ = positions.shape
     comm_range = torch.as_tensor(comm_range, dtype=torch.float32).reshape(-1)  # one value, or one per sample
-    draw_range = comm_range if scale is None else torch.clamp(comm_range, max=scale)
     if scale is None:
-        if comm_range.numel() != 1:
-            raise ValueError("a per-sample range needs a fixed drawing scale (--fixed-scale or --multiscale)")
-        scale = float(comm_range)
+        # the library's own behaviour: each sample is drawn at the range it was generated with,
+        # so a per-sample range gives a per-sample scale (that is what a merged mixed-range set holds)
+        drawing_scale, draw_range = comm_range, comm_range
+    else:
+        drawing_scale = torch.full_like(comm_range, float(scale))
+        draw_range = torch.clamp(comm_range, max=scale)
     rel = positions.unsqueeze(1) - positions.unsqueeze(2)  # rel[b, i, j] = p_j - p_i
     dist = torch.cdist(positions, positions, 2)
     mask = dist < draw_range.view(-1, 1, 1)
     idx = torch.arange(num_robots)
     mask[:, idx, idx] = False
-    cells = torch.round(rel * map_size / (scale * 2.0) + (map_size / 2.0 - 0.5)).long()
-    values = rel / scale
+    per_sample = drawing_scale.view(-1, 1, 1, 1)  # broadcasts over rel (B, N, N, 2), or over a single value
+    cells = torch.round(rel * map_size / (per_sample * 2.0) + (map_size / 2.0 - 0.5)).long()
+    values = rel / per_sample
     maps = torch.zeros((batch, num_robots, 2, map_size, map_size), dtype=torch.float32)
     b, i, j = mask.nonzero(as_tuple=True)
     cx, cy = cells[b, i, j, 0].clamp(0, map_size - 1), cells[b, i, j, 1].clamp(0, map_size - 1)
