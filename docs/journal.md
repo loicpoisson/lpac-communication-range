@@ -1544,7 +1544,7 @@ not slow, it is stuck. Five single-seed 30-epoch runs separate the candidate cau
 | V1 (reference) | no map, TAGConv K=3 | 0.540 / 0.462 / 0.392 | 0.557 / 0.545 / 0.548 | 0.536 (e18) |
 | V2lr | learning rate 1e-3 | 0.698 / 0.686 / 0.679 | 0.729 / 0.749 / 0.676 | 0.659 (e24) |
 | V2res | pre-norm residual blocks, LayerNorm, V4's bounded edge features | 0.522 / 0.467 / **0.432** | 0.522 / 0.504 / 0.495 | **0.488** (e29) |
-| V2deep | the same bundle with 15 GATv2 layers | 0.533 / 0.467 / 0.433 | 0.540 / 0.545 / 0.540 | 0.503 (e26) |
+| V2deep | 15 layers **of the V2res block**, not 15 plain V2 layers | 0.533 / 0.467 / 0.433 | 0.540 / 0.545 / 0.540 | 0.503 (e26) |
 | V2logdeg | the bundle plus log(1 + in-degree) as a node feature | 0.533 / 0.476 / 0.447 | 0.571 / 0.503 / 0.512 | 0.498 (e27) |
 | V1K1 | control: V1 with TAGConv K=1, so 5 hops like V2 | 0.530 / 0.455 / 0.392 | 0.567 / 0.541 / 0.530 | 0.529 (e24) |
 
@@ -1556,10 +1556,13 @@ What each run rules out:
 
 * **The learning rate is not the cause.** Ten times the step size leaves the training loss at 0.679,
   within 0.003 of V2, and only makes the validation curve noisy.
-* **Capacity and the receptive field are not the cause.** Fifteen GATv2 layers land at 0.433, the
-  same as five (0.432), and the control settles it from the other side: V1 restricted to K = 1, that
-  is the same five hops as V2, reaches 0.392, exactly V1's own figure with K = 3. A five-hop
-  receptive field is enough for this task, so V2's deficit was never about reach.
+* **Capacity and the receptive field are not the cause, given the conditioning.** This run is 15
+  *V2res* blocks (residual, LayerNorm, bounded edges), not 15 plain V2 layers, so what it shows is
+  that once the conditioning is fixed, depth adds nothing: 0.433 against 0.432 for five blocks.
+  Whether 15 plain V2 layers would train was not tested. The control settles the reach question
+  from the other side: V1 restricted to K = 1, that is the same five hops as V2, reaches 0.392,
+  exactly V1's own figure with K = 3, so a five-hop receptive field is enough for this task and
+  V2's deficit was never about reach.
 * **Missing degree information is not the cause.** Softmax attention is a weighted mean and loses
   the number of neighbours that the normalized sum of TAGConv keeps, but restoring it as a node
   feature makes things slightly worse, 0.447 against 0.432.
@@ -1567,8 +1570,9 @@ What each run rules out:
   the training loss from 0.676 to 0.432, which closes 86 % of the distance to V1 and puts the curve
   on top of V1's for the first twenty epochs.
 
-Diagnosis in one line: V2 was untuned, not structurally limited. Its plateau is an optimization
-failure that standard conditioning removes, not a sign that attention cannot represent the policy.
+Diagnosis in one line: underfitting caused by the conditioning of the original V2 configuration,
+not by attention as such. A residual 0.04 gap in training loss to V1 remains (0.432 against 0.392),
+so a small structural cost cannot be excluded; single seed.
 
 Two caveats. First, V2res changes three things at once, so this identifies the bundle and not which
 of the three carries it; the bounded edge features are the most likely single candidate, since V2's

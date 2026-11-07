@@ -105,12 +105,14 @@ when the policy is run with a larger communication range than it was trained wit
   +0.8), most likely because the added edges are not reflected in the map the CNN reads: with the
   fixed-scale map the same rewiring is neutral.
 
-- The GATv2 variant was untuned, not structurally limited. Pre-norm residual blocks, LayerNorm and
-  V4's bounded edge features take its training loss from 0.676 to 0.432 at epoch 30, closing 86 % of
-  the distance to the map-less TAGConv model (0.392); ten times the learning rate changes nothing
-  (0.679), fifteen layers instead of five change nothing (0.433), and a log-degree node feature is
-  slightly worse (0.447). A control with TAGConv K = 1, the same five hops as the attention model,
-  reaches 0.392, so the receptive field was never the limitation.
+- The GATv2 variant underfits because of the conditioning of its original configuration, not
+  because of attention as such. Pre-norm residual blocks, LayerNorm and V4's bounded edge features
+  take its training loss from 0.676 to 0.432 at epoch 30, closing 86 % of the distance to the
+  map-less TAGConv model (0.392); ten times the learning rate changes nothing (0.679), fifteen of
+  those blocks instead of five change nothing (0.433), and a log-degree node feature is slightly
+  worse (0.447). A control with TAGConv K = 1, the same five hops as the attention model, reaches
+  0.392, so the receptive field was never the limitation. A residual 0.04 gap in training loss
+  remains, on a single seed, so a small structural cost cannot be excluded.
 
 Details, numbers and caveats: [`docs/journal.md`](docs/journal.md). Framing document with
 figures (French): [`docs/framing.html`](docs/framing.html), also online at
