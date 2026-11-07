@@ -1391,3 +1391,42 @@ Next, in order (1 and 2 done, section 9; 4 done, section 10):
 Contact: an email with the results and three questions (other checkpoints, whether the
 neighbor-map sensitivity is known, scope and compute) was sent to Charilaos Kanatsoulis,
 co-instructor and co-author of Muthusamy et al., in the week of 12 October.
+
+## 16. Answers to the teaching assistant (6 November)
+
+Three questions, asked after the milestone draft: (Q1) does the collapse come from losing the far
+robots or from the distortion of the map, (Q2) does the answer depend on how a link is defined when
+the robots do not share a range, (Q3) why does V2 underfit. Q1 and Q2 need no training and run on
+the Intel CPU nodes; Q3 is five single-seed GPU runs.
+
+### 16.1 Q1. Projecting the far robots onto the 256 m circle instead of dropping them
+
+The fixed-scale map of section 9 (level `C3`, equivalently `S256`) draws the robots within
+min(R, 256 m) at the fixed 256 m scale and *drops* the rest, so beyond 256 m the policy stops
+seeing part of its team. The new level `K256` keeps them: a robot at distance d > 256 m is
+projected onto the 256 m circle along its own direction, written into the border cell, and its
+value is clipped to norm 1 (`comm_maps_from_positions(..., clamp=True)` in
+`lpac_study/neighbourhood.py`, tested in `tests/test_clamp_and_semantics.py`). Within 256 m the two
+levels are bit-identical, which the test asserts; only the far robots differ.
+
+Published model, 11 released environments, cost ratio averaged over the episode:
+
+| map at inference | 512 m | 768 m | 1024 m |
+| --- | --- | --- | --- |
+| drop the far robots (`C3`) | 1.78 | 1.76 | 1.71 |
+| project them on the circle (`K256`) | 2.03 | 2.55 | 2.64 |
+| map as published (`C0`) | 2.77 | 4.52 | 5.22 |
+| robots drawn per map, drop / project | 4.2 / 13.7 | 4.2 / 23.3 | 4.3 / 29.7 |
+
+Paired per environment, project minus drop: +0.25 (SE 0.08, better in 2/11), +0.80 (SE 0.12, 0/11),
++0.94 (SE 0.19, 0/11). Project minus as published: -0.74 (SE 0.11, 11/11), -1.97 (SE 0.33, 10/11),
+-2.58 (SE 0.28, 11/11). Centralized CVT reads 2.34 on the same environments.
+
+Answer: keeping the far robots as border pixels hurts, and dropping them is the better of the two,
+although both beat the published map by a wide margin. The reason is the magnitude of the input,
+measured locally at R = 1024 m on the same environments: the largest cell value is 1.10 with `C3`
+and 4.29 with `K256` (1.72 with `C0`), the mass per robot 4.0 against 36.1, and the number of
+nonzero cells 9.9 against 49.4. Projection piles up to 30 robots onto one ring of border cells, four
+times outside the distribution the CNN was trained on, so the policy pays more for the distortion
+than it gains from the extra neighbors. Information loss is therefore not what breaks the policy at
+long range; distribution shift of the map is.

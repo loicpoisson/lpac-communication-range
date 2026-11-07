@@ -278,7 +278,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--device", default="auto", help="auto, cpu or cuda")
     parser.add_argument("--seed", type=int, default=0, help="torch seed (the pipeline is deterministic anyway)")
     parser.add_argument("--model", default=None, help="state dict of another LPAC-K3 checkpoint (default: the published one)")
-    parser.add_argument("--variant", default="V0", choices=("V0", "V1", "V2", "V3", "V0R", "V4", "V5", "V6"), help="architecture of --model (lpac_study.variants)")
+    parser.add_argument("--variant", default="V0", choices=("V0", "V1", "V2", "V3", "V0R", "V4", "V5", "V6", "V2R", "V2RL"), help="architecture of --model (lpac_study.variants)")
     return parser
 
 

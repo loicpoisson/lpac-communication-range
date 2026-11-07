@@ -85,6 +85,14 @@ when the policy is run with a larger communication range than it was trained wit
   0.1 and 0.4-0.6 worse than the 128 m model at 128-256 m; in heterogeneous teams it beats the
   published model from f = 1/2 but stays 0.2-0.4 above the published model with the fixed-scale map.
 
+- Keeping the far robots in the fixed-scale map, projected onto the 256 m circle, is worse than
+  dropping them: on the 11 release environments the published model reads 2.03 / 2.55 / 2.64 at
+  512 / 768 / 1024 m against 1.78 / 1.76 / 1.71 when they are dropped (paired +0.25 to +0.94, better
+  in at most 2 of 11 environments), though both beat the published map (2.77 / 4.52 / 5.22). The
+  projection piles up to 30 robots onto the border ring, with cell values up to 4.29 against 1.10,
+  so what breaks the policy at long range is the distortion of the map, not the loss of the far
+  robots.
+
 Details, numbers and caveats: [`docs/journal.md`](docs/journal.md). Framing document with
 figures (French): [`docs/framing.html`](docs/framing.html), also online at
 <https://claude.ai/artifact/LcHe2tRjWD1ZMXqiXVh6zV>.
@@ -107,6 +115,7 @@ figures (French): [`docs/framing.html`](docs/framing.html), also online at
 | `results_h1/`, `farmshare_mixture.sbatch`, `fig_mixture.png` | mixture of range specialists in a heterogeneous team (`lpac_study.mixture`) |
 | `results_A/`, `fig_fixedmap_training.png` | V0 trained with the fixed-scale neighbour map (mixed ranges and 128 m control) |
 | `results_B/` | V3 trained on the mixed-range dataset |
+| `results_clamp/` | question Q1 of the teaching assistant: the fixed-scale map that keeps the far robots on the border circle (`K256`) against the one that drops them (`C3`) |
 | `results_H2/`, `fig_range_input.png` | V0R: the robot's own range as GNN input, trained on per-robot ranges; homogeneous sweeps and heterogeneous grid |
 | `fig_*.png` | figures; `fig_email.png` is the self-contained summary figure; `fig_variants*.png` the variant comparison |
 | `lpac_study/` | Python package (PyTorch Geometric) used by all scripts and the notebook |
@@ -130,6 +139,8 @@ figures (French): [`docs/framing.html`](docs/framing.html), also online at
 | C1 | map drawing only the k nearest neighbors, at the test-range scale |
 | C2 | map drawn as at training: neighbors within 128 m, 128 m scale |
 | C3 | map drawn at a fixed 256 m scale: neighbors within 256 m |
+| S\<m\> | map drawn at a fixed \<m\> metre scale: neighbors within min(m, test range) (S256 = C3) |
+| K\<m\> | same fixed scale, but the robots beyond \<m\> metres are projected onto the \<m\> metre circle and written into the border cell instead of being dropped |
 | C4 | empty map |
 
 ## Reproducing

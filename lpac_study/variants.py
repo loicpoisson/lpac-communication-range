@@ -20,6 +20,9 @@ Three models, same CNN, same action MLP, same training recipe:
   (256, 512, 1024 m) instead of one pair drawn at the communication range: 8 CNN channels.
 * ``V6`` V5 plus V4's bounded-edge layer: the multi-scale maps feed the CNN and the bounded
   edge features feed a residual front layer ahead of the unchanged TAGConv stack.
+* ``V2R`` / ``V2RL`` the GATv2 of V2 with the usual hygiene (pre-norm residual blocks and V4's
+  bounded edge features), without and with the log-degree of each robot as a node feature:
+  the diagnosis of why V2 underfits (question Q3 of the teaching assistant).
   The layer reads, for every edge, the relative position of the neighbour divided by a
   fixed constant of 256 m (never by the range, never by the world size), and adds its
   output to the TAGConv input (residual connection). Receptive field 16 hops.
@@ -38,7 +41,7 @@ from coverage_control.nn import LPAC
 from coverage_control.nn.data_loaders.loaders import CNNGNNDataset
 from torch_geometric.nn import GATv2Conv, PointNetConv
 
-VARIANTS = ("V0", "V1", "V2", "V3", "V0R", "V4", "V5", "V6")
+VARIANTS = ("V0", "V1", "V2", "V3", "V0R", "V4", "V5", "V6", "V2R", "V2RL")
 MULTISCALE_SCALES_M = (256.0, 512.0, 1024.0)  # V5: one pair of map channels per scale
 EDGE_DIM = 2
 HEADS = 4
@@ -54,6 +57,11 @@ POINTNET_HIDDEN = 256
 def uses_comm_map(variant: str) -> bool:
     """Whether the CNN input carries neighbour-map channels (two for V0/V0R, six for V5/V6)."""
     return variant in ("V0", "V0R", "V5", "V6")
+
+
+def uses_log_degree(variant: str) -> bool:
+    """Whether the GNN input carries log(1 + in-degree) as an extra node feature (V2RL)."""
+    return variant == "V2RL"
 
 
 def uses_multiscale_maps(variant: str) -> bool:
@@ -235,6 +243,66 @@ class EdgeGeometryGNN(torch.nn.Module):
         return x
 
 
+class ResidualEdgeGeometryGNN(torch.nn.Module):
+    """GATv2 layers in pre-norm residual blocks: ``x <- x + relu(GATv2(LayerNorm(x)))``.
+
+    The stack of V2 applies ``relu(GATv2(x))`` with no residual and no normalization, so five
+    attention layers have to carry the signal on their own; with 15 layers (to match the 15 hops
+    of five K = 3 TAGConv layers) that stack does not train at all. The blocks here are the
+    standard remedy and leave the attention itself untouched.
+    """
+
+    def __init__(self, input_dim: int, latent_size: int, num_layers: int, heads: int = HEADS, edge_dim: int = 3):
+        super().__init__()
+        assert latent_size % heads == 0, "latent size must split evenly across heads"
+        per_head = latent_size // heads
+        self.num_layers = num_layers  # same attribute as the library's GNNBackBone
+        self.input_proj = torch.nn.Linear(input_dim, latent_size)
+        self.layers = torch.nn.ModuleList(
+            GATv2Conv(latent_size, per_head, heads=heads, edge_dim=edge_dim, concat=True) for _ in range(num_layers))
+        self.norms = torch.nn.ModuleList(torch.nn.LayerNorm(latent_size) for _ in range(num_layers))
+
+    def forward(self, x: torch.Tensor, edge_index: torch.Tensor, edge_attr: torch.Tensor) -> torch.Tensor:
+        x = self.input_proj(x)
+        for layer, norm in zip(self.layers, self.norms):
+            x = x + torch.relu(layer(norm(x), edge_index, edge_attr))
+        return x
+
+
+class LPACResidualEdgeGeometry(LPAC):
+    """V2R / V2RL: the GATv2 model of V2 with residual blocks, LayerNorm and bounded edge features.
+
+    Three changes to V2, each one a candidate explanation of its underfitting (train loss 0.62
+    after 100 epochs against 0.21 for V0):
+    * the edge input is V4's ``[(p_j - p_i) / d, tanh(d / 256 m)]`` instead of ``(p_j - p_i) / W``,
+      whose values only span +-0.125 at the 128 m training range;
+    * every layer is a pre-norm residual block, so depth does not have to be crossed in one pass;
+    * ``V2RL`` adds ``log(1 + in-degree) / log(33)`` to the node input: softmax attention is a
+      weighted *mean* and loses the number of neighbours, which the normalized sum of TAGConv
+      partly keeps; if that is what V2 misses, the feature restores it.
+    The number of layers is read from the config, so the 15-layer run (the receptive field of
+    five K = 3 TAGConv layers) is the same class with ``NumLayers = 15``.
+    """
+
+    def __init__(self, config: dict, variant: str = "V2R"):
+        super().__init__(variant_config(config, variant))
+        self.log_degree = uses_log_degree(variant)
+        width = self.cnn_backbone.latent_size + 2 + (1 if self.log_degree else 0)
+        self.gnn_backbone = ResidualEdgeGeometryGNN(width, self.latent_size, self.num_layers)
+
+    def forward(self, data: torch_geometric.data.Data) -> torch.Tensor:
+        x, edge_index, pos = data.x, data.edge_index, data.pos
+        cnn_output = self.cnn_backbone(x.view(-1, x.shape[-3], x.shape[-2], x.shape[-1]))
+        parts = [cnn_output, pos]
+        if self.log_degree:
+            degree = torch.zeros(x.shape[0], device=x.device, dtype=cnn_output.dtype)
+            degree.index_add_(0, edge_index[1], torch.ones(edge_index.shape[1], device=x.device, dtype=cnn_output.dtype))
+            parts.append((torch.log1p(degree) / float(torch.log(torch.tensor(33.0)))).view(-1, 1))
+        gnn_input = torch.cat(parts, dim=-1)
+        edge_attr = LPACBoundedGeometry.edge_features(pos, edge_index)
+        return self.output_linear(self.gnn_mlp(self.gnn_backbone(gnn_input, edge_index, edge_attr)))
+
+
 class LPACEdgeGeometry(LPAC):
     """LPAC without neighbour maps, with ``p_j - p_i`` (normalized) as edge attribute of a GATv2 GNN."""
 
@@ -383,6 +451,8 @@ def build_model(variant: str, config: dict) -> LPAC:
         return LPACMultiScale(config)
     if variant == "V6":
         return LPACMultiScaleGeometry(config)
+    if variant in ("V2R", "V2RL"):
+        return LPACResidualEdgeGeometry(config, variant)
     return LPAC(variant_config(config, variant))
 
 
@@ -393,6 +463,6 @@ def parameter_count(model: torch.nn.Module) -> int:
 def receptive_field_hops(variant: str, config: dict) -> int:
     """Graph hops seen by a node: layers x K for TAGConv, layers for GATv2, plus one for V3's front layer."""
     layers = config["GNNBackBone"]["NumLayers"]
-    if variant == "V2":
+    if variant in ("V2", "V2R", "V2RL"):
         return layers
     return layers * config["GNNBackBone"]["NumHops"] + (1 if variant in ("V3", "V4", "V6") else 0)
