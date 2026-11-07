@@ -1,0 +1,211 @@
+run,variant,epoch,train_loss,val_loss,description
+V2lr,V2,1,0.822793,0.777655,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,2,0.747363,0.727113,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,3,0.732688,0.722860,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,4,0.724442,0.700413,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,5,0.718634,0.696262,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,6,0.713116,0.696559,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,7,0.710366,0.696685,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,8,0.705590,0.721562,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,9,0.701336,0.703923,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,10,0.698137,0.728722,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,11,0.696044,0.696071,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,12,0.694181,0.677215,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,13,0.692385,0.687715,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,14,0.690806,0.681526,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,15,0.689304,0.667363,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,16,0.687730,0.716839,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,17,0.686917,0.681150,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,18,0.688169,0.675144,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,19,0.685289,0.670397,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,20,0.685533,0.749004,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,21,0.685058,0.667360,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,22,0.682664,0.666202,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,23,0.684113,0.662564,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,24,0.681170,0.658973,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,25,0.681400,0.931443,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,26,0.680620,0.680708,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,27,0.680405,0.667279,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,28,0.678542,0.672537,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,29,0.680186,0.664966,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2lr,V2,30,0.678632,0.676361,"GATv2 of V2, learning rate 1e-3 instead of 1e-4"
+V2res,V2R,1,0.736091,0.651122,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,2,0.658749,0.618479,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,3,0.633227,0.626821,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,4,0.614330,0.607107,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,5,0.594608,0.571388,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,6,0.572065,0.552094,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,7,0.556000,0.542310,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,8,0.541603,0.544232,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,9,0.529613,0.526842,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,10,0.522340,0.522061,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,11,0.514613,0.528407,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,12,0.507312,0.528707,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,13,0.500610,0.511099,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,14,0.495303,0.533270,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,15,0.487715,0.506521,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,16,0.484044,0.506346,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,17,0.479757,0.508499,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,18,0.473533,0.521209,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,19,0.470528,0.555531,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,20,0.466585,0.503560,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,21,0.462869,0.523800,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,22,0.458508,0.495272,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,23,0.454806,0.506688,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,24,0.450992,0.502421,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,25,0.447322,0.512612,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,26,0.445472,0.494454,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,27,0.442221,0.499066,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,28,0.438438,0.494077,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,29,0.436114,0.488425,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2res,V2R,30,0.432347,0.495119,"GATv2 in pre-norm residual blocks, LayerNorm, bounded edge features"
+V2deep,V2R,1,0.750650,0.708247,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,2,0.664989,0.652175,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,3,0.637576,0.607280,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,4,0.619009,0.623722,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,5,0.604648,0.623618,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,6,0.589269,0.591762,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,7,0.573763,0.565898,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,8,0.556941,0.545446,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,9,0.544732,0.603877,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,10,0.532535,0.540360,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,11,0.524901,0.546371,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,12,0.517064,0.532188,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,13,0.507810,0.525503,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,14,0.500386,0.519060,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,15,0.494005,0.604955,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,16,0.487575,0.525619,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,17,0.484197,0.566299,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,18,0.478582,0.525862,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,19,0.473791,0.678711,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,20,0.467129,0.544984,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,21,0.464436,0.550025,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,22,0.459861,0.509827,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,23,0.456754,0.512572,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,24,0.454182,0.535535,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,25,0.449322,0.521956,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,26,0.446100,0.502941,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,27,0.443744,0.550754,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,28,0.439480,0.520695,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,29,0.436006,0.515937,same bundle with 15 GATv2 layers (15 hops)
+V2deep,V2R,30,0.432958,0.539642,same bundle with 15 GATv2 layers (15 hops)
+V1K1,V1,1,0.732735,0.620983,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,2,0.638170,0.615517,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,3,0.613005,0.593232,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,4,0.597082,0.589573,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,5,0.582984,0.567104,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,6,0.570015,0.562612,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,7,0.559628,0.559856,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,8,0.549005,0.556805,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,9,0.538493,0.546252,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,10,0.530076,0.566713,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,11,0.521439,0.552475,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,12,0.513621,0.542193,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,13,0.506482,0.535678,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,14,0.498584,0.542991,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,15,0.490473,0.538820,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,16,0.482843,0.540024,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,17,0.474809,0.540324,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,18,0.469059,0.531453,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,19,0.459824,0.536503,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,20,0.455397,0.540656,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,21,0.447454,0.533286,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,22,0.441719,0.539569,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,23,0.435115,0.533648,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,24,0.429356,0.528736,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,25,0.422482,0.536167,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,26,0.415520,0.534067,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,27,0.409799,0.540480,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,28,0.403246,0.538875,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,29,0.398615,0.537933,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V1K1,V1,30,0.391942,0.530090,"control: no map, 5 TAGConv layers with K=1 (5 hops)"
+V2logdeg,V2RL,1,0.734452,0.655497,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,2,0.656743,0.632864,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,3,0.631149,0.604017,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,4,0.611889,0.634375,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,5,0.597225,0.574971,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,6,0.581438,0.577617,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,7,0.566211,0.558731,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,8,0.554133,0.550799,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,9,0.541365,0.530496,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,10,0.532899,0.570546,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,11,0.524850,0.544401,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,12,0.517316,0.531077,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,13,0.508682,0.538729,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,14,0.502453,0.542677,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,15,0.499378,0.507795,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,16,0.492957,0.542992,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,17,0.489473,0.511139,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,18,0.485053,0.506866,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,19,0.481952,0.562282,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,20,0.476189,0.502641,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,21,0.474169,0.502820,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,22,0.471575,0.512900,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,23,0.466837,0.525892,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,24,0.463415,0.515223,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,25,0.461560,0.516759,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,26,0.458216,0.507485,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,27,0.456875,0.497800,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,28,0.453862,0.498456,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,29,0.449998,0.509149,the residual bundle plus log(1+in-degree) as a node feature
+V2logdeg,V2RL,30,0.446768,0.511829,the residual bundle plus log(1+in-degree) as a node feature
+V1,V1,1,0.779669,0.645692,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,2,0.652427,0.611377,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,3,0.622957,0.598166,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,4,0.604883,0.584478,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,5,0.591229,0.579468,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,6,0.577942,0.568263,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,7,0.568052,0.573225,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,8,0.559606,0.566617,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,9,0.546631,0.552728,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,10,0.539613,0.557226,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,11,0.531987,0.564494,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,12,0.523286,0.548886,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,13,0.516146,0.555673,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,14,0.505745,0.539289,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,15,0.497853,0.544645,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,16,0.489572,0.547022,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,17,0.484376,0.544401,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,18,0.475317,0.535934,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,19,0.468438,0.542656,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,20,0.461506,0.544628,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,21,0.452427,0.544106,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,22,0.447106,0.537193,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,23,0.439164,0.542160,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,24,0.430662,0.536317,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,25,0.425560,0.541756,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,26,0.419716,0.550715,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,27,0.412092,0.542544,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,28,0.405248,0.548063,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,29,0.399469,0.549982,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V1,V1,30,0.392393,0.547546,"reference: no neighbour map, 5 TAGConv K=3 (15 hops)"
+V2,V2,1,0.785628,0.723517,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,2,0.734115,0.702957,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,3,0.724238,0.696622,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,4,0.717030,0.693687,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,5,0.713007,0.696374,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,6,0.708969,0.687510,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,7,0.706186,0.689729,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,8,0.702772,0.688180,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,9,0.701118,0.683957,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,10,0.699473,0.687947,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,11,0.697806,0.679800,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,12,0.695825,0.683003,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,13,0.694091,0.681105,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,14,0.692447,0.682546,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,15,0.691001,0.679577,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,16,0.690709,0.680764,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,17,0.688447,0.678461,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,18,0.688531,0.687015,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,19,0.686470,0.679908,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,20,0.685167,0.689020,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,21,0.684828,0.680207,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,22,0.682956,0.679214,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,23,0.682450,0.676006,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,24,0.681663,0.682766,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,25,0.680300,0.680839,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,26,0.679952,0.679076,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,27,0.679521,0.682052,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,28,0.677606,0.686886,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,29,0.677089,0.677928,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"
+V2,V2,30,0.676435,0.679951,"reference: GATv2, edge (p_j-p_i)/W, no residual, no normalization"

@@ -105,6 +105,13 @@ when the policy is run with a larger communication range than it was trained wit
   +0.8), most likely because the added edges are not reflected in the map the CNN reads: with the
   fixed-scale map the same rewiring is neutral.
 
+- The GATv2 variant was untuned, not structurally limited. Pre-norm residual blocks, LayerNorm and
+  V4's bounded edge features take its training loss from 0.676 to 0.432 at epoch 30, closing 86 % of
+  the distance to the map-less TAGConv model (0.392); ten times the learning rate changes nothing
+  (0.679), fifteen layers instead of five change nothing (0.433), and a log-degree node feature is
+  slightly worse (0.447). A control with TAGConv K = 1, the same five hops as the attention model,
+  reaches 0.392, so the receptive field was never the limitation.
+
 Details, numbers and caveats: [`docs/journal.md`](docs/journal.md). Framing document with
 figures (French): [`docs/framing.html`](docs/framing.html), also online at
 <https://claude.ai/artifact/LcHe2tRjWD1ZMXqiXVh6zV>.
@@ -127,12 +134,13 @@ figures (French): [`docs/framing.html`](docs/framing.html), also online at
 | `results_h1/`, `farmshare_mixture.sbatch`, `fig_mixture.png` | mixture of range specialists in a heterogeneous team (`lpac_study.mixture`) |
 | `results_A/`, `fig_fixedmap_training.png` | V0 trained with the fixed-scale neighbour map (mixed ranges and 128 m control) |
 | `results_B/` | V3 trained on the mixed-range dataset |
+| `results_Q3/`, `plots_q3.py`, `fig_ta_q3.png` | question Q3 of the teaching assistant: five diagnostic training runs of the GATv2 variant, per-epoch losses (`q3_losses.csv`) and curves |
 | `results_sem/`, `plots_ta.py`, `fig_ta_q1q2.png` | question Q2 of the teaching assistant: the four definitions of a communication link in a heterogeneous team (`--semantics` of `lpac_study.heterogeneous`), and the figure of Q1 and Q2 |
 | `results_clamp/` | question Q1 of the teaching assistant: the fixed-scale map that keeps the far robots on the border circle (`K256`) against the one that drops them (`C3`) |
 | `results_H2/`, `fig_range_input.png` | V0R: the robot's own range as GNN input, trained on per-robot ranges; homogeneous sweeps and heterogeneous grid |
 | `fig_*.png` | figures; `fig_email.png` is the self-contained summary figure; `fig_variants*.png` the variant comparison |
 | `lpac_study/` | Python package (PyTorch Geometric) used by all scripts and the notebook |
-| `lpac_study/variants.py` | model variants V1 (no neighbor map), V2 (edge geometry, GATv2), V3 (V1 + PointNetConv front layer), V0R (V0 + own range as GNN input), V4 (V3 with bounded edge features) and V5 (multi-scale fixed maps) as subclasses of the library model; `--variant` on `training/train_launch.py`, `lpac_study.sweep`, `lpac_study.factorial` and the Slurm scripts |
+| `lpac_study/variants.py` | model variants V1 (no neighbor map), V2 (edge geometry, GATv2), V3 (V1 + PointNetConv front layer), V0R (V0 + own range as GNN input), V4 (V3 with bounded edge features), V5 (multi-scale fixed maps) and V2R/V2RL (residual GATv2 with LayerNorm and bounded edges, with or without a log-degree feature) as subclasses of the library model; `--variant` on `training/train_launch.py`, `lpac_study.sweep`, `lpac_study.factorial` and the Slurm scripts |
 | `lpac_study/heterogeneous.py`, `lpac_study/mixture.py` | heterogeneous teams at inference (range per robot, frozen-state probe, start-position descriptors) and the mixture of range specialists |
 | `training/redraw_ranges.py` | rebuilds the range-dependent tensors of a dataset at another range, at a fixed map scale, at three fixed scales (V5), or with a range per robot |
 | `tests/` | unit tests of the V4 edge features, the V5 maps, the clamped map (`K<m>`) and the four link semantics |

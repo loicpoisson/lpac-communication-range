@@ -1529,3 +1529,53 @@ than by reception, the OR rule marking the optimistic end of the same effect, an
 available to a model that reads the geometry on its edges. This is also a second,
 independent demonstration of the main thesis, that the policy is limited by what its input makes
 representable rather than by the information available to it.
+
+### 16.3 Q3. Why the GATv2 variant underfits
+
+V2 replaces the TAGConv stack by five GATv2 layers that read (p_j - p_i)/W on each edge. It has
+never trained well: 0.699 / 0.685 / 0.676 at epochs 10 / 20 / 30 against 0.540 / 0.462 / 0.392 for
+V1, and it is still at 0.622 after 100 epochs. Between epochs 10 and 30 it moves by 0.02, so it is
+not slow, it is stuck. Five single-seed 30-epoch runs separate the candidate causes, all on the same
+100k dataset at 128 m, 70 000 training samples, seed 0, learning rate 1e-4 unless stated.
+
+| run | what changes | train at 10 / 20 / 30 | val at 10 / 20 / 30 | best val |
+| --- | --- | --- | --- | --- |
+| V2 (reference) | nothing | 0.699 / 0.685 / 0.676 | 0.688 / 0.689 / 0.680 | 0.676 (e23) |
+| V1 (reference) | no map, TAGConv K=3 | 0.540 / 0.462 / 0.392 | 0.557 / 0.545 / 0.548 | 0.536 (e18) |
+| V2lr | learning rate 1e-3 | 0.698 / 0.686 / 0.679 | 0.729 / 0.749 / 0.676 | 0.659 (e24) |
+| V2res | pre-norm residual blocks, LayerNorm, V4's bounded edge features | 0.522 / 0.467 / **0.432** | 0.522 / 0.504 / 0.495 | **0.488** (e29) |
+| V2deep | the same bundle with 15 GATv2 layers | 0.533 / 0.467 / 0.433 | 0.540 / 0.545 / 0.540 | 0.503 (e26) |
+| V2logdeg | the bundle plus log(1 + in-degree) as a node feature | 0.533 / 0.476 / 0.447 | 0.571 / 0.503 / 0.512 | 0.498 (e27) |
+| V1K1 | control: V1 with TAGConv K=1, so 5 hops like V2 | 0.530 / 0.455 / 0.392 | 0.567 / 0.541 / 0.530 | 0.529 (e24) |
+
+All five ran their 30 epochs (2251 to 2743 s each on one L40S, 75 to 91 s per epoch including the
+validation pass on 20 000 samples, 3.5 GPU-hours in total against the 8 allowed). The 40 minutes
+are short only next to the 100-epoch reference runs.
+
+What each run rules out:
+
+* **The learning rate is not the cause.** Ten times the step size leaves the training loss at 0.679,
+  within 0.003 of V2, and only makes the validation curve noisy.
+* **Capacity and the receptive field are not the cause.** Fifteen GATv2 layers land at 0.433, the
+  same as five (0.432), and the control settles it from the other side: V1 restricted to K = 1, that
+  is the same five hops as V2, reaches 0.392, exactly V1's own figure with K = 3. A five-hop
+  receptive field is enough for this task, so V2's deficit was never about reach.
+* **Missing degree information is not the cause.** Softmax attention is a weighted mean and loses
+  the number of neighbours that the normalized sum of TAGConv keeps, but restoring it as a node
+  feature makes things slightly worse, 0.447 against 0.432.
+* **Conditioning is the cause.** Pre-norm residual blocks, LayerNorm and bounded edge features take
+  the training loss from 0.676 to 0.432, which closes 86 % of the distance to V1 and puts the curve
+  on top of V1's for the first twenty epochs.
+
+Diagnosis in one line: V2 was untuned, not structurally limited. Its plateau is an optimization
+failure that standard conditioning removes, not a sign that attention cannot represent the policy.
+
+Two caveats. First, V2res changes three things at once, so this identifies the bundle and not which
+of the three carries it; the bounded edge features are the most likely single candidate, since V2's
+raw (p_j - p_i)/W spans only +-0.125 at the 128 m training range. Second, V2res does not reach V1's
+training loss, 0.432 against 0.392, so by the rule set for this question no coverage evaluation was
+run. Worth recording for later: on validation MSE the residual GATv2 is the best of all seven runs
+(0.488 against V1's 0.536), but section 14 showed validation MSE carries no information about the
+coverage cost for these models, so that is a note, not a result.
+
+![Q3 training curves](../fig_ta_q3.png)

@@ -1,0 +1,16 @@
+{
+ "device": "cuda:0",
+ "variant": "V2R",
+ "params": 1396802,
+ "receptive_field_hops": 5,
+ "epochs": 30,
+ "seed": 0,
+ "num_workers": 27,
+ "train_size": 70000,
+ "val_size": 20000,
+ "torch": "2.8.0+cu126",
+ "cuda": "12.6",
+ "gpu": "NVIDIA L40S",
+ "config_file": "/home/users/lpoisson/lpac/train/Q3/lp_V2res.toml",
+ "total_s": 2356.4
+}
