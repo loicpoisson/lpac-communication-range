@@ -1422,6 +1422,16 @@ Paired per environment, project minus drop: +0.25 (SE 0.08, better in 2/11), +0.
 +0.94 (SE 0.19, 0/11). Project minus as published: -0.74 (SE 0.11, 11/11), -1.97 (SE 0.33, 10/11),
 -2.58 (SE 0.28, 11/11). Centralized CVT reads 2.34 on the same environments.
 
+How much does dropping them cost? Paired per environment against the 256 m optimum of the same
+model, `C3` at 512 / 768 / 1024 m reads +0.088 (SE 0.064, lower in 2/11), +0.066 (SE 0.063, 3/11)
+and +0.018 (SE 0.049, 4/11). At 1024 m the loss is therefore within the noise of the protocol (the
+seed spread of the 11-environment mean is 0.26 at that range, the episode noise about 0.35), while
+the distortion costs +0.936 (SE 0.190) at the same range, a factor of fifty. Dropping the far robots
+is close to free; drawing them wrong is not. Note that `C3` at 256 m *is* the published map at 256 m,
+since min(R, 256 m) = 256 m there and the scale matches, which is why the two references coincide
+exactly (1.69 both). The new job also reproduces the section 9 `C3` numbers bit for bit at all three
+ranges, a reproducibility check on the Intel nodes.
+
 Answer: keeping the far robots as border pixels hurts, and dropping them is the better of the two,
 although both beat the published map by a wide margin. The reason is the magnitude of the input,
 measured locally at R = 1024 m on the same environments: the largest cell value is 1.10 with `C3`
@@ -1429,4 +1439,5 @@ and 4.29 with `K256` (1.72 with `C0`), the mass per robot 4.0 against 36.1, and 
 nonzero cells 9.9 against 49.4. Projection piles up to 30 robots onto one ring of border cells, four
 times outside the distribution the CNN was trained on, so the policy pays more for the distortion
 than it gains from the extra neighbors. Information loss is therefore not what breaks the policy at
-long range; distribution shift of the map is.
+long range; distribution shift of the map is, and the comparison above makes that quantitative:
+losing the far robots costs 0.02 at 1024 m, distorting them 0.94.

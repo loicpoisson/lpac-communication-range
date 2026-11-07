@@ -91,7 +91,8 @@ when the policy is run with a larger communication range than it was trained wit
   in at most 2 of 11 environments), though both beat the published map (2.77 / 4.52 / 5.22). The
   projection piles up to 30 robots onto the border ring, with cell values up to 4.29 against 1.10,
   so what breaks the policy at long range is the distortion of the map, not the loss of the far
-  robots.
+  robots: dropping them costs +0.02 at 1024 m against the model's own 256 m optimum (SE 0.05, within
+  the seed noise of 0.26), while distorting them costs +0.94 (SE 0.19).
 
 Details, numbers and caveats: [`docs/journal.md`](docs/journal.md). Framing document with
 figures (French): [`docs/framing.html`](docs/framing.html), also online at
