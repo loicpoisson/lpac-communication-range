@@ -92,14 +92,18 @@ when the policy is run with a larger communication range than it was trained wit
   (2.87 at 512 m, 6.15 at 1024 m); the 11 release environments agree. The projection piles up to 30
   robots onto the border ring, with cell values up to 4.29 against 1.10, so what breaks the policy
   at long range is the distortion of the map, not the loss of the far robots: dropping them costs
-  +0.06 at 1024 m against the model's own 256 m optimum (SE 0.04), while distorting them costs
-  +0.88 (SE 0.08).
+  +0.06 at 1024 m against the model's own 256 m optimum (SE 0.04, 1.8 standard errors from zero),
+  small next to the +0.88 (SE 0.08) the distortion costs.
 - In a team mixing 128 m and 1024 m robots, the definition of a link matters as much as the model.
-  Wiring an edge whenever *either* robot can reach the other, instead of only when the receiver can,
-  gains 0.17 to 0.26 for V4 in 11 environments out of 11, because it lets the short-range robots
-  consume what the long-range ones broadcast; requiring both to reach changes nothing. For the
-  published model with its own neighbour map the ordering reverses (transmission costs +0.4 to
-  +0.8), since the extra edges are not reflected in the map the CNN reads.
+  Wiring an edge when the *sender* can reach the receiver, which is the natural rule under a
+  transmit-power radio, instead of only when the receiver can, gains 0.17, 0.23 and 0.12 for V4 at
+  a quarter, a half and three quarters of long-range robots, in 11 environments out of 11 and over
+  3 seeds, because it lets the short-range robots consume what the long-range ones broadcast. The
+  OR rule gains slightly more (0.17 to 0.26) but assumes long-range receivers as well, so it bounds
+  the effect rather than describing a deployable fleet; requiring both to reach changes nothing. For
+  the published model with its own neighbour map the ordering reverses (transmission costs +0.4 to
+  +0.8), most likely because the added edges are not reflected in the map the CNN reads: with the
+  fixed-scale map the same rewiring is neutral.
 
 Details, numbers and caveats: [`docs/journal.md`](docs/journal.md). Framing document with
 figures (French): [`docs/framing.html`](docs/framing.html), also online at

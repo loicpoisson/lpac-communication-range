@@ -1439,10 +1439,11 @@ Paired per environment, project minus drop: +0.25 (SE 0.08, better in 2/11), +0.
 How much does dropping them cost? Paired per environment against the 256 m optimum of the same
 model, `C3` at 512 / 768 / 1024 m reads +0.088 (SE 0.064, lower in 2/11), +0.066 (SE 0.063, 3/11)
 and +0.018 (SE 0.049, 4/11) on the 11 environments, and +0.007, +0.029, +0.064 (SE 0.029-0.035) on
-the 40. At 1024 m the loss is therefore within the noise of the protocol (the
-seed spread of the 11-environment mean is 0.26 at that range, the episode noise about 0.35), while
-the distortion costs +0.936 (SE 0.190) at the same range, a factor of fifty. Dropping the far robots
-is close to free; drawing them wrong is not. Note that `C3` at 256 m *is* the published map at 256 m,
+the 40. At 1024 m the loss is small (0.064 on the 40 environments, 1.8 standard errors
+from zero) next to the distortion, which costs +0.877 (SE 0.075) on the same set. On the 11
+environments the loss of +0.018 is within the noise of the protocol (the seed spread of the
+11-environment mean is 0.26 at that range, the episode noise about 0.35), but that statement is
+specific to the smaller set: the 40-environment estimate is more precise and does not support it. Note that `C3` at 256 m *is* the published map at 256 m,
 since min(R, 256 m) = 256 m there and the scale matches, which is why the two references coincide
 exactly (1.69 both). The new job also reproduces the section 9 `C3` numbers bit for bit at all three
 ranges, a reproducibility check on the Intel nodes.
@@ -1456,8 +1457,8 @@ times outside the distribution the CNN was trained on, so the policy pays more f
 than it gains from the extra neighbors. Information loss is therefore not what breaks the policy at
 long range; distribution shift of the map is, and the comparison above makes that quantitative:
 losing the far robots costs 0.06 at 1024 m on the 40 environments (0.02 on the 11),
-distorting them 0.88 (0.94). The loss is one order of magnitude below the distortion on both sets,
-and at most 1.8 standard errors from zero.
+distorting them 0.88 (0.94). The loss is small next to the distortion, one order of magnitude below
+it on both sets, and at most 1.8 standard errors from zero; it is not zero.
 
 ![Q1 and Q2](../fig_ta_q1q2.png)
 
@@ -1486,7 +1487,14 @@ V4 trained on mixed ranges, cost ratio, mean ± spread over the 3 seeds:
 
 Paired per environment against reception, at f = 1/4, 1/2, 3/4: transmission -0.17, -0.23, -0.12
 (SE 0.03-0.04, better in 11/11 at each); OR -0.22, -0.26, -0.17 (SE 0.03-0.04, 11/11); AND -0.01,
--0.05, -0.01 (SE 0.02-0.03, 7-8 of 11).
+-0.05, -0.01 (SE 0.02-0.03, 7-8 of 11). All of this is 11 environments and 3 seeds.
+
+Which of the two is the right rule to quote depends on the radio. Under a transmit-power model,
+where a robot's range is how far *its* signal carries, `transmission` is the physically natural rule
+and it is the directed graph the teaching assistant suggested: j reaches i when the distance is
+below j's range. `sym_max` additionally lets a 128 m robot reach a robot 1024 m away, which assumes
+the long-range robots also carry long-range *receivers*; it is therefore an optimistic bound on what
+the rewiring can give, not a deployable rule under a transmit-power radio.
 
 The published model, for comparison, with its own map and with the fixed-scale map:
 
@@ -1505,17 +1513,19 @@ The published model, for comparison, with its own map and with the fixed-scale m
 
 Answer: yes, the definition of a link changes the result, and it changes it in opposite directions
 depending on whether the model reads the geometry. For V4, which has no map and reads
-(p_j - p_i)/d and tanh(d/256 m) on its edges, the best rule is "either robot can reach" and it gains
-0.17 to 0.26 against the current rule in 11 environments out of 11; transmission gains almost as
-much. Both rules add exactly the same edges, those where r_j > d > r_i, that is a short-range robot
+(p_j - p_i)/d and tanh(d/256 m) on its edges, switching to the transmission rule gains 0.17, 0.23
+and 0.12 at f = 1/4, 1/2 and 3/4 against the current rule, in 11 environments out of 11 and over
+3 seeds. The OR rule gains slightly more, 0.17 to 0.26, and bounds what the rewiring can give. Both rules add exactly the same edges, those where r_j > d > r_i, that is a short-range robot
 hearing a long-range one, so the gain comes from letting the 128 m robots consume what the 1024 m
 robots broadcast. The AND rule, which removes those edges instead, is indistinguishable from the
-current one. For the published model with its own map the ordering reverses: transmission costs
-+0.4 to +0.8 because the extra edges are not reflected in the neighbour map the CNN reads, and the
-mismatch between what the graph carries and what the map shows is worse than the missing edges.
-With the fixed-scale map that penalty disappears and the symmetric rules become mildly favourable.
+current one. For the published model with its own map the ordering reverses: transmission costs +0.4 to +0.8.
+The likely explanation is that the extra edges are not reflected in the neighbour map the CNN reads,
+so the graph carries robots the map does not show; the supporting evidence is the fixed-scale map,
+where the same rewiring is neutral (+0.05, -0.01, -0.03) and the symmetric rules become mildly
+favourable. Nothing here measures that mechanism directly, so it stays a hypothesis.
 
-Practical consequence for the report: a heterogeneous fleet should be wired with the OR rule, and
-the gain is only available to a model that reads the geometry on its edges. This is also a second,
+Practical consequence for the report: a heterogeneous fleet should be wired by transmission rather
+than by reception, the OR rule marking the optimistic end of the same effect, and the gain is only
+available to a model that reads the geometry on its edges. This is also a second,
 independent demonstration of the main thesis, that the policy is limited by what its input makes
 representable rather than by the information available to it.
