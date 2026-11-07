@@ -1583,3 +1583,31 @@ run. Worth recording for later: on validation MSE the residual GATv2 is the best
 coverage cost for these models, so that is a note, not a result.
 
 ![Q3 training curves](../fig_ta_q3.png)
+
+### 16.4 Coverage cost of the repaired GATv2 model
+
+The training-loss gain of V2res is worth measuring in the metric the question is really about.
+Published checkpoint selection (best validation), 11 released environments, 128 / 256 / 1024 m,
+the same protocol as section 10. V1 and V2 are the pooled means of their three seeds.
+
+| model | 128 m | 256 m | 1024 m |
+| --- | --- | --- | --- |
+| V2res (one seed) | 2.45 | 2.26 | 3.11 |
+| V2, three seeds | 2.51 ± 0.00 | 2.96 ± 0.02 | 3.31 ± 0.07 |
+| V1, three seeds | 2.49 ± 0.08 | 2.48 ± 0.04 | 3.14 ± 0.20 |
+| published model | 1.98 | 1.69 | 5.22 |
+
+Paired per environment, V2res minus V2: -0.057 (SE 0.047, 9/11), -0.702 (SE 0.188, 10/11),
+-0.198 (SE 0.225, 8/11) at 128 / 256 / 1024 m. Against V1: -0.041 (SE 0.052, 8/11), -0.220
+(SE 0.103, 9/11), -0.034 (SE 0.058, 6/11).
+
+Three readings. First, the training-loss repair does reach the cost: at 256 m, where the models
+are at their best, V2res takes 0.70 off V2 in 10 of 11 environments, which is the same repair seen
+in the loss (0.676 to 0.432) expressed in coverage. Second, it slightly passes V1 at 256 m, -0.22
+in 9 of 11, although V1's three-seed spread is 0.04 and this is one seed, so the honest statement
+is that the repaired attention model now matches the map-less TAGConv model rather than beating
+it. Third, and this is the limit of the result, none of that makes attention competitive: at 256 m
+the published model reads 1.69 against V2res's 2.26, and V2res still degrades with the range,
++0.847 from 256 to 1024 m (SE 0.156, falling in 1 environment out of 11). Repairing the
+conditioning removes V2's underfitting; it does not give the model the neighbour map's information,
+and it does not buy range robustness.

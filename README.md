@@ -112,7 +112,10 @@ when the policy is run with a larger communication range than it was trained wit
   those blocks instead of five change nothing (0.433), and a log-degree node feature is slightly
   worse (0.447). A control with TAGConv K = 1, the same five hops as the attention model, reaches
   0.392, so the receptive field was never the limitation. A residual 0.04 gap in training loss
-  remains, on a single seed, so a small structural cost cannot be excluded.
+  remains, on a single seed, so a small structural cost cannot be excluded. In coverage cost the repair carries over:
+  at 256 m the repaired model reads 2.26 against 2.96 for the original GATv2 (paired -0.70 in 10 of
+  11 environments) and 2.48 for the map-less TAGConv model, but it stays far from the published
+  model's 1.69 and still degrades with range (+0.85 from 256 to 1024 m).
 
 Details, numbers and caveats: [`docs/journal.md`](docs/journal.md). Framing document with
 figures (French): [`docs/framing.html`](docs/framing.html), also online at
