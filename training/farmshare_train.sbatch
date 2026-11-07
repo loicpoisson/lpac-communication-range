@@ -13,6 +13,10 @@
 # exists else ~/lpac/venv), WORLD (default 1024), SEED (default 0), WORKERS (default cpus-per-task - 2).
 set -euo pipefail
 PROJECT_DIR="${SLURM_SUBMIT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
+# train_launch.py lives in training/; submitting from the repository root used to put PROJECT_DIR
+# one level above it and the job died in five seconds with "No such file or directory"
+[ -f "$PROJECT_DIR/train_launch.py" ] || PROJECT_DIR="$PROJECT_DIR/training"
+[ -f "$PROJECT_DIR/train_launch.py" ] || { echo "train_launch.py not found under $PROJECT_DIR" >&2; exit 2; }
 VENV="${VENV:-$([ -x "$HOME/lpac/venv_gpu/bin/python" ] && echo "$HOME/lpac/venv_gpu" || echo "$HOME/lpac/venv")}"
 export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-4}"
 cd "$PROJECT_DIR"
