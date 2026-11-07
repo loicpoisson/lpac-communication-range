@@ -80,6 +80,25 @@ def test_the_draw_is_reproducible_and_seed_dependent():
     assert not torch.equal(a, draw_fraction_ranges(64, NUM_ROBOTS, seed=2))
 
 
+def test_sample_range_mixture_follows_the_weights():
+    """A re-weighted mixture: half the samples at 128 m, the rest spread over the other three."""
+    from training.redraw_ranges import draw_sample_ranges
+    ranges = (128.0, 256.0, 512.0, 1024.0)
+    drawn = draw_sample_ranges(20000, ranges, (3.0, 1.0, 1.0, 1.0), seed=11)
+    assert set(drawn.unique().tolist()) == set(ranges)
+    share128 = float((drawn == 128.0).float().mean())
+    assert 0.48 < share128 < 0.52, share128
+    for r in ranges[1:]:
+        share = float((drawn == r).float().mean())
+        assert 0.15 < share < 0.19, (r, share)
+    assert torch.equal(drawn, draw_sample_ranges(20000, ranges, (3.0, 1.0, 1.0, 1.0), seed=11))
+    assert not torch.equal(drawn, draw_sample_ranges(20000, ranges, (3.0, 1.0, 1.0, 1.0), seed=12))
+    # the uniform default reproduces the four equal parts of the mixed dataset
+    uniform = draw_sample_ranges(20000, ranges, seed=13)
+    for r in ranges:
+        assert 0.23 < float((uniform == r).float().mean()) < 0.27
+
+
 def test_transmission_gives_short_robots_more_neighbours_than_reception():
     p = positions()
     ranges = draw_fraction_ranges(BATCH, NUM_ROBOTS, seed=7)

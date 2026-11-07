@@ -188,6 +188,22 @@ def write_hetero_fraction(src: Path, dst: Path, seed: int = 0, semantics: str = 
         print(f"{split}: {positions.shape[0]} samples, {semantics} graph, {100 * far:.1f}% of robots at {long:.0f} m")
 
 
+def draw_sample_ranges(num_samples: int, ranges, weights=None, seed: int = 0) -> torch.Tensor:
+    """One communication range per sample, drawn from ``ranges`` with probabilities ``weights``.
+
+    The mixed-range dataset of section 11 holds four equal parts generated at 128, 256, 512 and
+    1024 m. This draws the same kind of mixture from a single dataset, with any weights, so a
+    re-weighted mixture (for instance half the samples at 128 m) costs one rebuild instead of a
+    new generation. Reproducible from ``seed`` alone.
+    """
+    table = torch.tensor([float(r) for r in ranges])
+    probabilities = torch.ones(len(table)) if weights is None else torch.tensor([float(w) for w in weights])
+    if len(probabilities) != len(table):
+        raise ValueError("one weight per range is required")
+    gen = torch.Generator().manual_seed(seed)
+    return table[torch.multinomial(probabilities / probabilities.sum(), num_samples, replacement=True, generator=gen)]
+
+
 def draw_ranges(num_samples: int, num_robots: int, seed: int = 0) -> torch.Tensor:
     """One range per robot and sample, uniform over HETERO_RANGES, reproducible."""
     gen = torch.Generator().manual_seed(seed)
@@ -296,7 +312,7 @@ def write_hetero(src: Path, dst: Path, seed: int = 0) -> None:
 
 
 def write(src: Path, dst: Path, comm_range, scale: float | None = None, multiscale: bool = False,
-          infer_range: bool = False) -> None:
+          infer_range: bool = False, sample_ranges=None, sample_weights=None, seed: int = 0) -> None:
     dst.mkdir(parents=True, exist_ok=True)
     splits = [s for s in SPLITS if (src / s).is_dir()]
     if not splits:  # an unsplit part written by data_generation.py --split False
@@ -307,7 +323,13 @@ def write(src: Path, dst: Path, comm_range, scale: float | None = None, multisca
     for split in splits:
         (dst / split).mkdir(exist_ok=True)
         positions = load(src / split / "robot_positions.pt")
-        if infer_range:
+        if sample_ranges is not None:
+            comm_range = draw_sample_ranges(positions.shape[0], sample_ranges, sample_weights,
+                                            seed=1000 * seed + splits.index(split))
+            counts = {float(r): int((comm_range == r).sum()) for r in comm_range.unique()}
+            print(f"{split}: one range drawn per sample: {counts}")
+            maps, weights = rebuild(positions, comm_range, scale=scale, multiscale=multiscale)
+        elif infer_range:
             stored = torch.load(src / split / "edge_weights.pt", weights_only=True)
             comm_range = infer_ranges(positions, stored.to_dense() if stored.is_sparse else stored)
             counts = {float(r): int((comm_range == r).sum()) for r in comm_range.unique()}
@@ -355,6 +377,10 @@ def main() -> None:
     parser.add_argument("--semantics", default="transmission",
                         choices=("reception", "transmission", "sym_min", "sym_max"),
                         help="link rule of --hetero-fraction (see lpac_study.heterogeneous)")
+    parser.add_argument("--sample-ranges", nargs="+", type=float, default=None,
+                        help="draw one communication range per sample from this list (re-weighted mixture)")
+    parser.add_argument("--sample-weights", nargs="+", type=float, default=None,
+                        help="probabilities of --sample-ranges, in the same order (default: uniform)")
     parser.add_argument("--short-range", type=float, default=SHORT_RANGE)
     parser.add_argument("--long-range", type=float, default=LONG_RANGE)
     parser.add_argument("--fixed-scale", type=float, default=None,
@@ -374,9 +400,10 @@ def main() -> None:
     else:
         if not (args.src and args.dst):
             parser.error("--src and --dst are required unless --check is given")
-        if args.range is None and not args.infer_range:
-            parser.error("--range or --infer-range is required")
-        write(Path(args.src), Path(args.dst), args.range, args.fixed_scale, args.multiscale, args.infer_range)
+        if args.range is None and not args.infer_range and args.sample_ranges is None:
+            parser.error("--range, --infer-range or --sample-ranges is required")
+        write(Path(args.src), Path(args.dst), args.range, args.fixed_scale, args.multiscale, args.infer_range,
+              args.sample_ranges, args.sample_weights, args.seed)
 
 
 if __name__ == "__main__":
