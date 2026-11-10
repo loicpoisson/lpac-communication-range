@@ -113,14 +113,14 @@ with $f,g$ two-layer MLPs, max aggregation (invariant to the number of neighbors
 \begin{table}[t]
 \centering
 \small
-\caption{Cost / clairvoyant cost (lower is better), 40 new environments, mean over three training seeds (six runs for V5). The inference-time fix is shown for reference; all other rows are trained models used as is. ``--'': not evaluated on this set (the published model at 768\,m is evaluated only on the 11 released environments).}
+\caption{Cost / clairvoyant cost (lower is better), 40 new environments, mean over three training seeds (six runs for V5). The inference-time fix is shown for reference; all other rows are trained models used as is. ``--'': not evaluated on this set (the published model at 768\,m: 4.52 on the 11 released environments; the fixed map at 128\,m equals the published map up to scale and was not rerun).}
 \label{tab:main}
 \begin{tabular}{lccccc}
 \toprule
 Model & 128\,m & 256\,m & 512\,m & 768\,m & 1024\,m \\
 \midrule
 LPAC published (trained 128\,m) & 1.96 & 1.70 & 2.87 & -- & 6.15 \\
-\quad + fixed 256\,m map at inference & -- & 1.70 & 1.71 & -- & 1.77 \\
+\quad + fixed 256\,m map at inference & -- & 1.70 & 1.71 & 1.73 & 1.77 \\
 Centralized CVT & 2.33 & 2.33 & 2.33 & 2.33 & 2.33 \\
 \midrule
 A: fixed map, mixed & 2.09 & 1.91 & 1.91 & 1.91 & 1.92 \\
