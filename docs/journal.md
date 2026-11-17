@@ -1693,3 +1693,23 @@ Two conventions a reader of the bundle needs. `primary` is false for runs the ta
 (CPU reruns, other checkpoints, the training trials of 13 October). The centralized and
 clairvoyant controllers ignore the communication range, which the build verifies to the last
 digit, so the 40-environment set, not swept at 768 m, has no row for them there.
+
+## 18. Erratum on the milestone: the 256 m reference (16 November)
+
+Milestone section 4.3 compares V4 trained on mixed ranges with "LPAC retrained at that range
+(1.82)" at 256 m on the 40 new environments. The number is right but its label is wrong: 1.82 is
+LPAC retrained at **128 m** and evaluated at 256 m (`results_new40/results_sweep_r128_s0.csv`).
+The model retrained at 256 m reads 1.85 there (`results_new40/results_sweep_r256.csv`). The
+milestone is submitted and is not edited; the correct statements, recomputed from the site bundle
+with the pooled three seeds of V4 mixed, paired per environment at 256 m:
+
+| reference at 256 m | its cost | V4 mixed minus it | SE | V4 better in |
+| --- | --- | --- | --- | --- |
+| LPAC as published (trained 128 m) | 1.704 | +0.169 | 0.051 | 15/40 |
+| LPAC retrained at 128 m, seed 0 | 1.822 | +0.052 | 0.031 | 18/40 |
+| LPAC retrained at 256 m, seed 0 | 1.850 | +0.023 | 0.032 | 16/40 |
+
+So against the model actually retrained at 256 m, V4 mixed is +0.02 behind, within one standard
+error, not +0.05. Both references are single runs, and section 14 puts the run-to-run noise of this
+protocol at 0.08 to 0.15 at 256 m, which is why two more seeds of the 256 m model are queued. The
+final report must name the reference by its training range.
