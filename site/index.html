@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LPAC Range Transfer</title>
+<meta name="description" content="Why a GNN coverage policy for robot swarms gets worse when its robots can communicate farther, what actually causes it, and the first trained model that improves with range. Stanford CS224W project, Autumn 2026.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<div class="page">
+
+<nav class="toc" aria-label="Contents">
+  <div class="brand">Where should a robot swarm see its neighbors?<span>CS224W · Autumn 2026</span></div>
+  <ol>
+    <li><a href="#problem">Coverage control and LPAC</a></li>
+    <li><a href="#anomaly">The anomaly</a></li>
+    <li><a href="#diagnosis">The image, not the graph</a></li>
+    <li><a href="#maps">Inside the neighbor map</a></li>
+    <li><a href="#retrain">Retraining at every range</a></li>
+    <li><a href="#variants">Moving geometry onto the edges</a></li>
+    <li><a href="#hetero">Teams with mixed radios</a></li>
+    <li><a href="#gatv2">Why GATv2 underfit</a></li>
+    <li><a href="#method">Protocol and noise</a></li>
+    <li><a href="#record">What we got wrong</a></li>
+    <li><a href="#engineering">Compute and code</a></li>
+    <li><a href="#next">Open questions</a></li>
+  </ol>
+  <div class="theme-row">
+    <div class="seg" role="group" aria-label="Color theme">
+      <button type="button" data-theme-set="system" aria-pressed="true">Auto</button>
+      <button type="button" data-theme-set="light" aria-pressed="false">Light</button>
+      <button type="button" data-theme-set="dark" aria-pressed="false">Dark</button>
+    </div>
+  </div>
+</nav>
+
+<main id="content">
+
+<header class="hero">
+  <p class="eyebrow">Stanford CS224W · Machine Learning with Graphs · Project</p>
+  <h1>Where should a robot swarm see its neighbors?</h1>
+  <p class="lede">LPAC is a graph neural network that steers 32 robots so they cover the important parts of a 1&nbsp;km field. Its authors report that it gets <em>worse</em> when the robots can talk farther. We traced the failure to one input, fixed it without retraining, and built the first trained variant whose coverage improves with communication range.</p>
+  <p class="byline"><b>Loïc Poisson</b>, <b>Harold Gardon</b>, <b>Claire Fitussi</b> · Stanford University</p>
+  <div class="facts">
+    <div><b class="num">5.22 → 1.71</b><span>cost of the published model at 1024&nbsp;m, before and after redrawing one input (11 envs)</span></div>
+    <div><b class="num">−0.055</b><span>V4: cost change from 256&nbsp;m to 1024&nbsp;m, the only model that improves (SE 0.016, 40 envs)</span></div>
+    <div><b class="num" id="fact-evals">≈14,000</b><span>closed-loop episodes evaluated, 600 steps each</span></div>
+    <div><b class="num">40+</b><span>models trained on FarmShare L40S GPUs, 7 architectures</span></div>
+  </div>
+
+  <figure>
+    <div class="replay" id="hero-replay">
+      <div class="loading">Loading the episode replays…</div>
+    </div>
+    <div class="replay-bar">
+      <button class="btn" type="button" id="hero-play" aria-label="Play">▶ Play</button>
+      <input type="range" id="hero-step" min="0" max="149" value="0" aria-label="Time step">
+      <span class="small mono" id="hero-step-label">step 0 / 600</span>
+    </div>
+    <figcaption><b>Same weights, same environment, communication range 1024&nbsp;m.</b> Left: the published checkpoint as released. Right: the same checkpoint with its neighbor map drawn at a fixed 256&nbsp;m scale. The background is the importance field the robots must cover (darker means more important); lines are communication links; the number is the coverage cost divided by that of a clairvoyant controller, averaged over the episode (lower is better). The trace under each panel is the instantaneous cost ratio.</figcaption>
+  </figure>
+</header>
+
+<!-- =============================================================== -->
+<section class="chapter" id="problem">
+  <div class="chapter-head"><span class="chapter-num">01</span><h2>Coverage control, and what LPAC does</h2></div>
+  <p>In <strong>coverage control</strong>, <span class="mono">N</span> robots spread over an area so that their sensors watch the regions that matter. What matters is an <em>importance density field</em> <span class="mono">φ</span>, unknown in advance and revealed only where a robot has looked. The quality of a configuration is the coverage cost</p>
+  <div class="math">J(p₁…p_N) = ∫ φ(q) · min_i ‖q − p_i‖² dq</div>
+  <p>which is small when every important point is close to some robot. With full knowledge, the optimum is a <em>centroidal Voronoi tessellation</em> (CVT): each robot moves to the centroid of its Voronoi cell, weighted by <span class="mono">φ</span>. The real robots know neither <span class="mono">φ</span> nor where everyone is. Each one senses a 64&nbsp;×&nbsp;64&nbsp;m footprint, remembers what it has sensed, and exchanges messages only with robots within its <strong>communication range</strong> <span class="mono">R</span>. The communication network is the graph <span class="mono">G_R</span>, with an edge between two robots whenever they are closer than <span class="mono">R</span>, so decentralized control is a graph learning problem: what should each robot send, and how should it combine what it receives?</p>
+  <p><strong>LPAC</strong> (Agarwal et al., IEEE T-RO 2025) answers with a perception–action–communication loop learned by imitation. Every robot runs the same network:</p>
+
+  <figure class="arch">
+    <svg viewBox="0 0 900 300" role="img" aria-labelledby="arch-title arch-desc">
+      <title id="arch-title">LPAC architecture</title>
+      <desc id="arch-desc">Four 32 by 32 maps enter a CNN that outputs 32 features; the robot position is appended; five TAGConv layers exchange information over the communication graph; an MLP outputs the velocity. Neighbors enter twice: drawn in the neighbor map, and as edges of the graph.</desc>
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+      </defs>
+      <g font-size="12.5">
+        <rect class="box" x="16" y="38" width="190" height="34" rx="6"/><text x="30" y="60">Local importance map</text>
+        <rect class="box-map" x="16" y="80" width="190" height="34" rx="6"/><text x="30" y="102" class="lbl-map">Neighbor map, x channel</text>
+        <rect class="box-map" x="16" y="122" width="190" height="34" rx="6"/><text x="30" y="144" class="lbl-map">Neighbor map, y channel</text>
+        <rect class="box" x="16" y="164" width="190" height="34" rx="6"/><text x="30" y="186">Obstacle map</text>
+        <text x="16" y="24" class="lbl-muted" font-size="11.5">4 channels · 32 × 32 cells</text>
+
+        <path class="wire" d="M206 118 H262" marker-end="url(#arrow)" style="color:var(--ink-2)"/>
+        <rect class="box" x="264" y="96" width="92" height="46" rx="6"/><text x="282" y="116">CNN</text><text x="282" y="133" class="lbl-muted" font-size="11">32 features</text>
+        <path class="wire" d="M356 119 H392" marker-end="url(#arrow)" style="color:var(--ink-2)"/>
+        <rect class="box" x="394" y="96" width="86" height="46" rx="6"/><text x="408" y="116">⊕ position</text><text x="408" y="133" class="lbl-muted" font-size="11">34 inputs</text>
+        <path class="wire" d="M480 119 H516" marker-end="url(#arrow)" style="color:var(--ink-2)"/>
+        <rect class="box-graph" x="518" y="90" width="160" height="58" rx="6"/><text x="532" y="112" class="lbl-graph">5 × TAGConv, K = 3</text><text x="532" y="130" class="lbl-muted" font-size="11">width 256 · 15 hops</text>
+        <rect class="box-graph" x="540" y="20" width="116" height="34" rx="6"/><text x="556" y="42" class="lbl-graph">graph G_R</text>
+        <path class="wire-graph" d="M598 54 V88" marker-end="url(#arrow)" style="color:var(--graph)"/>
+        <path class="wire" d="M678 119 H714" marker-end="url(#arrow)" style="color:var(--ink-2)"/>
+        <rect class="box" x="716" y="96" width="150" height="46" rx="6"/><text x="730" y="116">MLP</text><text x="730" y="133" class="lbl-muted" font-size="11">velocity (vₓ, v_y)</text>
+
+        <text x="16" y="236" class="lbl-map">Path 1 · neighbors rasterized into an image read by the CNN, cell size 2R / 32</text>
+        <text x="16" y="262" class="lbl-graph">Path 2 · neighbors as edges of G_R, read by message passing</text>
+        <text x="16" y="288" class="lbl-muted" font-size="11.5">1,806,210 parameters · trained by imitation (MSE) of the clairvoyant CVT, 100,000 samples</text>
+      </g>
+    </svg>
+    <figcaption><b>Neighbors enter the network twice.</b> The <span class="map-c">neighbor map</span> writes each robot within range into a 32 × 32 image centred on the robot. The <span class="graph-c">communication graph</span> carries learned messages between robots in range. This double entry is the key to the whole project.</figcaption>
+  </figure>
+
+  <p>The GNN is five <code>TAGConv</code> layers (Du et al., 2017). Each mixes powers of the symmetrically normalized adjacency up to <span class="mono">K = 3</span>, the best value in the LPAC ablation, so a robot's action depends on robots up to 15 hops away:</p>
+  <div class="math">X⁽ˡ⁺¹⁾ = ReLU( Σ_{k=0..K} (D^−½ A D^−½)^k X⁽ˡ⁾ W_k⁽ˡ⁾ )</div>
+  <p>In the neighbor map, robot <span class="mono">j</span> within range is written into the cell <span class="mono">c_ij = round((p_j − p_i) · 32 / (2R) + 15.5)</span> with value <span class="mono">(p_j − p_i) / R</span>. The map therefore <strong>zooms out with R</strong>: one cell is 8&nbsp;m wide at 128&nbsp;m and 64&nbsp;m wide at 1024&nbsp;m. Reading the library code also corrected two things we had assumed from the paper. The aggregation is a normalized adjacency, not a sum, so the paper's "summation is lossy" hypothesis does not describe the implementation. The edge weights are computed but never passed to the GNN, so the adjacency is binary.</p>
+
+  <h3>Data, metric and protocol</h3>
+  <p>Everything runs on the open <a href="https://github.com/KumarRobotics/CoverageControl" target="_blank" rel="noopener">CoverageControl</a> library (release v1.3.1, GPL-3.0): a simulator of 32 robots in a 1024 × 1024&nbsp;m world whose importance fields are mixtures of 32 random Gaussians, the published LPAC checkpoint, its 11 evaluation environments, and the scripts that generate imitation data from a clairvoyant CVT controller.</p>
+  <ul>
+    <li><strong>One training sample</strong> is the state of all 32 robots at one time step: four 32 × 32 maps per robot, the positions, the graph <span class="mono">G_R</span>, and the clairvoyant velocity as the target. A training set holds 100,000 samples (about 250 episodes, 0.37&nbsp;MB per sample).</li>
+    <li><strong>The metric</strong> is the paper's: the coverage cost averaged over a 600-step closed-loop episode, divided by the clairvoyant controller's cost on the same environment. Lower is better; 1 is the clairvoyant; the centralized CVT, which knows every position but not <span class="mono">φ</span>, sits around 2.3 to 2.5.</li>
+    <li><strong>Two environment sets.</strong> The 11 released environments, and 40 new ones we generated with the library's own generator and never touched before evaluating. The 40 are the primary set from the milestone on, because run-to-run noise is three times smaller there (<a href="#method">section 9</a>).</li>
+    <li><strong>Pairing.</strong> Every comparison between two models is paired by environment: we report the mean difference, its standard error, and the number of environments where one model wins.</li>
+  </ul>
+</section>
+
+<!-- =============================================================== -->
+<section class="chapter" id="anomaly">
+  <div class="chapter-head"><span class="chapter-num">02</span><h2>The anomaly: more communication, worse coverage</h2></div>
+  <p>Only one LPAC checkpoint is public (<code>model_k3_1024_state_dict.pt</code>, byte-identical from release v1.1.0 to v1.3.1), and its parameters show it was trained at <span class="mono">R = 128&nbsp;m</span>. We ran it at five test ranges.</p>
+  <figure>
+    <div class="panel">
+      <div class="controls" id="anomaly-controls"></div>
+      <div class="chart" id="chart-anomaly"></div>
+    </div>
+    <figcaption><b>The published model, trained at 128&nbsp;m, run at larger ranges.</b> It is best at 256&nbsp;m (1.69 on the released set) and then collapses to 5.22 at 1024&nbsp;m, more than twice the cost of the centralized CVT, which needs no learning at all. The collapse is even deeper on the 40 new environments (6.15). Bands show the spread across environments. Hover for exact values.</figcaption>
+  </figure>
+  <ul>
+    <li>The collapse appears in <strong>every</strong> environment: the ratio of the 1024&nbsp;m cost to the 256&nbsp;m cost lies between 2.1 and 4.6. At 768 and 1024&nbsp;m the final configuration is worse than the initial one.</li>
+    <li>The number of neighbors per robot goes from 1.4 at 128&nbsp;m to 24.9 at 1024&nbsp;m. Shrinking the team to keep 4 to 5 neighbors per robot removes the collapse (1.7 to 2.0), but it changes the task, so it is a clue, not an answer.</li>
+    <li>The effective rank of the TAGConv outputs falls by about 30&nbsp;% with range in layers 2 to 4 but never collapses. Over-smoothing, the usual suspect for dense graphs, is not supported.</li>
+    <li>This is a <em>transfer</em> result: one model trained at 128&nbsp;m, run elsewhere. The paper's Fig. 20 compares models trained at each range; we reproduce that separately in <a href="#retrain">section 5</a>.</li>
+  </ul>
+</section>
+
+<!-- =============================================================== -->
+<section class="chapter" id="diagnosis">
+  <div class="chapter-head"><span class="chapter-num">03</span><h2>The failure is in the image, not in the graph</h2></div>
+  <p>Neighbors reach the network through two paths, and both change with the range. To tell them apart we intervened on each path separately <strong>at inference time</strong>, with the published weights unchanged, in a 2 × 4 factorial design at 1024&nbsp;m.</p>
+  <ul>
+    <li><span class="graph-c">Graph</span> levels: G0, the full graph; G1, each robot keeps only its 4 nearest neighbors within range.</li>
+    <li><span class="map-c">Map</span> levels: C0, the full map as published; C1, only the 4 nearest robots drawn; C2, the map drawn at a fixed 128&nbsp;m scale; C3, the map drawn at a fixed 256&nbsp;m scale, holding the robots within min(R, 256&nbsp;m).</li>
+  </ul>
+  <figure>
+    <div class="grid-2">
+      <div class="panel">
+        <p class="panel-title">Factorial at 1024&nbsp;m, published model</p>
+        <p class="panel-sub">11 released environments · cost / clairvoyant</p>
+        <div id="factorial-table" class="data-table-wrap"></div>
+      </div>
+      <div class="panel">
+        <p class="panel-title">How many robots are drawn in the map</p>
+        <p class="panel-sub">C1 level at 1024&nbsp;m: only the k nearest robots drawn, full graph</p>
+        <div class="chart" id="chart-dose"></div>
+      </div>
+    </div>
+    <figcaption><b>Capping the graph changes nothing measurable</b> (5.22 → 5.11, better in 5 of 11 environments). <b>Redrawing the map recovers everything</b>: at the 256&nbsp;m scale the model at 1024&nbsp;m matches its own 256&nbsp;m performance (paired +0.02 ± 0.16), in 11 of 11 environments. The cost rises monotonically with the number of robots drawn into the map.</figcaption>
+  </figure>
+  <p>Three further measurements pin it down:</p>
+  <ul>
+    <li><strong>The map is informative, not noise.</strong> An empty map costs 2.82 at 128&nbsp;m and 2.42 at 256&nbsp;m. At 1024&nbsp;m an empty map (3.20) beats the full one (5.22), and with an empty map, capping the graph helps (2.65): graph density has a real but secondary effect.</li>
+    <li><strong>The scale matters, not only the count.</strong> With about 4.5 robots drawn in both cases, the cost is 1.69 at the 256&nbsp;m scale and 2.91 at the 1024&nbsp;m scale.</li>
+    <li><strong>The best scale is 256&nbsp;m, and not by luck.</strong> Sweeping the drawing scale at 1024&nbsp;m (128 / 192 / 256 / 384 / 512&nbsp;m) gives the same optimum on the released environments and on the 40 new ones (chart below).</li>
+  </ul>
+  <figure>
+    <div class="panel">
+      <p class="panel-title">Map drawing scale at a test range of 1024&nbsp;m</p>
+      <p class="panel-sub">Published model, full graph, robots within min(R, scale) drawn at the fixed scale</p>
+      <div class="chart" id="chart-scale"></div>
+    </div>
+    <figcaption>The optimum sits at 256&nbsp;m on both environment sets (192 and 256&nbsp;m tie on the new set). At a 512&nbsp;m scale the model is already worse than the centralized CVT. The diagnosis also holds on our own retrained 128&nbsp;m models (three seeds): with the 256&nbsp;m map they sit at 1.76–1.86 at every range, their own 256&nbsp;m level.</figcaption>
+  </figure>
+  <div class="verdict map">
+    <p class="eyebrow">Finding 1</p>
+    <p>The paper hypothesizes that aggregating many messages loses information. The measurements say otherwise: the GNN is fine with 30 neighbors. What breaks is the <span class="map-c">neighbor map</span>, an image whose scale follows the range, so a model trained at 128&nbsp;m sees images at 1024&nbsp;m that it never saw in training. Drawing the map at a fixed 256&nbsp;m scale is a zero-cost fix that needs no retraining.</p>
+  </div>
+</section>
+
+<!-- =============================================================== -->
+<section class="chapter" id="maps">
+  <div class="chapter-head"><span class="chapter-num">04</span><h2>Inside the neighbor map</h2></div>
+  <p>Below, one robot's neighbor map from a real episode at 1024&nbsp;m, drawn three ways. Each cell shows the magnitude of the summed relative positions written into it. The published encoding (C0) puts 25 to 30 robots into a few cells near the centre, each with a small value. The fixed-scale map (C3) shows only the robots within 256&nbsp;m, spread over the grid exactly as in training. A third option, raised by our TA, keeps the far robots by projecting them onto the 256&nbsp;m circle (K256).</p>
+  <figure>
+    <div class="panel">
+      <div class="controls" id="mapviz-controls"></div>
+      <div class="mapviz" id="mapviz"><div class="loading">Loading…</div></div>
+    </div>
+    <figcaption id="mapviz-cap"><b>Three encodings of the same neighborhood.</b> The maps are the exact tensors fed to the CNN, exported from the episode.</figcaption>
+  </figure>
+
+  <h3>Should the far robots be dropped or kept on the border?</h3>
+  <p>The fixed-scale map drops every robot beyond 256&nbsp;m. Our TA asked whether clamping them to the edge would be better. We measured it on the published model and the 40 new environments.</p>
+  <figure>
+    <div class="grid-2">
+      <div class="panel">
+        <p class="panel-title">Cost at long range, three ways to draw the map</p>
+        <p class="panel-sub">Published model · 40 new environments</p>
+        <div class="chart" id="chart-clamp"></div>
+      </div>
+      <div class="panel">
+        <p class="panel-title">What the CNN receives at 1024&nbsp;m</p>
+        <p class="panel-sub">Per robot and per map, mean over the episode</p>
+        <div id="clamp-stats" class="data-table-wrap"></div>
+      </div>
+    </div>
+    <figcaption><b>Clamping is worse than dropping at every range</b>: +0.37, +0.70 and +0.88 at 512, 768 and 1024&nbsp;m (paired SE 0.06–0.08; clamping wins in at most 5 of 40 environments). Projection piles up to 30 robots onto one ring of border cells, so the largest cell value is four times what the network saw in training. Dropping the far robots costs only +0.06 at 1024&nbsp;m against the same model at its 256&nbsp;m optimum (SE 0.035).</figcaption>
+  </figure>
+  <div class="verdict map">
+    <p class="eyebrow">Finding 2</p>
+    <p>The policy is broken by the <em>distortion</em> of its input, not by the loss of the far robots: losing them costs 0.06, distorting them costs 0.88. The problem is distribution shift in the map, not missing information.</p>
+  </div>
+</section>
+
+<!-- =============================================================== -->
+<section class="chapter" id="retrain">
+  <div class="chapter-head"><span class="chapter-num">05</span><h2>Retraining at every range</h2></div>
+  <p>Training is feasible on Stanford's FarmShare cluster: the paper's full scale (100,000 samples, 100 epochs) trains in 2 h 35 on one L40S GPU. Our retrained 128&nbsp;m model matches the published one at 256&nbsp;m (1.74 against 1.69) and <strong>reproduces the collapse</strong> (4.36 at 1024&nbsp;m; three seeds give 4.36, 4.58 and 4.89). The collapse is a property of the training range, not of one unlucky checkpoint.</p>
+  <p>To connect with the paper's Fig. 20 we trained one model per range. Rather than re-simulate, we wrote a tool that redraws the neighbor maps and edge weights of an existing dataset at any range: only those two tensors depend on <span class="mono">R</span>. It matches native generation exactly for the edge weights and within 1e−7 for the maps.</p>
+  <figure>
+    <div class="panel">
+      <div class="controls" id="fig20-controls"></div>
+      <div id="fig20" class="data-table-wrap"></div>
+    </div>
+    <figcaption><b>Every model is best near its own training range.</b> Rows are training ranges, columns test ranges; darker cells cost more. The diagonal beats both CVT baselines at every range, so the architecture works at long range when trained there. Only the 128&nbsp;m model collapses upward; the long-range models are poor below their range, where their map is zoomed in and nearly empty. Unlike the paper, our diagonal is flat from 256&nbsp;m on (1.76 / 1.79 / 1.80), with neither a rise at 512&nbsp;m nor a decline at 1024&nbsp;m.</figcaption>
+  </figure>
+  <h3>One model for all ranges</h3>
+  <p>A single model trained on a <strong>mixed-range</strong> dataset (25,000 samples at each of 128, 256, 512 and 1024&nbsp;m) no longer collapses: 1.91–1.97 from 512&nbsp;m on the released set, three seeds. It pays for it at short range: 2.08 at 256&nbsp;m against 1.74, worse in 0–2 of 11 environments for every seed. Training the same mixture with the map drawn at the fixed 256&nbsp;m scale (model <strong>A</strong>, also called V0F) gives the best map-based trained recipe: flat at 1.81–1.86 from 256&nbsp;m, equal to the inference-time fix beyond 512&nbsp;m, and 0.12 above the 128&nbsp;m model at 256&nbsp;m (SE 0.047, three seeds each side). The same fixed map fails when trained on 128&nbsp;m data only (0.25–0.30 worse): a map can only show what the training data contained.</p>
+</section>
+
+<!-- =============================================================== -->
+<section class="chapter" id="variants">
+  <div class="chapter-head"><span class="chapter-num">06</span><h2>Moving neighbor geometry onto the edges</h2></div>
+  <p>If the map breaks because its scale follows the range, can the GNN carry the neighbor geometry itself, in a form that does not depend on the range? Every variant below keeps the TAGConv stack and the training recipe (imitation, Adam, best-validation checkpoint) and changes only how geometry enters.</p>
+  <div class="models" id="model-cards"><div class="loading">Loading models…</div></div>
+
+  <h3>Bounded edge features (V4)</h3>
+  <p>V3 reads raw relative positions <span class="mono">(p_j − p_i) / 256&nbsp;m</span>. Their support grows with the range, which is exactly the map's problem, moved onto the edges. V4 replaces them by a unit direction and a saturating distance, three numbers that stay in [−1, 1] at every range, and aggregates with a maximum, which does not depend on how many neighbors there are (about 2 at 128&nbsp;m, about 30 at 1024&nbsp;m):</p>
+  <div class="math">e_ij = [ (p_j − p_i) / d_ij ,  tanh(d_ij / 256 m) ]        d_ij = ‖p_j − p_i‖,  e_ii = 0
+h_i  = x_i + ReLU( g( max_{j ∈ N(i) ∪ {i}} f([x_j, e_ij]) ) )</div>
+  <p>with <span class="mono">f</span> and <span class="mono">g</span> two-layer MLPs, placed as a residual layer in front of the unchanged TAGConv stack (1,889,892 parameters).</p>
+
+  <figure>
+    <div class="panel">
+      <div class="controls" id="variants-controls"></div>
+      <div class="chart" id="chart-variants"></div>
+    </div>
+    <figcaption id="variants-cap"><b>Cost against test range for the trained models.</b> Choose a preset or toggle series in the legend. Lines are means over training seeds; the band is ± one standard deviation across seeds. Every value is recomputed in your browser from the evaluation files.</figcaption>
+  </figure>
+
+  <div class="grid-2" style="max-width:var(--wide)">
+    <div class="verdict">
+      <p class="eyebrow">Finding 3</p>
+      <p><strong>Bounded geometry removes the collapse.</strong> Trained at 128&nbsp;m only, V4 stays at 1.90 at 1024&nbsp;m (three seeds) and beats V3 at every range by 2 to 6 standard errors. The edge encoding, not the training range, makes the geometry transferable.</p>
+    </div>
+    <div class="verdict">
+      <p class="eyebrow">Finding 4</p>
+      <p><strong>The first model that benefits from range.</strong> Trained on mixed ranges, V4 is the only model whose cost <em>decreases</em> from 256 to 1024&nbsp;m: −0.055 (SE 0.016, 27 of 40 environments) on the new set, −0.12 (SE 0.03, 10 of 11) on the released set, in every seed.</p>
+    </div>
+  </div>
+  <p>What it does not do: no trained model reaches LPAC at its best range. At 256&nbsp;m every recipe trained on mixed ranges stays 0.05–0.09 behind LPAC trained at 128&nbsp;m and run at 256&nbsp;m, its best range (1.82 on the new environments). V5 (three fixed-scale map pairs) and A are flat: they tolerate a longer range without using it. V6 combines V5 and V4 and behaves exactly like V5 (within 0.03 at every range), because the map pathway reaches its validation minimum at epoch 4–6 and stops training before the edge layer contributes.</p>
+  <div id="paired-box"></div>
+</section>
+
+<!-- =============================================================== -->
+<section class="chapter" id="hetero">
+  <div class="chapter-head"><span class="chapter-num">07</span><h2>Teams with mixed radios</h2></div>
+  <p>Real fleets mix hardware. Here a fraction <span class="mono">f</span> of the 32 robots has a 1024&nbsp;m radio and the others 128&nbsp;m. The long-range subset is drawn at random (8 draws per environment for the published model, 4 per seed for V4). Two questions: which model copes, and what exactly is a link when two robots do not share a range?</p>
+  <figure>
+    <div class="panel">
+      <div class="controls" id="hetero-controls"></div>
+      <div class="chart" id="chart-hetero"></div>
+    </div>
+    <figcaption id="hetero-cap"><b>Cost against the fraction of long-range robots</b>, 11 released environments. Choose the link rule; models are toggled in the legend.</figcaption>
+  </figure>
+  <ul>
+    <li><strong>The published model degrades with every long-range robot</strong>: from 1.98 to 5.30. The curve is convex: a quarter of long-range robots costs a fifth of the full collapse. A frozen-state probe shows the 128&nbsp;m robots changing their actions by 18–36&nbsp;% through the graph alone, but the same probe under the fixed map shows 12–31&nbsp;% while the cost stays flat: a changed action is not a wrong action. The broken map inputs of the long-range robots are what break the team.</li>
+    <li><strong>Which robots get the long-range radio matters as much as how many</strong> (draws differ by 0.3–0.5), but none of four descriptors of where they start predicts it (all |Spearman ρ| ≤ 0.18). The collapsed regime is chaotic: a 1&nbsp;m shift of the start changes the 1024&nbsp;m cost by 0.35.</li>
+    <li><strong>V4 (mixed) improves with every long-range robot</strong>, at every step of <span class="mono">f</span>, for each seed: −0.45 in total (SE 0.08, 11 of 11). It ties the inference-time fix within noise for <span class="mono">f ≥ 1/4</span> without any test-time change. We also tried a mixture of specialists (each robot runs the model trained at its own range) and a model told its own range (V0R); neither beats V4.</li>
+  </ul>
+  <h3>What is a link when ranges differ?</h3>
+  <p>Our first experiments used <strong>reception</strong>: robot <span class="mono">i</span> hears <span class="mono">j</span> when <span class="mono">d_ij &lt; r_i</span>. Under a transmit-power radio, the natural rule is <strong>transmission</strong>, the directed graph our TA suggested, in which a 1024&nbsp;m robot reaches a 128&nbsp;m one: <span class="mono">j → i</span> when <span class="mono">d_ij &lt; r_j</span>. We also tested AND (both must reach) and OR (either reaches). Only the graph changes; the four rules coincide exactly at <span class="mono">f = 0</span> and <span class="mono">f = 1</span>, which the code checks.</p>
+  <figure>
+    <div class="panel">
+      <p class="panel-title">Gain over reception, V4 mixed</p>
+      <p class="panel-sub">Paired difference per environment, 3 seeds × 4 draws; negative is better</p>
+      <div id="rules-table" class="data-table-wrap"></div>
+    </div>
+    <figcaption><b>Short-range robots listening to long-range ones help V4 by 0.12–0.23</b>, in 11 of 11 environments at every fraction. OR gains slightly more but lets a 128&nbsp;m robot reach one 1024&nbsp;m away, so it is an optimistic bound; AND removes exactly the edges transmission adds and changes nothing. With transmission and three quarters of the team at long range, V4 is within 0.05 of an all-1024&nbsp;m team. The published model <em>loses</em> 0.4–0.8 under transmission with its own map; our hypothesis, not yet measured directly, is that the added edges bring in robots its neighbor map does not show.</figcaption>
+  </figure>
+</section>
+
+<!-- =============================================================== -->
+<section class="chapter" id="gatv2">
+  <div class="chapter-head"><span class="chapter-num">08</span><h2>Why GATv2 underfit</h2></div>
+  <p>Our first edge-geometry model, V2, replaced TAGConv with GATv2 attention reading <span class="mono">(p_j − p_i) / W</span> on each edge. It never trained: its loss stalled at 0.68 while the map-less TAGConv model (V1) reached 0.39. Our TA asked whether that was underfitting, missing tuning, or something structural. Five single-seed runs on the 128&nbsp;m set separate the causes.</p>
+  <figure>
+    <div class="panel">
+      <div class="controls" id="curves-controls"></div>
+      <div class="chart" id="chart-curves"></div>
+    </div>
+    <figcaption><b>Training loss per epoch.</b> Ten times the learning rate changes nothing. Pre-norm residual blocks with LayerNorm and V4's bounded edge features (V2res) take the loss from 0.676 to 0.432, closing 86&nbsp;% of the gap to V1. Changing only the edge features to V4's bounded ones (V2B) leaves V2 exactly where it was (0.672 at epoch 30), so the repair is carried by the residual blocks and LayerNorm. Fifteen repaired blocks train no better than five. TAGConv restricted to the same 5-hop reach as V2 (V1, K = 1) matches V1 exactly, so reach was never the issue. Adding the node degree, which softmax attention discards, does not help.</figcaption>
+  </figure>
+  <p>The repair reaches the coverage metric: −0.70 against V2 at 256&nbsp;m (SE 0.19, 10 of 11 environments), which brings GATv2 level with V1. It does not make attention competitive with the map (2.26 against 1.69), and it does not stop the degradation with range: +0.85 from 256 to 1024&nbsp;m (SE 0.16, worse in 10 of 11). V4 reads the same bounded edges and does not degrade, so the difference is most likely the aggregation. A maximum does not depend on how many neighbors there are; softmax attention is a weighted mean, diluted as the neighborhood grows from about 2 to about 30 robots.</p>
+  <div class="verdict">
+    <p class="eyebrow">Answer</p>
+    <p>Underfitting caused by the conditioning of the original configuration, not by attention as such: residual blocks and LayerNorm unblock training, while bounded edge features alone do nothing. Caveats: one seed per run and a remaining 0.04 gap in training loss to V1. A run that replaces softmax by max aggregation (V2M) tests whether aggregation explains the remaining degradation with range.</p>
+  </div>
+</section>
+
+<!-- =============================================================== -->
+<section class="chapter" id="method">
+  <div class="chapter-head"><span class="chapter-num">09</span><h2>Protocol, noise, and two lessons</h2></div>
+  <ul>
+    <li><strong>Deterministic evaluation.</strong> Episodes are bit-identical across Intel CPUs and differ by up to 5.6&nbsp;% per environment on AMD nodes (convolutions round differently), so every number here comes from Intel nodes; AMD runs were discarded and recomputed. Environment generation cannot be seeded, so generated environments are stored.</li>
+    <li><strong>Episode noise.</strong> Moving the initial positions by 1&nbsp;m changes an episode's cost by about 7&nbsp;%, and by 0.35 at 1024&nbsp;m for the collapsed model. Differences below about 0.1 on an 11-environment mean are not interpretable.</li>
+    <li><strong>Seed noise.</strong> Three seeds of the 128&nbsp;m recipe differ by a standard deviation of 0.01 / 0.02 / 0.08 / 0.14 / 0.26 at 128 to 1024&nbsp;m (11 environments).</li>
+  </ul>
+  <h3>Lesson 1: run-to-run noise is larger than seed noise</h3>
+  <p>Training is not bit-reproducible at a fixed seed: GPU scatter operations and parallel data loading make two launches of the same seed diverge (their weights differ by 18&nbsp;% after one epoch). Two launches of V5 with the same seeds differed by 0.08–0.15 at 256&nbsp;m on the released environments, more than the spread between seeds within one launch. A first set of three V5 runs appeared to match LPAC at 256&nbsp;m (1.78); pooled with three more it is 0.10 behind, and we withdrew the claim. On the 40 new environments the same pairs differ by only 0.01–0.05, which is why they became the primary set.</p>
+  <figure>
+    <div class="panel">
+      <p class="panel-title">The same recipe, launched twice</p>
+      <p class="panel-sub">V5 mixed at 256&nbsp;m, per run</p>
+      <div class="chart" id="chart-runs"></div>
+    </div>
+    <figcaption>Each dot is one training run evaluated on one environment set. Resolving a 0.05 difference at 256&nbsp;m needs 6 to 10 runs per recipe.</figcaption>
+  </figure>
+  <h3>Lesson 2: imitation loss does not predict coverage</h3>
+  <p>Map-based models reach their best validation MSE at epoch 4–6, after which it rises from 0.46 to 0.54, while the coverage cost does not move: epoch-25 checkpoints of V5 and V6 match their best-validation checkpoints within 0.04. In the other direction, the repaired GATv2 has the lowest validation loss of all our runs (0.488 against 0.536 for V1) and no better coverage. Validation MSE is a poor model-selection signal for this task.</p>
+</section>
+
+<!-- =============================================================== -->
+<section class="chapter" id="record">
+  <div class="chapter-head"><span class="chapter-num">10</span><h2>What we got wrong along the way</h2></div>
+  <p>Every claim below was made during the project, then replaced by a measurement. We keep them because the corrections are part of the result.</p>
+  <div class="corrections">
+    <div class="corr"><div class="was">The GNN uses sum aggregation, so the expressivity argument for GIN applies.</div><div class="now">It is TAGConv with a normalized adjacency, and the edge weights never reach it.</div></div>
+    <div class="corr"><div class="was">Over-smoothing explains the collapse at long range.</div><div class="now">The effective rank of TAGConv outputs never collapses; the factorial points to the neighbor map.</div></div>
+    <div class="corr"><div class="was">Any input whose support grows with the range breaks (from V3 after 11 CPU epochs: 5.8 at 1024&nbsp;m).</div><div class="now">Trained for 100 epochs, V3 degrades only to 2.6. The 11-epoch collapse was under-training.</div></div>
+    <div class="corr"><div class="was">The fixed 256&nbsp;m map improves the model at 128&nbsp;m (1.72).</div><div class="now">The mask drew robots up to 256&nbsp;m away, beyond radio range. Corrected to min(R, 256&nbsp;m): 1.89, within noise of the published map.</div></div>
+    <div class="corr"><div class="was">Where the long-range robots start decides how much they spoil the team.</div><div class="now">With 8 draws, no position descriptor predicts the cost (|ρ| ≤ 0.18). The spread is episode noise.</div></div>
+    <div class="corr"><div class="was">A mixture of specialists beats both specialists.</div><div class="now">Only when both share a training seed. With independent seeds it equals the better specialist.</div></div>
+    <div class="corr"><div class="was">V5 mixed matches LPAC at 256&nbsp;m (1.78, three runs).</div><div class="now">Six runs give 1.84, 0.10 behind. The first three were a favourable draw.</div></div>
+    <div class="corr"><div class="was">GATv2 cannot use edge geometry.</div><div class="now">It was badly conditioned; residual blocks and LayerNorm fix the training.</div></div>
+    <div class="corr"><div class="was">Of the three changes that repaired GATv2, the bounded edge features are the likeliest cause.</div><div class="now">Bounded edges alone (V2B) leave the loss at 0.672, exactly V2. The residual blocks and LayerNorm carry the repair.</div></div>
+  </div>
+</section>
+
+<!-- =============================================================== -->
+<section class="chapter" id="engineering">
+  <div class="chapter-head"><span class="chapter-num">11</span><h2>Compute and code</h2></div>
+  <div class="kv">
+    <div><b>0.54 s</b><span>to generate one training sample (one CPU core pair)</span></div>
+    <div><b>2 h 35</b><span>paper-scale training, 100k samples × 100 epochs, one L40S</span></div>
+    <div><b>842 s</b><span>per epoch at 1024&nbsp;m, 14× the 128&nbsp;m cost (30 neighbors per robot)</span></div>
+    <div><b>12 min</b><span>to evaluate one environment at five ranges (2 CPUs)</span></div>
+    <div><b>65 GB</b><span>one merged mixed-range dataset on disk</span></div>
+    <div><b>180 → 0.5 ms</b><span>per sample after splitting a sparse tensor once at load time</span></div>
+  </div>
+  <p>The repository contains <code>lpac_study/</code>, a Python package around CoverageControl and PyTorch Geometric: the closed-loop evaluation (<code>episode.py</code>, <code>sweep.py</code>), the inference-time interventions on the graph and the map (<code>factorial.py</code>, <code>neighbourhood.py</code>), the variants V0–V6 and the GATv2 diagnostics (<code>variants.py</code>), heterogeneous teams with four link rules (<code>heterogeneous.py</code>), the mixture of specialists (<code>mixture.py</code>), and the analyses (effective rank, CKA, checkpoint selection). <code>training/</code> holds data generation, map redrawing, dataset merging and the Slurm launchers for FarmShare; <code>tests/</code> the unit tests (bounds of the V4 features, equality of V5's 256&nbsp;m pair with the fixed map, V6 reducing to V5 when its edge layer is zeroed, the clamped map, the link rules, and the heterogeneous training set reproducing the evaluation graph). A running journal records every experiment, including the failed ones.</p>
+  <p>Everything on this page is computed in the browser from <a href="data/">the data bundle</a>: JSON tables built by <code>site/build_data.py</code> from the result CSVs, each row carrying its source file.</p>
+</section>
+
+<!-- =============================================================== -->
+<section class="chapter" id="next">
+  <div class="chapter-head"><span class="chapter-num">12</span><h2>Open questions and runs in progress</h2></div>
+  <div id="final-runs"></div>
+  <ul>
+    <li><strong>Replicates.</strong> Six runs of V4 mixed and three of LPAC retrained at 256&nbsp;m, so that the 256&nbsp;m gap and the range gain are measured against run-to-run noise.</li>
+    <li><strong>Training for mixed teams.</strong> V4 trained on heterogeneous teams wired by the transmission rule, against V4 mixed rewired only at test time.</li>
+    <li><strong>V4 at short range.</strong> V4 is weakest at 128&nbsp;m (2.14 against 2.05 when trained at 128&nbsp;m only). The fixed-map model loses a similar amount when trained on mixed ranges, so we attribute the gap to the small share of 128&nbsp;m samples; a run trained with half its samples at 128&nbsp;m tests this.</li>
+    <li><strong>Information loss or distribution shift?</strong> Drawing the same neighbors into a finer map would test whether the 256&nbsp;m map discards useful information.</li>
+  </ul>
+</section>
+
+<footer class="colophon">
+  <p><strong>Team.</strong> Loïc Poisson, Harold Gardon, Claire Fitussi (Stanford University). Course project for CS224W: Machine Learning with Graphs, Autumn 2026. Compute: Stanford FarmShare.</p>
+  <p><strong>References.</strong></p>
+  <ol>
+    <li>S. Agarwal, R. Muthukrishnan, W. Gosrich, V. Kumar, A. Ribeiro. LPAC: Learnable perception-action-communication loops with applications to coverage control. <em>IEEE Transactions on Robotics</em> 41, 2025. arXiv:2401.04855.</li>
+    <li>KumarRobotics. CoverageControl: a library for coverage control with robot swarms, release v1.3.1, 2024.</li>
+    <li>J. Cortés, S. Martínez, T. Karataş, F. Bullo. Coverage control for mobile sensing networks. <em>IEEE Transactions on Robotics and Automation</em> 20(2), 2004.</li>
+    <li>J. Du, S. Zhang, G. Wu, J. M. F. Moura, S. Kar. Topology adaptive graph convolutional networks. arXiv:1710.10370, 2017.</li>
+    <li>S. Brody, U. Alon, E. Yahav. How attentive are graph attention networks? ICLR 2022.</li>
+    <li>C. R. Qi, L. Yi, H. Su, L. J. Guibas. PointNet++: Deep hierarchical feature learning on point sets in a metric space. NeurIPS 2017.</li>
+    <li>E. Tolstaya, F. Gama, J. Paulos, G. Pappas, V. Kumar, A. Ribeiro. Learning decentralized controllers for robot swarms with graph neural networks. CoRL 2020.</li>
+    <li>M. Fey, J. E. Lenssen. Fast graph representation learning with PyTorch Geometric. ICLR Workshop, 2019.</li>
+  </ol>
+</footer>
+</main>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>
