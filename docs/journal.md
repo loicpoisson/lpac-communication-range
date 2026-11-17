@@ -1713,3 +1713,44 @@ So against the model actually retrained at 256 m, V4 mixed is +0.02 behind, with
 error, not +0.05. Both references are single runs, and section 14 puts the run-to-run noise of this
 protocol at 0.08 to 0.15 at 256 m, which is why two more seeds of the 256 m model are queued. The
 final report must name the reference by its training range.
+
+## 19. Episode replays for the site (16 November)
+
+`lpac_study/replay.py` replays one released environment under ten controllers and writes
+`site/data/replays.json` (1.4 MB): every fourth of the 600 steps, the 32 robot positions rounded
+to 0.1 m, the cost normalized by the clairvoyant controller's at the same step, the importance
+field downsampled to 128 x 128, and robot 0's neighbour map at steps 20, 200 and 596 drawn three
+ways (C0 at the run's range, C3, K256).
+
+The environment is released environment 5: its published-model cost ratio at 1024 m, 4.656, is
+the median of the 11, so the replay shows a typical collapse and not the worst one. The loops of
+the evaluation scripts are reproduced step for step, and the script refuses to write anything
+unless the episode mean of every replay equals the value in the result CSVs:
+
+| replay | mean cost ratio | CSV | gap |
+| --- | --- | --- | --- |
+| clairvoyant CVT | 1.000000 | 1.000000 | 0 |
+| centralized CVT | 2.275799 | 2.275799 | 0 |
+| published, 256 m | 1.516333 | 1.516333 | 0 |
+| published, 1024 m | 4.656353 | 4.656353 | 0 |
+| published, 1024 m, fixed 256 m map | 1.581851 | 1.581851 | 2e-16 |
+| V4 mixed seed 0, 1024 m | 1.503216 | 1.503216 | 0 |
+| published, half at 1024 m, reception | 2.490123 | 2.490123 | 0 |
+| published, half at 1024 m, transmission | 2.935341 | 2.935341 | 0 |
+| V4 mixed, half at 1024 m, reception | 1.928475 | 1.928475 | 4e-16 |
+| V4 mixed, half at 1024 m, transmission | 1.538776 | 1.538776 | 0 |
+
+Run on a laptop Intel CPU (i7-1065G7, one thread), about five minutes per episode: the results
+computed on FarmShare's Intel nodes are reproduced to machine precision on a different Intel
+machine, for the published model, for V4, with a modified map and in heterogeneous teams. The
+heterogeneous replays use draw 0 of the evaluation protocol at f = 1/2 and store each robot's
+range.
+
+One point was settled by the data rather than assumed: the orientation of the library's world
+map. The clairvoyant controller ends on the density, and its final positions sit on a mean density
+of 0.466 when the array is read as world[x, y] against 0.213 as world[y, x]; the file stores
+`idf.data[y * 128 + x]` accordingly and records the check. On this environment the three drawings
+of robot 0's map at step 20 of the 1024 m run have largest cells 0.77 (C0, 30 nonzero cells), 0.99
+(C3, 6 cells) and 3.00 (K256, 29 cells), the pattern of section 16.1.
+
+The site was render-checked in headless Chrome against a local server: no panel is left pending.

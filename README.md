@@ -141,6 +141,7 @@ figures (French): [`docs/framing.html`](docs/framing.html), also online at
 | `results_A/`, `fig_fixedmap_training.png` | V0 trained with the fixed-scale neighbour map (mixed ranges and 128 m control) |
 | `results_B/` | V3 trained on the mixed-range dataset |
 | `site/build_data.py`, `site/data/` | data bundle of the project site, built from the result files above; the build recomputes milestone Table 1 from the bundle and fails on any mismatch |
+| `lpac_study/replay.py`, `site/data/replays.json` | episode replays of one median environment under ten controllers; written only if every replay's mean cost equals its result CSV |
 | `lpac_study/map_stats.py`, `results_clamp/map_stats.csv` | magnitude of the neighbour map under the three drawing rules of Q1 |
 | `results_Q3/`, `plots_q3.py`, `fig_ta_q3.png` | question Q3 of the teaching assistant: five diagnostic training runs of the GATv2 variant, per-epoch losses (`q3_losses.csv`) and curves |
 | `results_sem/`, `plots_ta.py`, `fig_ta_q1q2.png` | question Q2 of the teaching assistant: the four definitions of a communication link in a heterogeneous team (`--semantics` of `lpac_study.heterogeneous`), and the figure of Q1 and Q2 |
