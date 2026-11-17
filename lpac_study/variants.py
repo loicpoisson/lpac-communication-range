@@ -41,7 +41,7 @@ from coverage_control.nn import LPAC
 from coverage_control.nn.data_loaders.loaders import CNNGNNDataset
 from torch_geometric.nn import GATv2Conv, PointNetConv
 
-VARIANTS = ("V0", "V1", "V2", "V3", "V0R", "V4", "V5", "V6", "V2R", "V2RL", "V2B")
+VARIANTS = ("V0", "V1", "V2", "V3", "V0R", "V4", "V5", "V6", "V2R", "V2RL", "V2B", "V2M")
 MULTISCALE_SCALES_M = (256.0, 512.0, 1024.0)  # V5: one pair of map channels per scale
 EDGE_DIM = 2
 HEADS = 4
@@ -244,6 +244,37 @@ class EdgeGeometryGNN(torch.nn.Module):
         return x
 
 
+class MaxEdgeConv(torch_geometric.nn.MessagePassing):
+    """GATv2's message with the softmax attention replaced by a maximum over the neighbours.
+
+    GATv2 scores an edge j -> i from ``s_ij = LeakyReLU(W_l x_i + W_r x_j + W_e e_ij)`` and returns
+    the attention-weighted *mean* ``sum_j softmax_j(a . s_ij) W_r x_j``. Here the same three linear
+    maps are kept and the layer returns ``max_j s_ij``, coordinate by coordinate. What changes is
+    therefore the aggregation alone: a weighted mean is bounded by its inputs and cannot tell one
+    neighbour from thirty identical ones, while a maximum keeps the strongest response whatever
+    the number of neighbours, which is what the PointNet layer of V3 and V4 does.
+
+    Every robot also receives its own message with a zero edge feature (the self-loop convention
+    of V4), so an isolated robot still gets a defined output.
+    """
+
+    def __init__(self, in_channels: int, out_channels: int, edge_dim: int = 3, negative_slope: float = 0.2):
+        super().__init__(aggr="max", node_dim=0)
+        self.lin_l = torch.nn.Linear(in_channels, out_channels)
+        self.lin_r = torch.nn.Linear(in_channels, out_channels, bias=False)
+        self.lin_edge = torch.nn.Linear(edge_dim, out_channels, bias=False)
+        self.negative_slope = negative_slope
+
+    def forward(self, x: torch.Tensor, edge_index: torch.Tensor, edge_attr: torch.Tensor) -> torch.Tensor:
+        loops = torch.arange(x.shape[0], device=x.device)
+        edge_index = torch.cat([edge_index, torch.stack([loops, loops])], dim=1)
+        edge_attr = torch.cat([edge_attr, edge_attr.new_zeros((x.shape[0], edge_attr.shape[1]))], dim=0)
+        return self.propagate(edge_index, x=x, edge_attr=edge_attr)
+
+    def message(self, x_i: torch.Tensor, x_j: torch.Tensor, edge_attr: torch.Tensor) -> torch.Tensor:
+        return torch.nn.functional.leaky_relu(self.lin_l(x_i) + self.lin_r(x_j) + self.lin_edge(edge_attr), self.negative_slope)
+
+
 class ResidualEdgeGeometryGNN(torch.nn.Module):
     """GATv2 layers in pre-norm residual blocks: ``x <- x + relu(GATv2(LayerNorm(x)))``.
 
@@ -253,14 +284,20 @@ class ResidualEdgeGeometryGNN(torch.nn.Module):
     standard remedy and leave the attention itself untouched.
     """
 
-    def __init__(self, input_dim: int, latent_size: int, num_layers: int, heads: int = HEADS, edge_dim: int = 3):
+    def __init__(self, input_dim: int, latent_size: int, num_layers: int, heads: int = HEADS, edge_dim: int = 3,
+                 aggregation: str = "attention"):
         super().__init__()
         assert latent_size % heads == 0, "latent size must split evenly across heads"
+        assert aggregation in ("attention", "max")
         per_head = latent_size // heads
         self.num_layers = num_layers  # same attribute as the library's GNNBackBone
+        self.aggregation = aggregation
         self.input_proj = torch.nn.Linear(input_dim, latent_size)
-        self.layers = torch.nn.ModuleList(
-            GATv2Conv(latent_size, per_head, heads=heads, edge_dim=edge_dim, concat=True) for _ in range(num_layers))
+        if aggregation == "max":  # V2M: the same blocks around MaxEdgeConv
+            self.layers = torch.nn.ModuleList(MaxEdgeConv(latent_size, latent_size, edge_dim) for _ in range(num_layers))
+        else:
+            self.layers = torch.nn.ModuleList(
+                GATv2Conv(latent_size, per_head, heads=heads, edge_dim=edge_dim, concat=True) for _ in range(num_layers))
         self.norms = torch.nn.ModuleList(torch.nn.LayerNorm(latent_size) for _ in range(num_layers))
 
     def forward(self, x: torch.Tensor, edge_index: torch.Tensor, edge_attr: torch.Tensor) -> torch.Tensor:
@@ -283,13 +320,19 @@ class LPACResidualEdgeGeometry(LPAC):
       partly keeps; if that is what V2 misses, the feature restores it.
     The number of layers is read from the config, so the 15-layer run (the receptive field of
     five K = 3 TAGConv layers) is the same class with ``NumLayers = 15``.
+
+    ``V2M`` is V2R with one change, the aggregation: ``MaxEdgeConv`` in place of GATv2, same blocks,
+    same LayerNorm, same edge features. V2res matches the map-less TAGConv model at 256 m but still
+    degrades with the range (+0.85 from 256 to 1024 m, journal 16.4); the milestone's hypothesis is
+    that a softmax-weighted mean is the reason, since V4's maximum does not degrade. V2M tests it.
     """
 
     def __init__(self, config: dict, variant: str = "V2R"):
         super().__init__(variant_config(config, variant))
         self.log_degree = uses_log_degree(variant)
         width = self.cnn_backbone.latent_size + 2 + (1 if self.log_degree else 0)
-        self.gnn_backbone = ResidualEdgeGeometryGNN(width, self.latent_size, self.num_layers)
+        self.gnn_backbone = ResidualEdgeGeometryGNN(width, self.latent_size, self.num_layers,
+                                                    aggregation="max" if variant == "V2M" else "attention")
 
     def forward(self, data: torch_geometric.data.Data) -> torch.Tensor:
         x, edge_index, pos = data.x, data.edge_index, data.pos
@@ -477,7 +520,7 @@ def build_model(variant: str, config: dict) -> LPAC:
         return LPACMultiScale(config)
     if variant == "V6":
         return LPACMultiScaleGeometry(config)
-    if variant in ("V2R", "V2RL"):
+    if variant in ("V2R", "V2RL", "V2M"):
         return LPACResidualEdgeGeometry(config, variant)
     if variant == "V2B":
         return LPACBoundedEdgeGATv2(config)
@@ -491,6 +534,6 @@ def parameter_count(model: torch.nn.Module) -> int:
 def receptive_field_hops(variant: str, config: dict) -> int:
     """Graph hops seen by a node: layers x K for TAGConv, layers for GATv2, plus one for V3's front layer."""
     layers = config["GNNBackBone"]["NumLayers"]
-    if variant in ("V2", "V2R", "V2RL", "V2B"):
+    if variant in ("V2", "V2R", "V2RL", "V2B", "V2M"):
         return layers
     return layers * config["GNNBackBone"]["NumHops"] + (1 if variant in ("V3", "V4", "V6") else 0)

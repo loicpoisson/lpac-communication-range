@@ -179,6 +179,48 @@ def test_v2b_is_v2_with_the_bounded_edge_features():
     assert out.shape == (NUM_ROBOTS, 2) and bool(torch.isfinite(out).all())
 
 
+def test_v2m_is_v2res_with_max_aggregation():
+    """V2M keeps V2res's blocks and edge features; its layer is a true maximum over the neighbours."""
+    from lpac_study.variants import MaxEdgeConv
+    cfg = _release_config()
+    if cfg is None:
+        print("skip (no learning_params.toml)"); return
+    v2r, v2m = build_model("V2R", cfg), build_model("V2M", cfg)
+    assert type(v2m) is type(v2r) and type(v2m.gnn_backbone) is type(v2r.gnn_backbone), "same model and block classes as V2res"
+    assert len(v2m.gnn_backbone.layers) == len(v2r.gnn_backbone.layers) == len(v2m.gnn_backbone.norms)
+    assert all(isinstance(layer, MaxEdgeConv) for layer in v2m.gnn_backbone.layers)
+    assert [tuple(p.shape) for p in v2m.gnn_backbone.norms.parameters()] == [tuple(p.shape) for p in v2r.gnn_backbone.norms.parameters()]
+
+    # the layer against a hand computation: robot 0 hears robots 1 and 2, plus itself with a zero edge
+    torch.manual_seed(1)
+    layer = MaxEdgeConv(6, 5, edge_dim=3)
+    x = torch.randn(4, 6)
+    edge_index = torch.tensor([[1, 2], [0, 0]])
+    edge_attr = torch.randn(2, 3)
+    out = layer(x, edge_index, edge_attr)
+    act = torch.nn.functional.leaky_relu
+    messages = torch.stack([act(layer.lin_l(x[0]) + layer.lin_r(x[1]) + layer.lin_edge(edge_attr[0]), 0.2),
+                            act(layer.lin_l(x[0]) + layer.lin_r(x[2]) + layer.lin_edge(edge_attr[1]), 0.2),
+                            act(layer.lin_l(x[0]) + layer.lin_r(x[0]), 0.2)])
+    assert torch.allclose(out[0], messages.max(dim=0).values, atol=1e-6), "not the coordinate-wise maximum"
+    # an isolated robot gets its own message, not zeros
+    assert torch.allclose(out[3], act(layer.lin_l(x[3]) + layer.lin_r(x[3]), 0.2), atol=1e-6)
+    # a maximum ignores a repeated neighbour and the order of the neighbours; a sum or a count would not
+    doubled = layer(x, torch.tensor([[1, 2, 1, 2], [0, 0, 0, 0]]), torch.cat([edge_attr, edge_attr]))
+    swapped = layer(x, torch.tensor([[2, 1], [0, 0]]), edge_attr.flip(0))
+    assert torch.allclose(doubled[0], out[0], atol=1e-6) and torch.allclose(swapped[0], out[0], atol=1e-6)
+
+    from torch_geometric.data import Data
+    p = random_positions(1)[0]
+    channels = v2m.cnn_backbone.conv0.in_channels
+    data = Data(x=torch.rand(NUM_ROBOTS, channels, 32, 32), edge_index=edge_index_within(p, 512.0), pos=(p + WORLD_SIZE_M / 2) / WORLD_SIZE_M)
+    v2m.eval()
+    with torch.no_grad():
+        result = v2m(data)
+    assert result.shape == (NUM_ROBOTS, 2) and bool(torch.isfinite(result).all())
+    print(f"   parameters: V2M {parameter_count(v2m)}, V2res {parameter_count(v2r)}")
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):
