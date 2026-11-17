@@ -1575,8 +1575,8 @@ not by attention as such. A residual 0.04 gap in training loss to V1 remains (0.
 so a small structural cost cannot be excluded; single seed.
 
 Two caveats. First, V2res changes three things at once, so this identifies the bundle and not which
-of the three carries it; the bounded edge features are the most likely single candidate, since V2's
-raw (p_j - p_i)/W spans only +-0.125 at the 128 m training range. Second, V2res does not reach V1's
+of the three carries it. (Written on 7 November: "the bounded edge features are the most likely
+single candidate". That guess was wrong, see 16.5: the edge features alone change nothing.) Second, V2res does not reach V1's
 training loss, 0.432 against 0.392, so by the rule set for this question no coverage evaluation was
 run. Worth recording for later: on validation MSE the residual GATv2 is the best of all seven runs
 (0.488 against V1's 0.536), but section 14 showed validation MSE carries no information about the
@@ -1611,3 +1611,85 @@ the published model reads 1.69 against V2res's 2.26, and V2res still degrades wi
 +0.847 from 256 to 1024 m (SE 0.156, falling in 1 environment out of 11). Repairing the
 conditioning removes V2's underfitting; it does not give the model the neighbour map's information,
 and it does not buy range robustness.
+
+### 16.5 V2B: the bounded edge features alone repair nothing (run of 9 November)
+
+The single-cause ablation of 16.3. V2B is V2 with one change, the edge input, V4's
+[(p_j - p_i)/d, tanh(d/256 m)] instead of (p_j - p_i)/W; the attention stack stays plain, with no
+residual connection and no normalization. Same dataset, seed and 30 epochs as the other Q3 runs.
+
+| run | train at 10 / 20 / 30 | val at 10 / 20 / 30 | best val |
+| --- | --- | --- | --- |
+| V2 (reference) | 0.699 / 0.685 / 0.676 | 0.688 / 0.689 / 0.680 | 0.676 (e23) |
+| V2B, bounded edges only | 0.697 / 0.683 / 0.672 | 0.688 / 0.676 / 0.684 | 0.676 (e27) |
+| V2res, edges + residual + LayerNorm | 0.522 / 0.467 / 0.432 | 0.522 / 0.504 / 0.495 | 0.488 (e29) |
+
+V2B is V2 to within 0.004 at every epoch. The edge encoding is therefore not what held V2 back,
+and the repair seen in V2res is carried by the pre-norm residual blocks and LayerNorm. This
+overturns the guess made in 16.3 and sharpens the diagnosis: the original GATv2 stack fails to
+optimize as a plain five-layer stack, whatever it reads on its edges. Not separated yet: residual
+connections against LayerNorm. No coverage evaluation, the training loss being V2's. Single seed.
+Files: `results_Q3/V2B_*`.
+
+### 16.6 Runs lost on 7-9 November, and why
+
+Nine trainings for the final report were submitted on 7 November with 4 CPUs and 32 GB each, a
+sizing chosen by the planning session so that backfill could place them, on the condition that
+the first seed be checked for a slowdown of more than 20 %. Three things went wrong.
+
+* **Memory.** Past trainings peak at 35.6 to 61.6 GB (sacct MaxRSS), so 32 GB would have killed
+  every job; caught before any started, raised to 80 GB.
+* **Path.** The job script ran `train_launch.py` from the submission directory, the repository
+  root, while the file is in `training/`: the first job died in 5 s, the others were resubmitted.
+* **Loader workers.** With 4 CPUs the launcher uses 2 loader workers, and an epoch then takes
+  3050 to 4300 s instead of 364 s, eight to twelve times slower, not 20 %. The check never
+  happened because the SSH link dropped that evening. Six jobs (V4 mixed seeds 3-5, V4 on
+  heterogeneous teams seeds 0-2) hit the 6 h wall with 6 and 4 epochs out of 25. One of them hung
+  in the multiprocessing shutdown and held its GPU for 28 h 20 after Slurm's own TIMEOUT. About 58
+  GPU-hours were spent for no usable checkpoint; the launcher has no resume, and a replicate has to
+  follow the recipe from epoch 1 anyway.
+
+Two more faults were the executant's alone: the 50/50 dataset rebuild deleted the folder that also
+held that run's config, so the job failed in 20 s; and the V2res coverage evaluation was first
+submitted without the clairvoyant controller that normalizes the cost.
+
+What changed: the job script now runs python under `timeout --kill-after=60 5h50m`, stops a run
+whose first epoch exceeds 600 s (or that completes none in 25 minutes) and prints the first epoch
+time; configs live outside dataset folders; every remote command goes through a helper that
+refuses to open a fresh login when the master socket is down. All nine trainings were resubmitted
+on 16 November with the October sizing, 8 CPUs so 6 workers, and 80 GB.
+
+One run did finish at the slow sizing, V2B (2 h 58 instead of 40 min), reported in 16.5. The check
+of the rebuilt 256 m dataset also passed: the stored seed-0 model at epoch 35 scores 0.4751 on
+the rebuilt validation split against 0.4658 logged, a gap of 0.009 where consecutive epochs of
+the original run differ by 0.04, so replicates trained on the rebuilt data are comparable with
+seed 0 even though their samples are redrawn from the 128 m positions and are not the ones seed 0
+saw.
+
+## 17. Data bundle of the project site (16 November)
+
+`site/build_data.py` writes `site/data/*.json` from the result files of this repository; nothing
+is measured there. Tables are columnar with a run dictionary and an index of source files, so
+each of the 13 358 cost evaluations keeps the path of the CSV it came from at a total of 1.3 MB.
+
+| file | content |
+| --- | --- |
+| `costs.json` | every cost ratio of the journal: 57 runs, 106 source files, both environment sets, map and graph levels |
+| `hetero.json` | heterogeneous teams: model, map mode, link rule, fraction, environment, draw |
+| `factorial.json` | the graph x map factorial on the published model and the dose-response in k |
+| `curves.json` | per-epoch training and validation loss of eleven runs, the Q3 diagnostics included |
+| `maps.json` | magnitude of the neighbour map under C0, C3 and K256, from `results_clamp/map_stats.csv` |
+| `models.json` | the variants: description, parameter count, edge features, aggregation, introducing commit |
+
+Three checks run on every build. The script recomputes milestone Table 1 from the bundle and
+fails unless every printed value matches to two decimals; they all do. When the same measurement
+exists in two files (the fixed-scale map appears in five) the copies must agree to 1e-9; there are
+no conflicts. And the folder must stay under 5 MB. The map magnitudes quoted in 16.1 had only
+ever been printed; `lpac_study/map_stats.py` now regenerates them into a CSV, at the initial
+positions of the 11 released environments, and reproduces the quoted figures exactly (largest
+cell 1.10 / 4.29 / 1.72, mass 4.0 / 36.1, nonzero cells 9.9 / 49.4 at 1024 m).
+
+Two conventions a reader of the bundle needs. `primary` is false for runs the tables do not pool
+(CPU reruns, other checkpoints, the training trials of 13 October). The centralized and
+clairvoyant controllers ignore the communication range, which the build verifies to the last
+digit, so the 40-environment set, not swept at 768 m, has no row for them there.

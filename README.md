@@ -111,7 +111,8 @@ when the policy is run with a larger communication range than it was trained wit
   map-less TAGConv model (0.392); ten times the learning rate changes nothing (0.679), fifteen of
   those blocks instead of five change nothing (0.433), and a log-degree node feature is slightly
   worse (0.447). A control with TAGConv K = 1, the same five hops as the attention model, reaches
-  0.392, so the receptive field was never the limitation. A residual 0.04 gap in training loss
+  0.392, so the receptive field was never the limitation. The bounded edge features alone change
+  nothing (0.672 against V2's 0.676), so the repair is carried by the residual blocks and LayerNorm. A residual 0.04 gap in training loss
   remains, on a single seed, so a small structural cost cannot be excluded. In coverage cost the repair carries over:
   at 256 m the repaired model reads 2.26 against 2.96 for the original GATv2 (paired -0.70 in 10 of
   11 environments) and 2.48 for the map-less TAGConv model, but it stays far from the published
@@ -139,6 +140,8 @@ figures (French): [`docs/framing.html`](docs/framing.html), also online at
 | `results_h1/`, `farmshare_mixture.sbatch`, `fig_mixture.png` | mixture of range specialists in a heterogeneous team (`lpac_study.mixture`) |
 | `results_A/`, `fig_fixedmap_training.png` | V0 trained with the fixed-scale neighbour map (mixed ranges and 128 m control) |
 | `results_B/` | V3 trained on the mixed-range dataset |
+| `site/build_data.py`, `site/data/` | data bundle of the project site, built from the result files above; the build recomputes milestone Table 1 from the bundle and fails on any mismatch |
+| `lpac_study/map_stats.py`, `results_clamp/map_stats.csv` | magnitude of the neighbour map under the three drawing rules of Q1 |
 | `results_Q3/`, `plots_q3.py`, `fig_ta_q3.png` | question Q3 of the teaching assistant: five diagnostic training runs of the GATv2 variant, per-epoch losses (`q3_losses.csv`) and curves |
 | `results_sem/`, `plots_ta.py`, `fig_ta_q1q2.png` | question Q2 of the teaching assistant: the four definitions of a communication link in a heterogeneous team (`--semantics` of `lpac_study.heterogeneous`), and the figure of Q1 and Q2 |
 | `results_clamp/` | question Q1 of the teaching assistant: the fixed-scale map that keeps the far robots on the border circle (`K256`) against the one that drops them (`C3`) |

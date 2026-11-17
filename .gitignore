@@ -14,6 +14,8 @@ venv/
 *.zip
 data/
 lpac/
+# exception: the site's data bundle is derived from the tracked CSVs and is served by GitHub Pages
+!site/data/
 
 # Slurm and editor noise
 slurm-*.out
