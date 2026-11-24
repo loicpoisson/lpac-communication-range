@@ -145,7 +145,7 @@ for name in ["fig_portee.png", "fig_degre.png", "fig_degre_constant.png", "fig_r
 EXPORT = """
 # Archive à télécharger et à rapporter.
 import shutil
-zip_path = shutil.make_archive(str(OUT_DIR / "lpac_results"), "zip", root_dir=OUT_DIR,
+zip_path = shutil.make_archive(str(OUT_DIR.parent / "lpac_results"), "zip", root_dir=OUT_DIR,
                                base_dir=".", verbose=False)
 print("archive :", zip_path)
 try:
