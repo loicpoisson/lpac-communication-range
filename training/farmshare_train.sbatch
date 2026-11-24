@@ -28,7 +28,7 @@ nvidia-smi -L 2>/dev/null || echo "no GPU visible"
 # exceeds FIRST_EPOCH_LIMIT seconds (default 600), or that has none after 25 minutes, is stopped.
 MODEL_DIR="$(grep -m1 -E '^Dir *= *' "$CONFIG" | sed -E 's/^Dir *= *"(.*)".*/\1/')"
 rm -f "$MODEL_DIR/timing.csv"
-timeout --kill-after=60 "${HARD_CAP:-5h50m}" "$VENV/bin/python" train_launch.py "$CONFIG" "${WORLD:-1024}" ${EPOCHS:+--epochs "$EPOCHS"} \
+timeout --kill-after=60 "${HARD_CAP:-350m}" "$VENV/bin/python" train_launch.py "$CONFIG" "${WORLD:-1024}" ${EPOCHS:+--epochs "$EPOCHS"} \
   --seed "${SEED:-0}" --num-workers "${WORKERS:-$(( ${SLURM_CPUS_PER_TASK:-4} - 2 ))}" --variant "${VARIANT:-V0}" &
 TRAIN_PID=$!
 (
