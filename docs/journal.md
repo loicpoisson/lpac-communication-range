@@ -1754,3 +1754,32 @@ of robot 0's map at step 20 of the 1024 m run have largest cells 0.77 (C0, 30 no
 (C3, 6 cells) and 3.00 (K256, 29 cells), the pattern of section 16.1.
 
 The site was render-checked in headless Chrome against a local server: no panel is left pending.
+
+## 20. The final-report trainings of 16 November never started (23 November)
+
+All ten training jobs submitted on 16 November (1991252-60, 1991310) failed within ten seconds
+with exit code 125. The hard cap added in d3fd1c2 was written `timeout --kill-after=60 5h50m`, and
+GNU `timeout` takes a single unit: it printed `invalid time interval '5h50m'` and exited before
+starting Python. Nothing was trained and no GPU time was spent; a week of queue time was lost. The
+default is now `350m` (c26afb5), checked with `timeout 350m true`.
+
+The six run folders still holding the partial 4-CPU runs of 7 November (V4mixed seeds 3-5, V4T
+seeds 0-2) were renamed with the suffix `_nov7cpu4`, not deleted, since train_launch.py does not
+resume and would have overwritten them.
+
+Resubmitted on 23 November with the same configs, seeds and variants, 8 CPUs, 80 GB:
+
+| job | run | config | variant |
+|---|---|---|---|
+| 2018603-05 | V4 mixed, seeds 3-5 | V45/lp_V4mixed_s{3,4,5}.toml | V4 |
+| 2018606-07 | LPAC at 256 m, seeds 1-2 | large256/params/learning_params_s{1,2}.toml | V0 |
+| 2018608-10 | V4 on transmission teams, seeds 0-2 | heteroT/lp_V4T_s{0,1,2}.toml | V4 |
+| 2018611 | V4 on the 50/50 mixture 128 + 1024 m | configs/lp_V4half_s0.toml | V4 |
+| 2018612 | V2M | configs/lp_V2M.toml | V2M |
+
+`training/submit_final_evals.sh` queued their 30 evaluations (2018637-66) with
+`--dependency=afterok`, so each starts when its training succeeds and is cancelled if it fails.
+Protocols are those of the earlier seeds: sweeps on the 11 release and 40 new environments at
+128, 256, 512, 768 and 1024 m (V4T on the 11 only), and heterogeneous teams on the 11 environments
+with draws 0-3, map as is, under reception and under transmission, sym_max and sym_min. Outputs go
+to `~/lpac_project/results_final/`.
