@@ -22,3 +22,6 @@ slurm-*.out
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# per-environment raw outputs of the final runs (merged CSVs are tracked)
+results_final/raw/
