@@ -101,6 +101,22 @@ for s in range(3):
     RUNS[f"V5mixed_s{s}_v2"] = run("V5mixed", "V5: multi-scale maps, mixed ranges", MIXED, "V5", s, map_level="multiscale",
                                    note="second launch, same seed (GPU training is not deterministic)",
                                    released11=f"results_V45/V5mixed_s{s}_v2_11.csv", new40=f"results_V45/V5mixed_s{s}_v2_40.csv")
+# final-report runs (journal 20-21), evaluated by training/submit_final_evals.sh into results_final/
+HALF = "two ranges only, half the samples at 128 m and half at 1024 m"
+HETERO_T = "teams mixing 128 m and 1024 m robots, links by the transmission rule"
+for s in (3, 4, 5):
+    RUNS[f"V4mixed_s{s}"] = run("V4mixed", "V4: bounded edges, mixed ranges", MIXED, "V4", s, map_level="none",
+                                released11=f"results_final/V4mixed_s{s}_11.csv", new40=f"results_final/V4mixed_s{s}_40.csv")
+for s in (1, 2):
+    RUNS[f"lpac256_s{s}"] = run("lpac256", "LPAC retrained at 256 m", "256 m, 100k samples", "V0", s,
+                                released11=f"results_final/LPAC256_s{s}_11.csv", new40=f"results_final/LPAC256_s{s}_40.csv")
+RUNS["V4half_s0"] = run("V4half", "V4: bounded edges, trained on 128 m and 1024 m only", HALF, "V4", 0, map_level="none",
+                        released11="results_final/V4half_s0_11.csv", new40="results_final/V4half_s0_40.csv")
+for s in (0, 1):
+    RUNS[f"V4T_s{s}"] = run("V4T", "V4 trained on heterogeneous teams (transmission)", HETERO_T, "V4", s, map_level="none",
+                            released11=f"results_final/V4T_s{s}_11.csv")
+RUNS["V2M_s0"] = run("V2M", "V2M: V2res with max aggregation", R128, "V2M", 0, map_level="none", note="30 epochs",
+                     released11="results_final/V2M_11.csv", new40="results_final/V2M_40.csv")
 for v in ("V1", "V2", "V3"):
     RUNS[f"{v}_s0_cpu"] = run(v, RUNS[f"{v}_s0"]["model_label"], R128, v, 0, primary=False, map_level="none",
                               note="12-epoch CPU run of seed 0", released11=f"results_variants/{v}_s0_cpu_11.csv",
@@ -306,6 +322,11 @@ HETERO_FILES = [
     ("results_H2/results_hetero_V0R.csv", {"V0R": "V0R_s0"}),
     ("results_h1/results_h1.csv", {"128+1024": "mixture_s0"}), ("results_h1/results_h1_s1.csv", {"128+1024": "mixture_s1"}),
     ("results_h1/results_h1_s2.csv", {"128+1024": "mixture_s2"}),
+    *[(f"results_final/hetero_V4mixed_s{s}_{sem}.csv", {f"V4mixed_s{s}": f"V4mixed_s{s}"})
+      for s in (3, 4, 5) for sem in ("reception", "transmission")],
+    *[(f"results_final/hetero_V4T_s{s}_{sem}.csv", {f"V4T_s{s}": f"V4T_s{s}"})
+      for s in (0, 1) for sem in ("transmission", "reception")],
+    ("results_final/hetero_V4half_s0_reception.csv", {"V4half_s0": "V4half_s0"}),
 ]
 
 
@@ -363,6 +384,7 @@ CURVES = [  # id, label, variant, dataset, seed, source
     ("V2deep", "the V2res block, 15 layers", "V2R", R128, 0, "results_Q3/V2deep_loss_history.json"),
     ("V2logdeg", "V2res plus a log-degree node feature", "V2RL", R128, 0, "results_Q3/V2logdeg_loss_history.json"),
     ("V1K1", "V1 with TAGConv K=1 (five hops, like V2)", "V1", R128, 0, "results_Q3/V1K1_loss_history.json"),
+    ("V2M", "V2res with max aggregation (V2M)", "V2M", R128, 0, "results_final/train_V2M/loss_history.json"),
     ("V4mixed_s0", "V4: bounded edges, mixed ranges", "V4", MIXED, 0, "results_V45/train_V4mixed_s0/loss_history.json"),
     ("V5mixed_s0", "V5: multi-scale maps, mixed ranges", "V5", MIXED, 0, "results_V45/train_V5mixed_s0/loss_history.json"),
     ("lpac256_s0", "LPAC retrained at 256 m", "V0", "256 m, 100k samples", 0, "training/logs/loss_256m_gpu.json"),
@@ -433,6 +455,11 @@ def build_models(commit: str) -> dict:
                      parameters=params_of("results_Q3/V2logdeg_run_info.json"), map_input="none", edge_features="[(p_j - p_i) / d, tanh(d / 256 m)], 3 numbers",
                      aggregation="as V2res", receptive_field_hops=5, training_sets=[R128], epochs="30", **{"class": "LPACResidualEdgeGeometry"},
                      introduced_in_commit=introduced_in("uses_log_degree"), source="results_Q3/V2logdeg_run_info.json"),
+        "V2M": dict(label="V2M: V2res with max aggregation", description="V2res with each GATv2 layer replaced by the same GATv2-style message, leaky_relu(W_l x_i + W_r x_j + W_e e_ij), max-aggregated instead of softmax-weighted. Fits better than TAGConv and halves V2res's range degradation (journal 21).",
+                    parameters=params_of("results_final/train_V2M/run_info.json"), map_input="none", edge_features="[(p_j - p_i) / d, tanh(d / 256 m)], 3 numbers",
+                    aggregation="max over neighbours of GATv2-style messages, in x + relu(conv(LayerNorm(x))) blocks, 5 layers", receptive_field_hops=5,
+                    training_sets=[R128], epochs="30", **{"class": "MaxEdgeConv in ResidualEdgeGeometryGNN"}, introduced_in_commit=introduced_in("MaxEdgeConv"),
+                    source="results_final/train_V2M/run_info.json"),
         "V3": dict(label="V3: PointNet edges", description="V1 plus one PointNet-style layer in front of the TAGConv stack, reading (p_j - p_i) / 256 m on every edge.",
                    parameters=params_of("results_variants/train_models100k_V3_s0/run_info.json"), map_input="none", edge_features="(p_j - p_i) / 256 m, 2 numbers, unbounded",
                    aggregation="max over neighbours in the front layer (residual), then " + tag, receptive_field_hops=16, training_sets=[R128, MIXED], epochs="100 at 128 m, 25 on mixed ranges",

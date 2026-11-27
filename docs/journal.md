@@ -1839,8 +1839,10 @@ trained on homogeneous mixed ranges already uses the extra edges, and training o
 teams costs it 0.1 elsewhere. Seed 2 is pending (job 2028908, oat-05 excluded after its first
 attempt was stopped at epoch 10 with exit code 125 and no Python error, apparently a node fault).
 
-**F. V2M: GATv2 with max aggregation.** V2res (section 16.3) with the softmax attention replaced
-by a maximum over neighbours, everything else equal, one seed, 30 epochs at 128 m. Training loss
+**F. V2M: GATv2 with max aggregation.** V2res (section 16.3) with each GATv2 layer replaced by
+`MaxEdgeConv`: the same GATv2-style message leaky_relu(W_l x_i + W_r x_j + W_e e_ij), but
+max-aggregated over the neighbours (self-loop included) instead of softmax-weighted; same
+residual blocks, LayerNorm and bounded edge features, one seed, 30 epochs at 128 m. Training loss
 0.317 at epoch 30, below V2res (0.432) and V1 (0.392): it is the first attention-family model of
 the study that fits better than the map-less TAGConv. Coverage, 11 released environments: 2.15 /
 1.73 / 2.06 / 2.10 / 2.11 at 128-1024 m (V2res 2.45 / 2.26 / – / – / 3.11; published 1.98 / 1.69
@@ -1848,13 +1850,16 @@ the study that fits better than the map-less TAGConv. Coverage, 11 released envi
 V2res on the 11: −0.30, −0.54, −1.00 at 128 / 256 / 1024 m, 11/11 each; against V1 on the 40:
 −0.36, −0.67, −1.05 (38-39 of 40). At 256 m it matches V4 trained at 128 m (1.87 on the 40) with
 no neighbour map and no TAGConv, but it still degrades with the range (+0.20, SE 0.04, 5/40 lower
-at 1024 m), less than the published model and more than V4 at 128 m (1.90 flat). Reading: the
-aggregation hypothesis of the milestone is supported. Once optimization is repaired (16.3), the
-softmax weighted mean was what kept the attention model from using its neighbours; a max, as in
-V4's front layer, makes the same stack competitive. One seed, so the size of the effect is
-indicative; its sign is not in doubt (11/11 and 38-40/40).
+at 1024 m; +0.39, SE 0.08, on the 11, against +0.85 for V2res), less than the published model and
+more than V4 at 128 m (1.90 flat). Reading: the aggregation hypothesis of the milestone is
+partly supported. Replacing the softmax-weighted mean by a max makes the residual attention-style
+stack fit better than TAGConv and brings it level with V4 at 256 m, and it halves the range
+degradation of V2res, but it does not remove it: the max alone is not what makes V4 flat (V4 also
+differs in its edge layer placed in front of a TAGConv stack). One seed, so the size of the effect
+is indicative; its sign is not in doubt (11/11 and 38-40/40).
 
 What this changes in the report: (1) V4 mixed "improves with the range" stands on six seeds;
 (2) the 256 m comparison is "level with LPAC retrained at 256 m on the primary set, 0.56 better at
 1024 m"; (3) transmission gains 0.09-0.18; (4) training on transmission teams is not needed;
-(5) GATv2 becomes competitive with a max aggregation.
+(5) the GATv2-style stack becomes competitive at 256 m with a max aggregation, and degrades with
+the range half as much, but is still not flat.

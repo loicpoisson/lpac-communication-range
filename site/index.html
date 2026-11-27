@@ -28,7 +28,7 @@
     <li><a href="#method">Protocol and noise</a></li>
     <li><a href="#record">What we got wrong</a></li>
     <li><a href="#engineering">Compute and code</a></li>
-    <li><a href="#next">Open questions</a></li>
+    <li><a href="#next">Final runs</a></li>
   </ol>
   <div class="theme-row">
     <div class="seg" role="group" aria-label="Color theme">
@@ -261,10 +261,10 @@ h_i  = x_i + ReLU( g( max_{j ∈ N(i) ∪ {i}} f([x_j, e_ij]) ) )</div>
     </div>
     <div class="verdict">
       <p class="eyebrow">Finding 4</p>
-      <p><strong>The first model that benefits from range.</strong> Trained on mixed ranges, V4 is the only model whose cost <em>decreases</em> from 256 to 1024&nbsp;m: −0.055 (SE 0.016, 27 of 40 environments) on the new set, −0.12 (SE 0.03, 10 of 11) on the released set, in every seed.</p>
+      <p><strong>The first model that benefits from range.</strong> Trained on mixed ranges, V4 is the only model whose cost <em>decreases</em> from 256 to 1024&nbsp;m: −0.062 (SE 0.014, 30 of 40 environments) on the new set, −0.11 (SE 0.02, 10 of 11) on the released set, negative for each of six seeds.</p>
     </div>
   </div>
-  <p>What it does not do: no trained model reaches LPAC at its best range. At 256&nbsp;m every recipe trained on mixed ranges stays 0.05–0.09 behind LPAC trained at 128&nbsp;m and run at 256&nbsp;m, its best range (1.82 on the new environments). V5 (three fixed-scale map pairs) and A are flat: they tolerate a longer range without using it. V6 combines V5 and V4 and behaves exactly like V5 (within 0.03 at every range), because the map pathway reaches its validation minimum at epoch 4–6 and stops training before the edge layer contributes.</p>
+  <p>Against the strongest map-based baseline: LPAC retrained at 256&nbsp;m (three seeds) reads 1.87 at its own range and 2.37 at 1024&nbsp;m on the new environments. V4 mixed (six seeds) is level with it at 256&nbsp;m, +0.003 (SE 0.028), and 0.56 better at 1024&nbsp;m (SE 0.05, 38 of 40); on the released set it is 0.10 behind at 256&nbsp;m (SE 0.05). What V4 does not do is reach the published model at its best range: 0.17 behind at 256&nbsp;m (SE 0.05). Trained on 128 and 1024&nbsp;m only, half and half, V4 behaves exactly like V4 mixed (within 0.02 at every range on the new set, one seed): the two extremes are enough. V5 (three fixed-scale map pairs) and A are flat: they tolerate a longer range without using it. V6 combines V5 and V4 and behaves exactly like V5 (within 0.03 at every range), because the map pathway reaches its validation minimum at epoch 4–6 and stops training before the edge layer contributes.</p>
   <div id="paired-box"></div>
 </section>
 
@@ -282,18 +282,19 @@ h_i  = x_i + ReLU( g( max_{j ∈ N(i) ∪ {i}} f([x_j, e_ij]) ) )</div>
   <ul>
     <li><strong>The published model degrades with every long-range robot</strong>: from 1.98 to 5.30. The curve is convex: a quarter of long-range robots costs a fifth of the full collapse. A frozen-state probe shows the 128&nbsp;m robots changing their actions by 18–36&nbsp;% through the graph alone, but the same probe under the fixed map shows 12–31&nbsp;% while the cost stays flat: a changed action is not a wrong action. The broken map inputs of the long-range robots are what break the team.</li>
     <li><strong>Which robots get the long-range radio matters as much as how many</strong> (draws differ by 0.3–0.5), but none of four descriptors of where they start predicts it (all |Spearman ρ| ≤ 0.18). The collapsed regime is chaotic: a 1&nbsp;m shift of the start changes the 1024&nbsp;m cost by 0.35.</li>
-    <li><strong>V4 (mixed) improves with every long-range robot</strong>, at every step of <span class="mono">f</span>, for each seed: −0.45 in total (SE 0.08, 11 of 11). It ties the inference-time fix within noise for <span class="mono">f ≥ 1/4</span> without any test-time change. We also tried a mixture of specialists (each robot runs the model trained at its own range) and a model told its own range (V0R); neither beats V4.</li>
+    <li><strong>V4 (mixed) improves with every long-range robot</strong>, at every step of <span class="mono">f</span>, for each of six seeds: −0.43 in total (SE 0.07, 11 of 11). It ties the inference-time fix within noise for <span class="mono">f ≥ 1/4</span> without any test-time change. We also tried a mixture of specialists (each robot runs the model trained at its own range) and a model told its own range (V0R); neither beats V4.</li>
   </ul>
   <h3>What is a link when ranges differ?</h3>
   <p>Our first experiments used <strong>reception</strong>: robot <span class="mono">i</span> hears <span class="mono">j</span> when <span class="mono">d_ij &lt; r_i</span>. Under a transmit-power radio, the natural rule is <strong>transmission</strong>, the directed graph our TA suggested, in which a 1024&nbsp;m robot reaches a 128&nbsp;m one: <span class="mono">j → i</span> when <span class="mono">d_ij &lt; r_j</span>. We also tested AND (both must reach) and OR (either reaches). Only the graph changes; the four rules coincide exactly at <span class="mono">f = 0</span> and <span class="mono">f = 1</span>, which the code checks.</p>
   <figure>
     <div class="panel">
       <p class="panel-title">Gain over reception, V4 mixed</p>
-      <p class="panel-sub">Paired difference per environment, 3 seeds × 4 draws; negative is better</p>
+      <p class="panel-sub">Paired difference per environment, 6 seeds × 4 draws; negative is better</p>
       <div id="rules-table" class="data-table-wrap"></div>
     </div>
-    <figcaption><b>Short-range robots listening to long-range ones help V4 by 0.12–0.23</b>, in 11 of 11 environments at every fraction. OR gains slightly more but lets a 128&nbsp;m robot reach one 1024&nbsp;m away, so it is an optimistic bound; AND removes exactly the edges transmission adds and changes nothing. With transmission and three quarters of the team at long range, V4 is within 0.05 of an all-1024&nbsp;m team. The published model <em>loses</em> 0.4–0.8 under transmission with its own map; our hypothesis, not yet measured directly, is that the added edges bring in robots its neighbor map does not show.</figcaption>
+    <figcaption><b>Short-range robots listening to long-range ones help V4 by 0.09–0.18</b> (six seeds; the first three gave 0.12–0.23), in 10 or 11 of 11 environments at every fraction. OR gains slightly more but lets a 128&nbsp;m robot reach one 1024&nbsp;m away, so it is an optimistic bound; AND removes exactly the edges transmission adds and changes nothing. With transmission and three quarters of the team at long range, V4 is within 0.05 of an all-1024&nbsp;m team. The published model <em>loses</em> 0.4–0.8 under transmission with its own map; our hypothesis, not yet measured directly, is that the added edges bring in robots its neighbor map does not show.</figcaption>
   </figure>
+  <p><strong>Training on transmission teams is not needed.</strong> V4 trained on heterogeneous teams wired by transmission (V4T, two seeds) is no better than V4 mixed rewired at test time (+0.02 to +0.10 under transmission, SE 0.04–0.05) and is 0.09–0.16 worse in homogeneous teams. V4 trained on homogeneous ranges already uses the extra edges.</p>
 </section>
 
 <!-- =============================================================== -->
@@ -310,7 +311,8 @@ h_i  = x_i + ReLU( g( max_{j ∈ N(i) ∪ {i}} f([x_j, e_ij]) ) )</div>
   <p>The repair reaches the coverage metric: −0.70 against V2 at 256&nbsp;m (SE 0.19, 10 of 11 environments), which brings GATv2 level with V1. It does not make attention competitive with the map (2.26 against 1.69), and it does not stop the degradation with range: +0.85 from 256 to 1024&nbsp;m (SE 0.16, worse in 10 of 11). V4 reads the same bounded edges and does not degrade, so the difference is most likely the aggregation. A maximum does not depend on how many neighbors there are; softmax attention is a weighted mean, diluted as the neighborhood grows from about 2 to about 30 robots.</p>
   <div class="verdict">
     <p class="eyebrow">Answer</p>
-    <p>Underfitting caused by the conditioning of the original configuration, not by attention as such: residual blocks and LayerNorm unblock training, while bounded edge features alone do nothing. Caveats: one seed per run and a remaining 0.04 gap in training loss to V1. A run that replaces softmax by max aggregation (V2M) tests whether aggregation explains the remaining degradation with range.</p>
+    <p>Underfitting caused by the conditioning of the original configuration, not by attention as such: residual blocks and LayerNorm unblock training, while bounded edge features alone do nothing. Caveats: one seed per run and a remaining 0.04 gap in training loss to V1.</p>
+    <p><strong>Then the aggregation.</strong> V2M keeps V2res's blocks and edge features and replaces each attention layer by the same GATv2-style message, max-aggregated instead of softmax-weighted. It fits better than TAGConv (training loss 0.317 against V1's 0.392), reaches 1.73 at 256&nbsp;m on the released set (V2res 2.26, published 1.69) and 1.87 on the new set, level with V4 trained at 128&nbsp;m. It still degrades with the range, +0.39 from 256 to 1024&nbsp;m on the released set, but half as much as V2res (+0.85). One seed; the sign holds in 11 of 11 and 38–40 of 40 environments.</p>
   </div>
 </section>
 
@@ -370,14 +372,16 @@ h_i  = x_i + ReLU( g( max_{j ∈ N(i) ∪ {i}} f([x_j, e_ij]) ) )</div>
 
 <!-- =============================================================== -->
 <section class="chapter" id="next">
-  <div class="chapter-head"><span class="chapter-num">12</span><h2>Open questions and runs in progress</h2></div>
+  <div class="chapter-head"><span class="chapter-num">12</span><h2>Final runs and open questions</h2></div>
   <div id="final-runs"></div>
+  <p>Ten trainings were run for the final report (journal, sections 20–21). What they settled:</p>
   <ul>
-    <li><strong>Replicates.</strong> Six runs of V4 mixed and three of LPAC retrained at 256&nbsp;m, so that the 256&nbsp;m gap and the range gain are measured against run-to-run noise.</li>
-    <li><strong>Training for mixed teams.</strong> V4 trained on heterogeneous teams wired by the transmission rule, against V4 mixed rewired only at test time.</li>
-    <li><strong>V4 at short range.</strong> V4 is weakest at 128&nbsp;m (2.14 against 2.05 when trained at 128&nbsp;m only). The fixed-map model loses a similar amount when trained on mixed ranges, so we attribute the gap to the small share of 128&nbsp;m samples; a run trained with half its samples at 128&nbsp;m tests this.</li>
-    <li><strong>Information loss or distribution shift?</strong> Drawing the same neighbors into a finer map would test whether the 256&nbsp;m map discards useful information.</li>
+    <li><strong>Replicates.</strong> Three more seeds of V4 mixed reproduce the first three, and the gain from 256 to 1024&nbsp;m holds with six seeds (−0.062, SE 0.014). Three seeds of LPAC retrained at 256&nbsp;m put V4 mixed level with it at 256&nbsp;m and 0.56 ahead at 1024&nbsp;m.</li>
+    <li><strong>V4 at short range.</strong> Training on half 128&nbsp;m and half 1024&nbsp;m samples does <em>not</em> fix V4's weakness at 128&nbsp;m (2.13, the same as V4 mixed): the share of 128&nbsp;m samples was not the cause. The open question remains why every mixed-range recipe pays about 0.1 at 128&nbsp;m.</li>
+    <li><strong>Training for mixed teams.</strong> Not needed: V4 trained on transmission teams does not beat V4 mixed rewired at test time (chapter 7). A third seed is running.</li>
+    <li><strong>GATv2 and aggregation.</strong> A max aggregation makes the attention-style stack competitive at 256&nbsp;m and halves its degradation with range, without removing it (chapter 8).</li>
   </ul>
+  <p>Still open: whether the 256&nbsp;m map discards useful information (drawing the same neighbors into a finer map would test it), and whether a single model can be level with LPAC at 256&nbsp;m and improve with range at once; V6 tried and did not.</p>
 </section>
 
 <footer class="colophon">

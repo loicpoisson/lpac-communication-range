@@ -158,23 +158,23 @@ An earlier version, V3, used the raw offset (*p_j* − *p_i*) / 256 m instead. T
 We trained V4 two ways: on data collected at 128 m only, and on a mix of 128, 256, 512 and 1024 m.
 
 ![Cost against range for the fixes and variants](figures/fig4_variants.png)
-*Figure 4. Cost against range on the 40 new environments. Shaded bands are the spread across three training seeds.*
+*Figure 4. Cost against range on the 40 new environments. Shaded bands are the spread across training seeds (six for V4 on mixed ranges, three for the others).*
 
 | Range (40 new environments) | 128 m | 256 m | 512 m | 768 m | 1024 m |
 |---|---|---|---|---|---|
 | LPAC as published | 1.96 | 1.70 | 2.87 | n/a | 6.15 |
 | Same weights, fixed 256 m map | 1.89 | 1.70 | 1.71 | 1.73 | 1.77 |
-| LPAC retrained at 256 m | 2.42 | 1.85 | 1.81 | n/a | 2.29 |
+| LPAC retrained at 256 m (3 seeds) | 2.38 | 1.87 | 1.79 | 2.02 | 2.37 |
 | V4, trained at 128 m (3 seeds) | 2.05 | 1.87 | 1.90 | 1.90 | 1.90 |
-| **V4, trained on mixed ranges (3 seeds)** | 2.14 | 1.87 | **1.81** | **1.81** | **1.82** |
+| **V4, trained on mixed ranges (6 seeds)** | 2.13 | 1.87 | **1.80** | **1.81** | **1.81** |
 
 Three things stand out.
 
 1. **V4 does not collapse, even when trained at 128 m only.** It stays at 1.9 at every range. The bounded edge encoding, not the training data, is what makes the geometry transferable.
-2. **Trained on mixed ranges, V4 is the only model in our study whose cost keeps falling beyond 256 m.** From 256 to 1024 m it drops by 0.055 (standard error 0.016, lower in 27 of 40 environments; on the 11 released environments −0.12, 10 of 11). Simply retraining LPAC at a longer range does not achieve this: the model trained at 256 m is fine up to 512 m and then degrades again (2.29 at 1024 m). The collapse is pushed back, not removed.
-3. **It does not beat everything.** At 256 m, V4 mixed is 0.17 behind the published model, and within noise of LPAC retrained at 256 m (+0.02, standard error 0.03). At 1024 m the inference-time fix on the published model is still slightly better (1.77 against 1.82). V4's advantage is not a better score at any one range. It is that a single model, with no hand-chosen scale, works across all ranges and gets better as the radios get better.
+2. **Trained on mixed ranges, V4 is the only model in our study whose cost keeps falling beyond 256 m.** From 256 to 1024 m it drops by 0.062 (standard error 0.014, lower in 30 of 40 environments), and it drops for each of the six training seeds. Simply retraining LPAC at a longer range does not achieve this: the model trained at 256 m is fine up to 512 m and then degrades again, by +0.50 at 1024 m. The collapse is pushed back, not removed.
+3. **It ties the specialist on its home ground and beats it away from it.** At 256 m, V4 mixed is level with LPAC retrained at 256 m (+0.003, standard error 0.03; on the 11 released environments 0.10 behind). At 1024 m it is 0.56 better. It does not beat everything: it is 0.17 behind the published model at 256 m, and at 1024 m the inference-time fix on the published model is still slightly better (1.77 against 1.81). V4's advantage is that a single model, with no hand-chosen scale, works across all ranges and gets better as the radios get better.
 
-<!-- TODO after the final runs: replace "3 seeds" by 6 seeds for V4 mixed and 3 seeds for LPAC retrained at 256 m, and update the 256 m comparison. -->
+A last check on the recipe: training V4 on only the two extreme ranges, half 128 m and half 1024 m, gives the same model (within 0.02 at every range). The extremes are enough.
 
 ## Extension 1: when robots have different radios
 
@@ -188,7 +188,7 @@ In the graph this is a single change of `edge_index`; the transmission graph is 
 ![Heterogeneous teams under two link rules](figures/fig5_hetero.png)
 *Figure 5. Teams mixing 1024 m and 128 m robots, 11 released environments. V4 is averaged over three seeds and four random choices of which robots get the long range.*
 
-With V4 trained on mixed ranges, every robot that hears farther helps the team: under either rule, the cost decreases at every step as the fraction of long-range robots grows. Switching from reception to transmission gains another 0.17, 0.23 and 0.12 at one quarter, one half and three quarters of long-range robots, better in 11 of 11 environments at each point. The extra edges let short-range robots listen to what the long-range robots broadcast.
+With V4 trained on mixed ranges, every robot that hears farther helps the team: under either rule, the cost decreases at every step as the fraction of long-range robots grows. Switching from reception to transmission gains another 0.16, 0.18 and 0.09 at one quarter, one half and three quarters of long-range robots (six seeds), better in 11, 11 and 10 of 11 environments. The extra edges let short-range robots listen to what the long-range robots broadcast. Training V4 directly on teams wired this way does not help further: it is no better under transmission and about 0.1 worse in homogeneous teams. The model trained on homogeneous mixed ranges already knows how to use the extra edges.
 
 For the published model, the same rewiring *hurts*, by 0.4 to 0.8. Our hypothesis is that the extra edges are not reflected in the neighbour map, so the GNN carries robots that the CNN's picture does not show. When the map is drawn at the fixed scale, the same rewiring becomes neutral. We have not measured the mechanism directly.
 
@@ -211,9 +211,11 @@ Is attention simply too weak here? We ran five 30-epoch ablations, each changing
 
 The diagnosis: the plain GATv2 stack failed to *optimize*. It was not missing capacity, reach or information. Residual connections and normalization fixed it.
 
-The repair carries through to coverage. At 256 m, the residual GATv2 scores 2.26, against 2.96 for the plain one and 2.48 for V1. But it is still far from LPAC's 1.70, and it still degrades with the range (+0.85 from 256 to 1024 m). Fixing the optimization does not give the model the neighbour map's information, and it does not make it robust to the range. A GATv2 variant with max aggregation, closer to V4, is training as we write.
+The repair carries through to coverage. At 256 m, the residual GATv2 scores 2.26, against 2.96 for the plain one and 2.48 for V1. But it is still far from LPAC's 1.70, and it still degrades with the range (+0.85 from 256 to 1024 m).
 
-<!-- TODO after the final runs: one sentence on V2M. -->
+One suspect remained: the aggregation itself. Softmax attention computes a weighted *mean* over neighbours, which gets diluted as a robot's neighbourhood grows from 2 to 30; V4's front layer takes a *max*, which does not. So we kept everything in the residual GATv2 and changed one thing: each layer computes the same GATv2-style message, `leaky_relu(W_l x_i + W_r x_j + W_e e_ij)`, but takes the maximum over neighbours instead of a softmax-weighted average. In PyG this is `MessagePassing(aggr="max")` instead of `GATv2Conv`.
+
+The effect is large. This model (V2M) fits better than TAGConv (training loss 0.317 against 0.392), and at 256 m it reaches 1.73 on the released environments and 1.87 on the new ones, level with V4 and close to LPAC with its map. It still degrades with the range, but half as much as the residual GATv2 (+0.39 against +0.85 from 256 to 1024 m). One seed, so the size is indicative, but the sign holds in 11 of 11 and 38 to 40 of 40 environments. Lesson: for neighbourhoods whose size varies by an order of magnitude, the choice between mean-like and max aggregation matters as much as the architecture around it.
 
 ## Lessons for GNN practitioners
 

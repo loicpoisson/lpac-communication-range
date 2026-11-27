@@ -72,7 +72,7 @@
     published: "--s8", fix: "--s2", lpac128: "--s8", lpac256: "--s1", lpac512: "--s7", lpac1024: "--s6",
     v0mixed: "--s5", A_mixed: "--s4", A_128: "--s4", V1: "--s7", V2: "--s5", V3: "--s6", V3mixed: "--s6",
     V4_128: "--s1", V4mixed: "--s3", V5mixed: "--s4", V5_128: "--s4", V6mixed: "--s7", V0R: "--s5",
-    V2res: "--s1", mixture: "--s7", clamp: "--s5",
+    V2res: "--s1", mixture: "--s7", clamp: "--s5", V2M: "--s2", V4half: "--s4", V4T: "--s6",
   };
   const colorOf = (k) => `var(${COLORS[k] || "--s1"})`;
 
@@ -343,7 +343,8 @@
   const PRESETS = {
     story: { label: "The story", keys: ["published", "fix", "A_mixed", "V4mixed"] },
     maps: { label: "Map-based", keys: ["published", "lpac256", "v0mixed", "A_mixed", "V5mixed", "V6mixed"] },
-    edges: { label: "Edge geometry", keys: ["V1", "V2", "V3", "V4_128", "V4mixed"] },
+    edges: { label: "Edge geometry", keys: ["V1", "V2", "V3", "V4_128", "V4mixed", "V2M"] },
+    final: { label: "Final runs", keys: ["published", "lpac256", "V4mixed", "V4half", "V2M"] },
     all: { label: "Everything", keys: null },
   };
   function variantSeries(C, set) {
@@ -358,6 +359,8 @@
       ["V3", "V3: PointNet edges, 128 m", { model: "V3", map: ["none", "C0"] }],
       ["V4_128", "V4: bounded edges, 128 m", { model: "V4_128", map: ["none", "C0"] }],
       ["V4mixed", "V4: bounded edges, mixed", { model: "V4mixed", map: ["none", "C0"] }],
+      ["V4half", "V4: 128 m + 1024 m only", { model: "V4half", map: ["none", "C0"] }],
+      ["V2M", "V2M: GATv2-style, max aggregation", { model: "V2M", map: ["none", "C0"] }],
       ["V5mixed", "V5: multi-scale maps, mixed", { model: "V5mixed", map: ["multiscale"] }],
       ["V6mixed", "V6: V5 + V4, mixed", { model: "V6mixed", map: ["multiscale"] }],
     ];
@@ -385,6 +388,8 @@
       ["A (fixed map, mixed): 1024 m − 256 m", f("A_mixed", ["C3", "C0"], 1024), f("A_mixed", ["C3", "C0"], 256)],
       ["V5 mixed: 1024 m − 256 m", f("V5mixed", ["multiscale"], 1024), f("V5mixed", ["multiscale"], 256)],
       ["V4 mixed − LPAC trained at 128 m, both at 256 m", f("V4mixed", ["none", "C0"], 256), f("lpac128", "C0", 256)],
+      ["V4 mixed − LPAC retrained at 256 m, both at 256 m", f("V4mixed", ["none", "C0"], 256), f("lpac256", "C0", 256)],
+      ["V4 mixed − LPAC retrained at 256 m, both at 1024 m", f("V4mixed", ["none", "C0"], 1024), f("lpac256", "C0", 1024)],
       ["V4 at 128 m − V3, at 1024 m", f("V4_128", ["none", "C0"], 1024), f("V3", ["none", "C0"], 1024)],
     ];
     const t = el("table", { class: "data" });
@@ -404,7 +409,7 @@
     if (!Mo) { host.append(el("div", { class: "pending" }, "Model catalogue not in the bundle yet.")); return; }
     const order = ["V0", "V1", "V2", "V3", "V4", "V5", "V6", "V0F", "V0R", "V2R", "V2RL", "V2B", "V2M"];
     const keys = Object.keys(Mo).sort((a, b) => (order.indexOf(a) + 99) % 99 - (order.indexOf(b) + 99) % 99);
-    const colorKey = { V0: "published", V1: "V1", V2: "V2", V3: "V3", V4: "V4mixed", V5: "V5mixed", V6: "V6mixed", V0F: "A_mixed", V0R: "V0R", V2R: "V2res" };
+    const colorKey = { V0: "published", V1: "V1", V2: "V2", V3: "V3", V4: "V4mixed", V5: "V5mixed", V6: "V6mixed", V0F: "A_mixed", V0R: "V0R", V2R: "V2res", V2M: "V2M" };
     for (const k of keys) {
       const m = Mo[k];
       const dl = el("dl");
@@ -428,7 +433,9 @@
     const S = [
       ["published", "published, own map", { model: "published", map: "asis" }, "published"],
       ["fix", "published, fixed 256 m map", { model: "published", map: "fixed256" }, "fix"],
-      ["V4mixed", "V4 mixed (3 seeds)", { model: "V4mixed" }, "V4mixed"],
+      ["V4mixed", "V4 mixed (6 seeds)", { model: "V4mixed" }, "V4mixed"],
+      ["V4T", "V4 trained on transmission teams (2 seeds)", { model: "V4T" }, "V4T"],
+      ["V4half", "V4 trained on 128 m + 1024 m", { model: "V4half" }, "V4half"],
       ["V0R", "V0R: own range as input", { model: "V0R" }, "V0R"],
       ["mixture", "mixture of specialists", { model: "mixture128+1024", mode: "mixture" }, "mixture"],
     ];
@@ -476,7 +483,7 @@
     const host = $("#chart-curves"), ctl = $("#curves-controls");
     if (!Cu || !Cu.runs) { host.append(el("div", { class: "pending" }, "Training curves not in the bundle yet.")); return; }
     let which = "train";
-    const ids = [["V2", "V2: GATv2 as configured", "V2"], ["V2lr", "V2, learning rate ×10", "fix"], ["V2B", "V2B: bounded edges only", "published"],["V2res", "V2res: residual + LayerNorm + bounded edges", "V3"], ["V2deep", "V2res, 15 blocks", "V4mixed"], ["V2logdeg", "V2res + node degree", "A_mixed"], ["V1", "V1: TAGConv, K = 3", "V1"], ["V1K1", "V1: TAGConv, K = 1", "lpac256"]];
+    const ids = [["V2", "V2: GATv2 as configured", "V2"], ["V2lr", "V2, learning rate ×10", "fix"], ["V2B", "V2B: bounded edges only", "published"],["V2res", "V2res: residual + LayerNorm + bounded edges", "V3"], ["V2deep", "V2res, 15 blocks", "V4mixed"], ["V2logdeg", "V2res + node degree", "A_mixed"], ["V1", "V1: TAGConv, K = 3", "V1"], ["V1K1", "V1: TAGConv, K = 1", "lpac256"], ["V2M", "V2M: V2res with max aggregation", "V2M"]];
     const draw = () => {
       const series = ids.filter(([id]) => Cu.runs[id]).map(([id, label, col]) => {
         const r = Cu.runs[id];

@@ -199,6 +199,7 @@ def fig_curves():
     fig, ax = plt.subplots(figsize=(7, 4.2))
     spec = [("V2", "GATv2, plain stack (V2)", C["published"], "-"), ("V2B", "GATv2 + bounded edge features (V2B)", C["other"], "--"),
             ("V2res", "GATv2 in residual blocks + LayerNorm (V2res)", C["v4"], "-"),
+            ("V2M", "same blocks, max aggregation (V2M)", C["fixed"], "-."),
             ("V1", "TAGConv, no map (V1)", C["v1"], ":")]
     for key, label, col, ls in spec:
         r = cu[key]
@@ -207,8 +208,8 @@ def fig_curves():
         ax.plot(e[sel], t[sel], ls=ls, color=col, lw=2, label=label)
     ax.set_xlabel("epoch")
     ax.set_ylabel("training loss (MSE on the normalized action)")
-    ax.set_title("GATv2 was not too weak: it could not optimize", loc="left", fontweight="bold")
-    ax.legend(fontsize=9)
+    ax.set_title("GATv2 could not optimize, then could not count", loc="left", fontweight="bold")
+    ax.legend(fontsize=9, loc="upper right")
     fig.tight_layout()
     fig.savefig(OUT / "fig6_gatv2.png")
     plt.close(fig)
