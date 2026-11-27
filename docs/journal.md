@@ -1863,3 +1863,10 @@ What this changes in the report: (1) V4 mixed "improves with the range" stands o
 1024 m"; (3) transmission gains 0.09-0.18; (4) training on transmission teams is not needed;
 (5) the GATv2-style stack becomes competitive at 256 m with a max aggregation, and degrades with
 the range half as much, but is still not flat.
+
+**V4T seed 2, correction (26 November, evening).** The "node fault" above was most likely the home
+quota: `~` on FarmShare was full (about 50 GB, of which 34 GB under `~/lpac`), so the first attempt
+died when it next had to write, and the resubmission (2028908) failed before it could even create
+its log. With Loïc's approval the pip cache (8 GB) was purged; writing works again and seed 2 was
+resubmitted as 2028978 with its evaluations (2028979-81). The 1,746 per-epoch checkpoints (~12 GB)
+were left in place.
