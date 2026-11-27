@@ -174,9 +174,9 @@ def section_d():
         hetero_table(f"V4 mixed, {sem}, seeds 3-5", new, sem)
         hetero_table(f"V4 mixed, {sem}, six seeds", v4, sem)
     v4t = {s: pd.concat([hetero(f"results_final/hetero_V4T_s{s}_transmission.csv"),
-                         hetero(f"results_final/hetero_V4T_s{s}_reception.csv")]) for s in (0, 1)}
+                         hetero(f"results_final/hetero_V4T_s{s}_reception.csv")]) for s in (0, 1, 2)}
     for sem in ("transmission", "reception", "sym_min", "sym_max"):
-        hetero_table(f"V4T (trained on transmission teams), {sem}, seeds 0-1", v4t, sem)
+        hetero_table(f"V4T (trained on transmission teams), {sem}, seeds 0-2", v4t, sem)
     half = {0: hetero("results_final/hetero_V4half_s0_reception.csv")}
     hetero_table("V4 half 128/1024 m, reception, seed 0", half, "reception")
 
@@ -210,13 +210,13 @@ def section_d():
 # E. V4T in homogeneous teams ------------------------------------------------------------------------
 def section_e():
     header("E. V4T (trained on transmission teams) in homogeneous teams, 11 environments")
-    v4t = runs([f"results_final/V4T_s{s}_11.csv" for s in (0, 1)])
+    v4t = runs([f"results_final/V4T_s{s}_11.csv" for s in (0, 1, 2)])
     v4 = runs([V4MIX[s][11] for s in range(6)])
-    print(per_run_line("V4T seeds 0 / 1", v4t))
+    print(per_run_line("V4T seeds 0 / 1 / 2", v4t))
     print(curve_line("V4 mixed, six seeds", v4))
     print()
     for r in RANGES:
-        print(f"V4T (2 seeds) − V4 mixed (6 seeds) at {r} m: {paired(avg(v4t)[r], avg(v4)[r])}")
+        print(f"V4T (3 seeds) − V4 mixed (6 seeds) at {r} m: {paired(avg(v4t)[r], avg(v4)[r])}")
 
 
 # F. V2M ---------------------------------------------------------------------------------------------

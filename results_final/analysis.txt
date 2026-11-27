@@ -98,32 +98,32 @@ V4 half, 1024 m − 256 m: -0.052 (SE 0.044, better in 6/11)
 | V4 mixed, sym_max, seeds 0-2 | 2.21 ± 0.01 | 1.95 ± 0.02 | 1.82 ± 0.07 | 1.76 ± 0.06 | 1.76 ± 0.06 |
 | V4 mixed, sym_max, seeds 3-5 | 2.18 ± 0.07 | 1.97 ± 0.03 | 1.85 ± 0.06 | 1.80 ± 0.05 | 1.78 ± 0.06 |
 | V4 mixed, sym_max, six seeds | 2.20 ± 0.05 | 1.96 ± 0.02 | 1.83 ± 0.06 | 1.78 ± 0.05 | 1.77 ± 0.06 |
-| V4T (trained on transmission teams), transmission, seeds 0-1 | 2.27 ± 0.12 | 2.02 ± 0.07 | 1.96 ± 0.07 | 1.90 ± 0.05 | 1.88 ± 0.04 |
-| V4T (trained on transmission teams), reception, seeds 0-1 | 2.27 ± 0.12 | 2.22 ± 0.13 | 2.09 ± 0.09 | 1.99 ± 0.10 | 1.88 ± 0.04 |
-| V4T (trained on transmission teams), sym_min, seeds 0-1 | 2.27 ± 0.12 | 2.23 ± 0.10 | 2.14 ± 0.09 | 2.00 ± 0.09 | 1.88 ± 0.04 |
-| V4T (trained on transmission teams), sym_max, seeds 0-1 | 2.27 ± 0.12 | 2.08 ± 0.08 | 1.94 ± 0.05 | 1.88 ± 0.04 | 1.88 ± 0.04 |
+| V4T (trained on transmission teams), transmission, seeds 0-2 | 2.24 ± 0.10 | 2.00 ± 0.05 | 1.94 ± 0.07 | 1.88 ± 0.04 | 1.86 ± 0.05 |
+| V4T (trained on transmission teams), reception, seeds 0-2 | 2.24 ± 0.10 | 2.20 ± 0.10 | 2.08 ± 0.06 | 1.98 ± 0.08 | 1.86 ± 0.05 |
+| V4T (trained on transmission teams), sym_min, seeds 0-2 | 2.24 ± 0.10 | 2.19 ± 0.10 | 2.09 ± 0.10 | 1.98 ± 0.08 | 1.86 ± 0.05 |
+| V4T (trained on transmission teams), sym_max, seeds 0-2 | 2.24 ± 0.10 | 2.03 ± 0.10 | 1.92 ± 0.05 | 1.86 ± 0.05 | 1.86 ± 0.05 |
 | V4 half 128/1024 m, reception, seed 0 | 2.22 | 2.19 | 2.08 | 1.95 | 1.84 |
 
 V4 mixed (6 seeds), transmission − reception at f = 0.25: -0.155 (SE 0.031, better in 11/11)
 V4 mixed (6 seeds), sym_max − reception at f = 0.25: -0.193 (SE 0.033, better in 11/11)
 V4 mixed (6 seeds), sym_min − reception at f = 0.25: -0.008 (SE 0.027, better in 7/11)
 V4 mixed seeds 3-5 only, transmission − reception at f = 0.25: -0.140 (SE 0.034, better in 9/11)
-V4T − V4 mixed, both under transmission, at f = 0.25: +0.018 (SE 0.042, better in 4/11)
-V4T, transmission − reception at f = 0.25: -0.203 (SE 0.057, better in 11/11)
+V4T − V4 mixed, both under transmission, at f = 0.25: +0.005 (SE 0.041, better in 5/11)
+V4T, transmission − reception at f = 0.25: -0.197 (SE 0.046, better in 10/11)
 V4 half − V4 mixed, reception, at f = 0.25: +0.032 (SE 0.083, better in 7/11)
 V4 mixed (6 seeds), transmission − reception at f = 0.5: -0.179 (SE 0.036, better in 11/11)
 V4 mixed (6 seeds), sym_max − reception at f = 0.5: -0.214 (SE 0.027, better in 11/11)
 V4 mixed (6 seeds), sym_min − reception at f = 0.5: -0.028 (SE 0.032, better in 8/11)
 V4 mixed seeds 3-5 only, transmission − reception at f = 0.5: -0.131 (SE 0.031, better in 10/11)
-V4T − V4 mixed, both under transmission, at f = 0.5: +0.096 (SE 0.048, better in 2/11)
-V4T, transmission − reception at f = 0.5: -0.127 (SE 0.046, better in 9/11)
+V4T − V4 mixed, both under transmission, at f = 0.5: +0.070 (SE 0.043, better in 4/11)
+V4T, transmission − reception at f = 0.5: -0.146 (SE 0.034, better in 10/11)
 V4 half − V4 mixed, reception, at f = 0.5: +0.027 (SE 0.033, better in 4/11)
 V4 mixed (6 seeds), transmission − reception at f = 0.75: -0.093 (SE 0.020, better in 10/11)
 V4 mixed (6 seeds), sym_max − reception at f = 0.75: -0.136 (SE 0.017, better in 11/11)
 V4 mixed (6 seeds), sym_min − reception at f = 0.75: -0.003 (SE 0.010, better in 6/11)
 V4 mixed seeds 3-5 only, transmission − reception at f = 0.75: -0.067 (SE 0.018, better in 9/11)
-V4T − V4 mixed, both under transmission, at f = 0.75: +0.073 (SE 0.037, better in 4/11)
-V4T, transmission − reception at f = 0.75: -0.095 (SE 0.033, better in 10/11)
+V4T − V4 mixed, both under transmission, at f = 0.75: +0.057 (SE 0.040, better in 5/11)
+V4T, transmission − reception at f = 0.75: -0.095 (SE 0.031, better in 8/11)
 V4 half − V4 mixed, reception, at f = 0.75: +0.037 (SE 0.031, better in 4/11)
 
 V4 mixed reception, f = 1 − f = 0: -0.426 (SE 0.069, better in 11/11)
@@ -133,14 +133,14 @@ V4 mixed transmission, f = 1 − f = 0: -0.426 (SE 0.069, better in 11/11)
 
 | | 128 m | 256 m | 512 m | 768 m | 1024 m |
 |---|---|---|---|---|---|
-| V4T seeds 0 / 1 | 2.18 / 2.35 | 1.90 / 2.02 | 1.87 / 1.98 | 1.85 / 1.94 | 1.86 / 1.91 |
+| V4T seeds 0 / 1 / 2 | 2.18 / 2.35 / 2.18 | 1.90 / 2.02 / 1.91 | 1.87 / 1.98 / 1.82 | 1.85 / 1.94 / 1.81 | 1.86 / 1.91 / 1.81 |
 | V4 mixed, six seeds | 2.20 ± 0.05 | 1.88 ± 0.04 | 1.77 ± 0.06 | 1.77 ± 0.04 | 1.77 ± 0.06 |
 
-V4T (2 seeds) − V4 mixed (6 seeds) at 128 m: +0.071 (SE 0.056, better in 4/11)
-V4T (2 seeds) − V4 mixed (6 seeds) at 256 m: +0.087 (SE 0.022, better in 1/11)
-V4T (2 seeds) − V4 mixed (6 seeds) at 512 m: +0.157 (SE 0.059, better in 1/11)
-V4T (2 seeds) − V4 mixed (6 seeds) at 768 m: +0.129 (SE 0.045, better in 1/11)
-V4T (2 seeds) − V4 mixed (6 seeds) at 1024 m: +0.115 (SE 0.036, better in 2/11)
+V4T (3 seeds) − V4 mixed (6 seeds) at 128 m: +0.043 (SE 0.042, better in 4/11)
+V4T (3 seeds) − V4 mixed (6 seeds) at 256 m: +0.069 (SE 0.030, better in 2/11)
+V4T (3 seeds) − V4 mixed (6 seeds) at 512 m: +0.121 (SE 0.053, better in 1/11)
+V4T (3 seeds) − V4 mixed (6 seeds) at 768 m: +0.102 (SE 0.045, better in 3/11)
+V4T (3 seeds) − V4 mixed (6 seeds) at 1024 m: +0.092 (SE 0.038, better in 3/11)
 
 ## F. GATv2 variants, 11 environments
 

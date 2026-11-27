@@ -434,7 +434,7 @@
       ["published", "published, own map", { model: "published", map: "asis" }, "published"],
       ["fix", "published, fixed 256 m map", { model: "published", map: "fixed256" }, "fix"],
       ["V4mixed", "V4 mixed (6 seeds)", { model: "V4mixed" }, "V4mixed"],
-      ["V4T", "V4 trained on transmission teams (2 seeds)", { model: "V4T" }, "V4T"],
+      ["V4T", "V4 trained on transmission teams (3 seeds)", { model: "V4T" }, "V4T"],
       ["V4half", "V4 trained on 128 m + 1024 m", { model: "V4half" }, "V4half"],
       ["V0R", "V0R: own range as input", { model: "V0R" }, "V0R"],
       ["mixture", "mixture of specialists", { model: "mixture128+1024", mode: "mixture" }, "mixture"],

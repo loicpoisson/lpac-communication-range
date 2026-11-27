@@ -1870,3 +1870,9 @@ died when it next had to write, and the resubmission (2028908) failed before it 
 its log. With Loïc's approval the pip cache (8 GB) was purged; writing works again and seed 2 was
 resubmitted as 2028978 with its evaluations (2028979-81). The 1,746 per-epoch checkpoints (~12 GB)
 were left in place.
+
+**V4T seed 2 (27 November).** Finished its 25 epochs (best validation 0.385 at epoch 24) and its
+evaluations. With three seeds, V4T − V4 mixed under transmission is +0.005 / +0.070 / +0.057 at
+f = 1/4, 1/2, 3/4 (SE 0.04, 4-5 of 11), and in homogeneous teams +0.04 at 128 m and +0.07 to +0.12
+from 256 m (SE 0.03-0.05, 1-3 of 11). Conclusion E unchanged: training on transmission teams
+does not help, and costs about 0.1 in homogeneous teams.

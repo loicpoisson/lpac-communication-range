@@ -297,7 +297,7 @@ h_i  = x_i + ReLU( g( max_{j ∈ N(i) ∪ {i}} f([x_j, e_ij]) ) )</div>
     </div>
     <figcaption><b>Short-range robots listening to long-range ones help V4 by 0.09–0.18</b> (six seeds; the first three gave 0.12–0.23), in 10 or 11 of 11 environments at every fraction. OR gains slightly more but lets a 128&nbsp;m robot reach one 1024&nbsp;m away, so it is an optimistic bound; AND removes exactly the edges transmission adds and changes nothing. With transmission and three quarters of the team at long range, V4 is within 0.05 of an all-1024&nbsp;m team. The published model <em>loses</em> 0.4–0.8 under transmission with its own map; our hypothesis, not yet measured directly, is that the added edges bring in robots its neighbor map does not show.</figcaption>
   </figure>
-  <p><strong>Training on transmission teams is not needed.</strong> V4 trained on heterogeneous teams wired by transmission (V4T, two seeds) is no better than V4 mixed rewired at test time (+0.02 to +0.10 under transmission, SE 0.04–0.05) and is 0.09–0.16 worse in homogeneous teams. V4 trained on homogeneous ranges already uses the extra edges.</p>
+  <p><strong>Training on transmission teams is not needed.</strong> V4 trained on heterogeneous teams wired by transmission (V4T, three seeds) is no better than V4 mixed rewired at test time (+0.01 to +0.07 under transmission, SE 0.04) and is 0.07–0.12 worse in homogeneous teams from 256&nbsp;m. V4 trained on homogeneous ranges already uses the extra edges.</p>
 </section>
 
 <!-- =============================================================== -->
@@ -381,7 +381,7 @@ h_i  = x_i + ReLU( g( max_{j ∈ N(i) ∪ {i}} f([x_j, e_ij]) ) )</div>
   <ul>
     <li><strong>Replicates.</strong> Three more seeds of V4 mixed reproduce the first three, and the gain from 256 to 1024&nbsp;m holds with six seeds (−0.062, SE 0.014). Three seeds of LPAC retrained at 256&nbsp;m put V4 mixed level with it at 256&nbsp;m and 0.56 ahead at 1024&nbsp;m.</li>
     <li><strong>V4 at short range.</strong> Training on half 128&nbsp;m and half 1024&nbsp;m samples does <em>not</em> fix V4's weakness at 128&nbsp;m (2.13, the same as V4 mixed): the share of 128&nbsp;m samples was not the cause. The open question remains why every mixed-range recipe pays about 0.1 at 128&nbsp;m.</li>
-    <li><strong>Training for mixed teams.</strong> Not needed: V4 trained on transmission teams does not beat V4 mixed rewired at test time (chapter 7). A third seed is running.</li>
+    <li><strong>Training for mixed teams.</strong> Not needed: V4 trained on transmission teams does not beat V4 mixed rewired at test time (chapter 7, three seeds).</li>
     <li><strong>GATv2 and aggregation.</strong> A max aggregation makes the attention-style stack competitive at 256&nbsp;m and halves its degradation with range, without removing it (chapter 8).</li>
   </ul>
   <p>Still open: whether the 256&nbsp;m map discards useful information (drawing the same neighbors into a finer map would test it), and whether a single model can be level with LPAC at 256&nbsp;m and improve with range at once; V6 tried and did not.</p>

@@ -112,7 +112,7 @@ for s in (1, 2):
                                 released11=f"results_final/LPAC256_s{s}_11.csv", new40=f"results_final/LPAC256_s{s}_40.csv")
 RUNS["V4half_s0"] = run("V4half", "V4: bounded edges, trained on 128 m and 1024 m only", HALF, "V4", 0, map_level="none",
                         released11="results_final/V4half_s0_11.csv", new40="results_final/V4half_s0_40.csv")
-for s in (0, 1):
+for s in (0, 1, 2):
     RUNS[f"V4T_s{s}"] = run("V4T", "V4 trained on heterogeneous teams (transmission)", HETERO_T, "V4", s, map_level="none",
                             released11=f"results_final/V4T_s{s}_11.csv")
 RUNS["V2M_s0"] = run("V2M", "V2M: V2res with max aggregation", R128, "V2M", 0, map_level="none", note="30 epochs",
@@ -325,7 +325,7 @@ HETERO_FILES = [
     *[(f"results_final/hetero_V4mixed_s{s}_{sem}.csv", {f"V4mixed_s{s}": f"V4mixed_s{s}"})
       for s in (3, 4, 5) for sem in ("reception", "transmission")],
     *[(f"results_final/hetero_V4T_s{s}_{sem}.csv", {f"V4T_s{s}": f"V4T_s{s}"})
-      for s in (0, 1) for sem in ("transmission", "reception")],
+      for s in (0, 1, 2) for sem in ("transmission", "reception")],
     ("results_final/hetero_V4half_s0_reception.csv", {"V4half_s0": "V4half_s0"}),
 ]
 
