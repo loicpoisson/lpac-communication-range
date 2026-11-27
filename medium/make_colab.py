@@ -42,7 +42,7 @@ Network for Robot Swarms* (Stanford CS224W, Autumn 2026). Full study and interac
    graph or only the CNN's neighbour map. The map is the culprit, not the graph.
 3. Applies the fix: draw the neighbour map at a fixed 256 m scale. The cost comes back to the
    model's own optimum.
-4. (Optional) Runs V4, our map-less variant with bounded edge features, if its checkpoint URL is set.
+4. Runs V4, our map-less variant with bounded edge features (its checkpoint is downloaded, 7.6 MB).
 
 **Runtime.** `QUICK = True` (default) uses 2 environments with full 600-step episodes and runs them
 in parallel on Colab's 2 CPUs: about 35 minutes for parts 1-3 and 15 more for part 4.
@@ -69,7 +69,8 @@ QUICK = True                     # False: the 11 released environments (several 
 NUM_ENVS = 2 if QUICK else 11
 NUM_STEPS = 600                  # episode length used throughout the study
 WORKERS = 2                      # parallel processes, one environment each (Colab CPU runtime has 2 cores)
-V4_URL = ""                      # optional: URL of the V4 checkpoint (state dict); empty = skip part 4
+V4_URL = ("https://raw.githubusercontent.com/loicpoisson/lpac-range-transfer/models/"
+          "v4_mixed_ranges_seed0.pt")   # V4 checkpoint (7.6 MB); set to "" to skip part 4
 ROOT = Path(os.environ.get("LPAC_NB_ROOT", "/content"))
 OUT = ROOT / "lpac_range"
 OUT.mkdir(parents=True, exist_ok=True)
@@ -219,14 +220,14 @@ plt.tight_layout(); plt.savefig(OUT / "summary.png", dpi=150); plt.show()
 """
 
 PART4_MD = """
-## 4. (Optional) V4: let the graph carry the geometry
+## 4. V4: let the graph carry the geometry
 
 V4 removes the two neighbour-map channels and adds one PointNet-style `MessagePassing` layer in
 front of the unchanged `TAGConv` stack. On every edge j → i at distance d it reads the unit
 direction (p_j − p_i) / d and tanh(d / 256 m), three numbers in [−1, 1] whatever the range, and
 aggregates with a max (`lpac_study/variants.py`, class `BoundedGeometryConv`). Trained on mixed
-ranges, it is the only model of the study whose cost keeps falling beyond 256 m. Set `V4_URL`
-above to the published state dict to run it; the clairvoyant rows of part 1 are reused.
+ranges, it is the only model of the study whose cost keeps falling beyond 256 m. The checkpoint
+is seed 0 of that recipe; the clairvoyant rows of part 1 are reused.
 """
 
 PART4 = """
