@@ -1783,3 +1783,78 @@ Protocols are those of the earlier seeds: sweeps on the 11 release and 40 new en
 128, 256, 512, 768 and 1024 m (V4T on the 11 only), and heterogeneous teams on the 11 environments
 with draws 0-3, map as is, under reception and under transmission, sym_max and sym_min. Outputs go
 to `~/lpac_project/results_final/`.
+
+## 21. The final-report runs (26 November)
+
+Nine of the ten trainings of section 20 finished (V4T seed 2 is rerunning, see below). Analysis
+script `lpac_study/final_runs.py`, full output `results_final/analysis.txt`; merged CSVs and
+training histories in `results_final/`. Costs are cost / clairvoyant, episode mean; paired means
+per-environment differences, seed-averaged first, with the standard error over environments and
+the number of environments where the first model is lower. The 40 new environments are the
+primary set.
+
+Training (best validation and its epoch, final training loss): V4 mixed seeds 3-5 0.353 / 0.357 /
+0.354 at 17 / 24 / 21, 0.28-0.29 (seeds 0-2: 0.351-0.356 at 21-25); LPAC at 256 m seeds 1-2
+0.391 / 0.386 at 8 / 9 (seed 0: 0.391 at 7); V4 on the 50/50 mixture 0.367 at 23; V4T seeds 0-1
+0.379 / 0.385 at 24 / 25; V2M 0.402 at 21, training loss 0.317 at epoch 30.
+
+**A. V4 mixed with six seeds.** The three new seeds reproduce the first three: 2.11 / 1.87 / 1.79
+/ 1.80 / 1.80 against 2.14 / 1.87 / 1.81 / 1.81 / 1.82 on the 40 environments. Six seeds: 2.13 ±
+0.04, 1.87 ± 0.03, 1.80 ± 0.02, 1.81 ± 0.03, 1.81 ± 0.02 (11 released: 2.20, 1.88, 1.77, 1.77,
+1.77). Criterion (b), 1024 m − 256 m: −0.062 (SE 0.014, lower in 30/40) on the 40, −0.107 (SE
+0.023, 10/11) on the 11, and negative for every one of the six seeds on the 40 (−0.02 to −0.09).
+**The claim that V4 mixed improves with the range holds with six seeds.**
+
+**B. LPAC retrained at 256 m with three seeds.** 2.38 ± 0.04, 1.87 ± 0.02, 1.79 ± 0.05, 2.02 ±
+0.05 (two seeds), 2.37 ± 0.07 on the 40. Paired against it, seed-averaged: V4 mixed +0.003 (SE
+0.028, 13/40) at 256 m, +0.012 at 512 m, **−0.558 (SE 0.054, 38/40) at 1024 m**; on the 11
+released +0.097 (SE 0.047, 3/11) at 256 m, −0.577 at 1024 m. The 256 m model itself degrades by
++0.499 (SE 0.062) from 256 to 1024 m. So the comparison of section 18 is settled: at the 256 m
+model's own range V4 mixed is level with it on the primary set (+0.003) and 0.10 behind on the
+11 released, and at 1024 m it is 0.56 better. Against the published model at 256 m V4 mixed
+stays +0.167 (SE 0.050, 13/40), and against LPAC retrained at 128 m +0.050 (SE 0.029, 18/40).
+
+**C. V4 trained on half 128 m, half 1024 m.** Equal to V4 mixed within noise at every range on
+the 40 (differences −0.009 to +0.018, SE ~0.02, 18-22 of 40), with the same improvement with range
+(−0.057, SE 0.017, 28/40); on the 11 it is 0.04-0.08 worse at 512-1024 m (SE 0.04, 4/11), within
+two standard errors. One seed. Reading: the two extreme ranges are enough; the intermediate
+ranges of the mixed set are not what teaches V4 to transfer.
+
+**D. Heterogeneous teams, V4 mixed with six seeds.** Reception 2.20 / 2.15 / 2.05 / 1.92 / 1.77 at
+f = 0 / 1/4 / 1/2 / 3/4 / 1, transmission 2.20 / 2.00 / 1.87 / 1.82 / 1.77, OR 2.20 / 1.96 / 1.83 /
+1.78 / 1.77, AND 2.20 / 2.15 / 2.02 / 1.91 / 1.77. Transmission minus reception, paired, at f =
+1/4, 1/2, 3/4: −0.155 (SE 0.031, 11/11), −0.179 (SE 0.036, 11/11), −0.093 (SE 0.020, 10/11);
+three seeds gave −0.17, −0.23, −0.12. The new seeds alone give −0.14, −0.13, −0.07 (9-10 of 11):
+the effect is replicated and slightly smaller than first measured. OR −0.19 / −0.21 / −0.14, AND
+−0.01 / −0.03 / −0.00 (not different from reception). From f = 0 to f = 1 the cost falls by 0.43
+(SE 0.07, 11/11). V4 on the 50/50 mixture, reception: 2.22 / 2.19 / 2.08 / 1.95 / 1.84, +0.03 to
++0.04 against V4 mixed (SE 0.03-0.08), not different.
+
+**E. V4T, V4 trained on teams wired by transmission (two seeds).** It does not beat V4 mixed
+where it was meant to: under transmission, V4T − V4 mixed +0.018 (SE 0.042), +0.096 (SE 0.048,
+2/11), +0.073 (SE 0.037, 4/11) at f = 1/4, 1/2, 3/4; and in homogeneous teams it is worse at every
+range from 256 m (+0.09 to +0.16, 1-2 of 11). Seed 1 is the weaker one (2.35 at 128 m, against
+2.18). The transmission gain therefore does not require training on transmission teams: V4
+trained on homogeneous mixed ranges already uses the extra edges, and training on heterogeneous
+teams costs it 0.1 elsewhere. Seed 2 is pending (job 2028908, oat-05 excluded after its first
+attempt was stopped at epoch 10 with exit code 125 and no Python error, apparently a node fault).
+
+**F. V2M: GATv2 with max aggregation.** V2res (section 16.3) with the softmax attention replaced
+by a maximum over neighbours, everything else equal, one seed, 30 epochs at 128 m. Training loss
+0.317 at epoch 30, below V2res (0.432) and V1 (0.392): it is the first attention-family model of
+the study that fits better than the map-less TAGConv. Coverage, 11 released environments: 2.15 /
+1.73 / 2.06 / 2.10 / 2.11 at 128-1024 m (V2res 2.45 / 2.26 / – / – / 3.11; published 1.98 / 1.69
+/ 2.77 / 4.52 / 5.22); 40 new environments: 2.03 / 1.87 / 1.97 / 2.04 / 2.07. Paired against
+V2res on the 11: −0.30, −0.54, −1.00 at 128 / 256 / 1024 m, 11/11 each; against V1 on the 40:
+−0.36, −0.67, −1.05 (38-39 of 40). At 256 m it matches V4 trained at 128 m (1.87 on the 40) with
+no neighbour map and no TAGConv, but it still degrades with the range (+0.20, SE 0.04, 5/40 lower
+at 1024 m), less than the published model and more than V4 at 128 m (1.90 flat). Reading: the
+aggregation hypothesis of the milestone is supported. Once optimization is repaired (16.3), the
+softmax weighted mean was what kept the attention model from using its neighbours; a max, as in
+V4's front layer, makes the same stack competitive. One seed, so the size of the effect is
+indicative; its sign is not in doubt (11/11 and 38-40/40).
+
+What this changes in the report: (1) V4 mixed "improves with the range" stands on six seeds;
+(2) the 256 m comparison is "level with LPAC retrained at 256 m on the primary set, 0.56 better at
+1024 m"; (3) transmission gains 0.09-0.18; (4) training on transmission teams is not needed;
+(5) GATv2 becomes competitive with a max aggregation.
