@@ -249,7 +249,67 @@ def gif_hook(every=2):
     plt.close(fig)
 
 
+# Architecture: LPAC (top) and V4 (bottom), same colour code as the site ----------------------------
+def fig_arch():
+    from matplotlib.patches import FancyBboxPatch
+    MAP, GRAPH, INK, MUTED = "#a85a06", "#0b6a70", "#101413", "#5c6562"
+    MAPW, GRAPHW, BOXW = "#f6ead9", "#dcefef", "#f4f6f5"
+    fig, ax = plt.subplots(figsize=(10, 6.2))
+    ax.set_xlim(-1, 101.5); ax.set_ylim(0, 62); ax.axis("off"); ax.grid(False)
+
+    def box(x, y, w, h, title, sub=None, kind="box"):
+        fc, ec, tc = {"box": (BOXW, MUTED, INK), "map": (MAPW, MAP, MAP), "graph": (GRAPHW, GRAPH, GRAPH),
+                      "gone": ("white", "#c9cfcc", "#a0a8a5")}[kind]
+        ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0,rounding_size=0.8", fc=fc, ec=ec,
+                                    lw=1.4, ls="--" if kind == "gone" else "-"))
+        ty = y + h / 2 + (1.1 if sub else 0)
+        ax.text(x + w / 2, ty, title, ha="center", va="center", color=tc, fontsize=10, fontweight="bold")
+        if sub:
+            ax.text(x + w / 2, y + h / 2 - 1.6, sub, ha="center", va="center", color=MUTED, fontsize=8.5)
+
+    def arrow(x0, y0, x1, y1, col=MUTED):
+        ax.annotate("", (x1, y1), (x0, y0), arrowprops=dict(arrowstyle="-|>", color=col, lw=1.4))
+
+    def row(y0, v4):
+        ax.text(0, y0 + 25.5, "V4: geometry on the edges, no neighbour map" if v4 else
+                "LPAC as published: the neighbourhood enters twice", fontsize=11.5, fontweight="bold",
+                color=INK)
+        h = 4.2
+        box(0, y0 + 17, 19, h, "Importance map")
+        box(0, y0 + 12, 19, h, "Neighbour map, x", kind="gone" if v4 else "map")
+        box(0, y0 + 7, 19, h, "Neighbour map, y", kind="gone" if v4 else "map")
+        box(0, y0 + 2, 19, h, "Obstacle map")
+        ax.text(9.5, y0 + 0.3, "32 × 32 cells each" + (" (2 channels removed)" if v4 else ""),
+                ha="center", fontsize=8, color=MUTED)
+        arrow(19.5, y0 + 13, 23.5, y0 + 13)
+        box(24, y0 + 9.5, 10, 7, "CNN", "32 features")
+        arrow(34.5, y0 + 13, 37.5, y0 + 13)
+        box(38, y0 + 9.5, 10, 7, "⊕ position", "34 inputs")
+        x = 48.5
+        if v4:
+            arrow(x, y0 + 13, x + 3, y0 + 13)
+            box(52, y0 + 8.5, 15, 9, "Max-aggregated", "edge layer (residual)", kind="graph")
+            ax.text(59.5, y0 + 6.3, "edge: (pⱼ−pᵢ)/d, tanh(d/256)", ha="center", fontsize=8, color=GRAPH)
+            x = 67.5
+        arrow(x, y0 + 13, x + 3, y0 + 13)
+        gx = x + 3.5
+        box(gx, y0 + 9.5, 15, 7, "5 × TAGConv", "K = 3, width 256", kind="graph")
+        box(gx + 2.5, y0 + 19.5, 10, 4, "graph G_R", kind="graph")
+        arrow(gx + 7.5, y0 + 19.3, gx + 7.5, y0 + 16.8, GRAPH)
+        if v4:
+            ax.annotate("", (59.5, y0 + 17.8), (gx + 2.3, y0 + 21.5),
+                        arrowprops=dict(arrowstyle="-|>", color=GRAPH, lw=1.4, connectionstyle="arc3,rad=0.25"))
+        arrow(gx + 15.5, y0 + 13, gx + 18.5, y0 + 13)
+        box(gx + 19, y0 + 9.5, 10, 7, "MLP", "velocity")
+
+    row(32, False)
+    row(0, True)
+    fig.tight_layout()
+    fig.savefig(OUT / "fig_arch.png")
+    plt.close(fig)
+
+
 if __name__ == "__main__":
-    fig_anomaly(); fig_factorial(); fig_maps(); fig_variants(); fig_hetero(); fig_curves(); gif_hook()
+    fig_arch(); fig_anomaly(); fig_factorial(); fig_maps(); fig_variants(); fig_hetero(); fig_curves(); gif_hook()
     for p in sorted(OUT.iterdir()):
         print(p.name, f"{p.stat().st_size / 1e3:.0f} kB")

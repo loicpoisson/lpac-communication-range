@@ -5,7 +5,7 @@
 The notebook embeds the ``lpac_study`` modules it needs as ``%%writefile`` cells, so it runs top
 to bottom on a fresh Colab runtime with no other file. Re-run this script after editing the
 package. Quick mode (default): 2 environments, full 600-step episodes, on the
-free CPU runtime (about 45 minutes); full mode: the 11 released environments, several hours.
+free CPU runtime (about 50 minutes: 35 for parts 1-3, 15 for part 4); full mode: the 11 released environments, several hours.
 """
 from __future__ import annotations
 
